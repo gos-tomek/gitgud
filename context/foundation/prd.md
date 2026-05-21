@@ -1,30 +1,14 @@
 ---
 project: GitGud
-context_type: greenfield
+version: 1
+status: draft
 created: 2026-05-21
-updated: 2026-05-21
-checkpoint:
-  current_phase: 8
-  phases_completed: [1, 2, 3, 4, 5, 6, 7]
-  frs_drafted: 17
-  gray_areas_resolved:
-    - topic: "pain category"
-      decision: "workflow friction + decision paralysis"
-    - topic: "core insight"
-      decision: "glue work is the gap the market misses — semantic contribution layer vs. throughput metadata"
-    - topic: "primary persona"
-      decision: "Senior IC who does glue work (Marek archetype)"
-    - topic: "buyer model"
-      decision: "EM is the buyer; IC is the primary user. EM switch trigger: retaining engineers whose invisible contributions can't currently be proven."
-    - topic: "auth model"
-      decision: "email + password login; two roles (IC, EM); same contribution-profile view — IC sees own data; EM can switch between team members"
-    - topic: "MVP scope"
-      decision: "GitHub-only (no Jira for v1); LLM comment classification included; 6-week timeline acknowledged"
-  quality_check_status: accepted
+context_type: greenfield
 product_type: web-app
-distribution_model: on-premises
 target_scale:
   users: medium
+  qps: "# TODO: qps — see Open Questions"
+  data_volume: "# TODO: data_volume — see Open Questions"
 timeline_budget:
   mvp_weeks: 6
   hard_deadline: null
@@ -46,15 +30,10 @@ The gap the market hasn't solved is the semantic layer: not *how much* code ship
 
 *The moment he reaches for GitGud:* Review cycle is approaching and he's staring at a blank self-evaluation form. He knows he did important work — unblocking, mentoring, refactoring — but can't reconstruct the specifics from memory. The data exists in GitHub and Jira. It's just never been assembled for him.
 
-## Access Control
+### Secondary persona (buyer)
 
-Auth: email + password. No OAuth in MVP.
-
-Two roles: **IC** and **EM**. Both see the same contribution-profile view — IC sees their own data; EM can navigate between any IC on their team, viewing each IC's profile in turn. No ranking, no comparative view across ICs. Role separation enforces scope, not information asymmetry — transparency is a design value.
-
-Sign-up: EM creates the workspace and invites team members. Each invited member creates an account (email + password). No self-serve team creation.
-
----
+**Marta — Engineering Manager**
+3 years as EM, 9 direct reports. Spends ~5 hours per engineer per review cycle on manual data archaeology across GitHub, Jira, and Slack. Her switch trigger: she knows she's losing engineers like Marek because she can't see and communicate their real contribution clearly enough to retain them. Replacing a senior engineer costs $150K–$200K. One retained departure = the tool pays for itself.
 
 ## Success Criteria
 
@@ -62,12 +41,27 @@ Sign-up: EM creates the workspace and invites team members. Each invited member 
 Manager creates a Board linked to a GitHub org and, within one session, can view any IC's contribution profile — PRs authored, code reviews given, comments by semantic category — without opening GitHub directly.
 
 ### Secondary
-Comment classification accuracy is visible to the IC: each classified comment shows its assigned category and allows the IC to signal agreement or correction ("this was classified as X — does that look right?"). Addresses AI trust concerns proactively.
+Comment classification is visible to the IC: each classified comment shows its assigned category and allows the IC to signal agreement or correction ("this was classified as X — does that look right?"). Addresses AI trust concerns proactively.
 
 ### Guardrails
 - No individual ranking or comparison across ICs — the tool must never present a comparative view or rank team members against each other.
 - IC sees the same data their EM sees when viewing their profile — no hidden management-only layer.
 - No raw comment content stored after classification — data handled with minimum retention.
+
+## User Stories
+
+### US-01: EM connects GitHub org and views IC contribution profile
+
+- **Given** an EM who has created a Board and linked a GitHub org
+- **When** they select an IC from the dropdown
+- **Then** they see that IC's PRs authored, code reviews given, comment counts, and classified comment categories for the connected period
+
+#### Acceptance Criteria
+- All data is sourced from GitHub — no manual data entry required
+- Switching between ICs loads the selected IC's profile without a full page reload
+- Empty state (no GitHub activity in period) shows an explanatory message, not blank metrics
+
+# TODO: additional user stories — see Open Questions
 
 ## Functional Requirements
 
@@ -126,18 +120,11 @@ Comment classification accuracy is visible to the IC: each classified comment sh
 - FR-016: First user on a Board (creator) is assigned EM role automatically. Priority: must-have
   > Socrates: Counter-argument considered: "Silent role auto-assignment creates confusion when the user discovers their role unexpectedly during account management." Resolution: kept as must-have; implementation note: role assignment must be made explicit at Board creation time (confirmation step or inline label), not applied silently.
 
-## User Stories
+## Non-Functional Requirements
 
-### US-01: EM connects GitHub org and views IC contribution profile
-
-- **Given** an EM who has created a Board and linked a GitHub org
-- **When** they select an IC from the dropdown
-- **Then** they see that IC's PRs authored, code reviews given, comment counts, and classified comment categories for the connected period
-
-#### Acceptance Criteria
-- All data is sourced from GitHub — no manual data entry required
-- Switching between ICs loads the selected IC's profile without a full page reload
-- Empty state (no GitHub activity in period) shows an explanatory message, not blank metrics
+- **Progressive load**: the contribution profile view opens immediately; individual metric sections that are not yet computed display an explicit "not ready yet" placeholder. The board never blocks on full data availability before rendering.
+- **Accuracy floor**: classification results must be demonstrably better than random category assignment before launch. Validation method and minimum threshold are open questions (see Open Questions).
+- **Data parity**: an IC viewing their own profile and an EM viewing that same profile see identical data. No hidden management-only fields exist. This is externally verifiable by comparing both views.
 
 ## Business Logic
 
@@ -149,16 +136,13 @@ GitGud classifies each code review comment into a semantic category — mentorin
 
 **How the user encounters it**: the IC's contribution profile shows a category breakdown in the review comments section. The IC can see this breakdown themselves — the same view the EM sees — and can flag individual labels for review (see FR-013, dependency-constrained).
 
-## Non-Functional Requirements
+## Access Control
 
-- **Progressive load**: the contribution profile view opens immediately; individual metric sections that are not yet computed display an explicit "not ready yet" placeholder. The board never blocks on full data availability before rendering.
-- **Accuracy floor**: classification results must be demonstrably better than random category assignment before launch. Validation method and minimum threshold are open questions (see Open Questions).
-- **Data parity**: an IC viewing their own profile and an EM viewing that same profile see identical data. No hidden management-only fields exist. This is externally verifiable by comparing both views.
+Auth: email + password. No OAuth in MVP.
 
-## Timeline acknowledgment
-Acknowledged on 2026-05-21: 6-week MVP requires sustained dedication over after-hours work; user accepted the cost and timeline going in eyes-open.
+Two roles: **IC** and **EM**. Both see the same contribution-profile view — IC sees their own data; EM can navigate between any IC on their team, viewing each IC's profile in turn. No ranking, no comparative view across ICs. Role separation enforces scope, not information asymmetry — transparency is a design value.
 
----
+Sign-up: EM creates the workspace and invites team members. Each invited member creates an account (email + password). No self-serve team creation.
 
 ## Non-Goals
 
@@ -166,10 +150,14 @@ Acknowledged on 2026-05-21: 6-week MVP requires sustained dedication over after-
 - **No IC ranking or comparative views.** No team leaderboard, no percentile scores, no "top reviewer" views. The absence of comparison is a design constraint, not a UX omission — it is what makes the tool safe to use transparently.
 - **No real-time data sync.** Data is fetched when the profile is loaded. The profile reflects data as of the last fetch.
 
-## Quality cross-check
-Completed 2026-05-21. All six greenfield elements present: Access Control, Business Logic (one-sentence rule), Project artifacts, Timeline-cost acknowledgment, Non-Goals. Preserved behavior: n/a (greenfield). Status: accepted.
+## Open Questions
 
-### Secondary persona (buyer)
+1. **What is the validation method and minimum accuracy threshold for comment classification before launch?** — Raised by FR-012 accuracy guardrail. Owner: TBD. Block: yes — must be resolved before launch; FR-012 cannot ship without a validated classification approach.
 
-**Marta — Engineering Manager**
-3 years as EM, 9 direct reports. Spends ~5 hours per engineer per review cycle on manual data archaeology across GitHub, Jira, and Slack. Her switch trigger: she knows she's losing engineers like Marek because she can't see and communicate their real contribution clearly enough to retain them. Replacing a senior engineer costs $150K–$200K. One retained departure = the tool pays for itself.
+2. **What constitutes the correction-signal pathway that unlocks FR-013 for shipping?** — FR-013 ships only when this pathway exists and has been implemented. Owner: TBD. Block: FR-013 must not ship without resolution.
+
+3. **What is the expected request rate (qps ballpark) for the application?** — Needed to complete `target_scale.qps`. Owner: TBD.
+
+4. **What is the expected data volume ballpark?** — Needed to complete `target_scale.data_volume`. Owner: TBD.
+
+5. **Are there additional user stories beyond US-01?** — Only the EM "view IC profile" flow is documented. The IC self-evaluation flow, the EM Board-setup flow, and the IC correction flow (FR-013, if shipped) each likely warrant a dedicated user story. Owner: TBD.

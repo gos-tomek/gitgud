@@ -65,7 +65,7 @@ Marta is the **primary buyer and daily user**. She would evaluate the tool based
 
 ---
 
-## Persona 2: "The Invisible Pillar" — Tomek, Senior Software Engineer
+## Persona 2: "The Invisible Pillar" — Marek, Senior Software Engineer
 
 ### Demographics & Context
 
@@ -80,13 +80,13 @@ Marta is the **primary buyer and daily user**. She would evaluate the tool based
 
 ### Background
 
-Tomek is the engineer everyone goes to when something is broken or confusing. He's the person who reviews the most PRs on the team, mentors two junior engineers informally, and recently refactored a critical payment service that reduced incident response time by 40%. He doesn't talk about it much — he just does it.
+Marek is the engineer everyone goes to when something is broken or confusing. He's the person who reviews the most PRs on the team, mentors two junior engineers informally, and recently refactored a critical payment service that reduced incident response time by 40%. He doesn't talk about it much — he just does it.
 
 His last performance review was "meets expectations." He was told his ticket velocity was lower than the team average. The refactoring work and mentoring were mentioned in passing but not weighted. He's been thinking about interviewing elsewhere — not because of money, but because he doesn't feel seen. `[DATA]` — 78% of devs planning to leave cite stress and lack of management awareness [17-G]; "silent contributor" pattern [1-FA, 26-FA]
 
 ### Goals
 
-1. **Be recognized for actual impact, not ticket count.** Tomek knows that his mentoring saves the team weeks of ramp-up time and his refactoring prevents incidents. He wants that to matter in his evaluation. `[DATA]` — [11-G]
+1. **Be recognized for actual impact, not ticket count.** Marek knows that his mentoring saves the team weeks of ramp-up time and his refactoring prevents incidents. He wants that to matter in his evaluation. `[DATA]` — [11-G]
 2. **Spend less time on self-evaluation paperwork.** He resents spending 3 hours reconstructing his achievements when the data already exists in GitHub and Jira. `[DATA]` — [10-G]
 3. **Get meaningful career feedback.** He wants his 1:1s to be about growth — what to learn next, how to get to staff level — not status updates. `[INFERRED]`
 4. **Fair comparison.** He's fine being measured, but the metrics need to capture what matters. Lines of code and ticket count actively misrepresent his contribution. `[DATA]` — metric misalignment [3-G]
@@ -113,7 +113,7 @@ His last performance review was "meets expectations." He was told his ticket vel
 
 ### Relationship to the Product
 
-Tomek is the **primary beneficiary but not the buyer.** He won't purchase the tool himself — his manager or the org will. His engagement determines whether the tool succeeds or fails: if ICs perceive it as surveillance, they'll game the metrics or resist adoption.
+Marek is the **primary beneficiary but not the buyer.** He won't purchase the tool himself — his manager or the org will. His engagement determines whether the tool succeeds or fails: if ICs perceive it as surveillance, they'll game the metrics or resist adoption.
 
 **Switch trigger:** A tool that automatically surfaces his code review quality, mentoring contributions, and architectural impact alongside his delivery metrics — so his self-evaluation writes itself and his manager sees the full picture.
 
@@ -129,21 +129,21 @@ Tomek is the **primary beneficiary but not the buyer.** He won't purchase the to
 |-----------|-------|
 | Role | Junior Software Engineer |
 | Experience | 1.5 years |
-| Team size | 8 people (same team as Tomek) |
+| Team size | 8 people (same team as Marek) |
 | Company type | Same mid-size product company |
 | Work mode | Hybrid |
 | Tools used daily | VS Code, GitHub, Jira, Slack |
 
 ### Background
 
-Ania joined the team 18 months ago out of a bootcamp. She's ramping up quickly, largely thanks to Tomek's informal mentoring and detailed PR comments. She doesn't fully understand the review process yet — her first annual review was a mix of generic praise and vague suggestions to "take on bigger projects." She left the conversation unclear about what she was doing well and what she needed to change.
+Ania joined the team 18 months ago out of a bootcamp. She's ramping up quickly, largely thanks to Marek's informal mentoring and detailed PR comments. She doesn't fully understand the review process yet — her first annual review was a mix of generic praise and vague suggestions to "take on bigger projects." She left the conversation unclear about what she was doing well and what she needed to change.
 
 She's eager to grow but unsure what "impact" looks like at her level. She doesn't keep a brag document because she doesn't know what to put in it. `[INFERRED]` — consistent with the observation that junior engineers adopt brag docs at lower rates because they're still learning what "impact" means [G-report]
 
 ### Goals
 
 1. **Understand what "good" looks like.** She wants concrete, specific feedback — not "you're doing great, keep it up." `[INFERRED]`
-2. **Learn from code reviews.** Tomek's PR comments are her best learning resource. She wants more of that, and she wants to know what to focus on. `[INFERRED]` — consistent with mentoring value of code review [23-FA, 24-FA]
+2. **Learn from code reviews.** Marek's PR comments are her best learning resource. She wants more of that, and she wants to know what to focus on. `[INFERRED]` — consistent with mentoring value of code review [23-FA, 24-FA]
 3. **Build a track record.** She's starting to think about what a promotion case looks like and wants to start documenting her growth, but doesn't know how. `[INFERRED]`
 4. **Feel like a real contributor.** She sometimes worries that her ticket velocity being lower than seniors means she's underperforming, when in reality she's learning. `[INFERRED]`
 
@@ -163,7 +163,7 @@ She's eager to grow but unsure what "impact" looks like at her level. She doesn'
 Ania is a **secondary user and indirect beneficiary.** She's unlikely to interact with the tool directly in the early version, but she benefits significantly if:
 
 - Her manager arrives at 1:1s with specific observations about her growth trajectory (not just ticket velocity)
-- The tool captures Tomek's mentoring of her as a contribution on his side and a growth signal on hers
+- The tool captures Marek's mentoring of her as a contribution on his side and a growth signal on hers
 - Code review quality feedback helps her learn what to focus on
 
 **Key design implication:** If the tool only surfaces productivity metrics (PRs, tickets, velocity), it will actively harm Ania by reinforcing comparison anxiety. Any IC-facing view must contextualize metrics by experience level, or it becomes a source of stress rather than growth.
@@ -226,7 +226,7 @@ Krzysztof is the **budget holder and organizational champion** (or blocker). He 
 | Persona | Role in Adoption | Frequency of Use | Research Confidence | Interview Priority |
 |---------|-----------------|-------------------|--------------------|--------------------|
 | **Marta** (EM) | Buyer + Daily User | Daily/Weekly | High — strong data coverage | **#1** — validate workflow and time estimates |
-| **Tomek** (Senior IC) | Beneficiary + Trust Gatekeeper | Weekly/Per-cycle | Medium — "silent contributor" pattern needs validation | **#2** — validate visibility pain and AI trust reaction |
+| **Marek** (Senior IC) | Beneficiary + Trust Gatekeeper | Weekly/Per-cycle | Medium — "silent contributor" pattern needs validation | **#2** — validate visibility pain and AI trust reaction |
 | **Ania** (Junior IC) | Indirect Beneficiary | Rare (via manager) | Low — mostly inferred | **#3** — validate comparison anxiety and feedback quality |
 | **Krzysztof** (VP) | Budget Holder | Monthly/Quarterly | Low — mostly inferred | **#4** — validate buying criteria and culture concerns |
 
@@ -235,7 +235,7 @@ Krzysztof is the **budget holder and organizational champion** (or blocker). He 
 ## Open Questions for Interview Validation
 
 1. **Is Marta real?** Do EMs actually follow a four-stage prep process, or is this a blog-idealized version of what happens? What does "I didn't have time to prepare" actually look like in practice?
-2. **Does Tomek exist on every team?** Is the "silent contributor" a universal pattern, or is it specific to certain team structures or engineering cultures?
+2. **Does Marek exist on every team?** Is the "silent contributor" a universal pattern, or is it specific to certain team structures or engineering cultures?
 3. **How much does Ania suffer?** Is comparison anxiety a real pain for junior engineers, or do they not think about metrics at all until they're more senior?
 4. **Will Krzysztof actually buy?** What's the real budget authority? Does the VP make tool decisions, or does the EM have a discretionary budget for productivity tools?
 5. **Is there a persona we're missing?** Tech leads, staff engineers, HR/People Ops? Who else touches the feedback process?
