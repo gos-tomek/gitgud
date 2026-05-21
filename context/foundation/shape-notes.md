@@ -1,5 +1,5 @@
 ---
-project: NaviTeam
+project: GitGud
 context_type: greenfield
 created: 2026-05-21
 updated: 2026-05-21
@@ -44,7 +44,7 @@ The gap the market hasn't solved is the semantic layer: not *how much* code ship
 **Tomek — Senior Software Engineer**
 6 years of experience. Works on a team of 8 in a mid-size product company. Reviews 3–5 PRs per week, often leaving detailed architectural comments. Mentors two junior engineers informally. Recently refactored a critical service — the kind of work that doesn't appear in ticket velocity. His last review was "meets expectations." He's thinking about interviewing elsewhere — not because of money, but because he doesn't feel seen.
 
-*The moment he reaches for NaviTeam:* Review cycle is approaching and he's staring at a blank self-evaluation form. He knows he did important work — unblocking, mentoring, refactoring — but can't reconstruct the specifics from memory. The data exists in GitHub and Jira. It's just never been assembled for him.
+*The moment he reaches for GitGud:* Review cycle is approaching and he's staring at a blank self-evaluation form. He knows he did important work — unblocking, mentoring, refactoring — but can't reconstruct the specifics from memory. The data exists in GitHub and Jira. It's just never been assembled for him.
 
 ## Access Control
 
@@ -141,7 +141,7 @@ Comment classification accuracy is visible to the IC: each classified comment sh
 
 ## Business Logic
 
-NaviTeam classifies each code review comment into a semantic category — mentoring, architecture, bug-catch, nitpick, unblocking, or question — so the reviewer's intent is visible, not just their volume.
+GitGud classifies each code review comment into a semantic category — mentoring, architecture, bug-catch, nitpick, unblocking, or question — so the reviewer's intent is visible, not just their volume.
 
 **Inputs the rule consumes**: the text of each review comment, the PR title and description (for context), and the comment's position in the diff (inline vs. summary). Attribution to the IC is via GitHub identity.
 
@@ -162,7 +162,7 @@ Acknowledged on 2026-05-21: 6-week MVP requires sustained dedication over after-
 
 ## Non-Goals
 
-- **No Jira integration in v1.** NaviTeam is GitHub-only. No ticket-to-PR cross-referencing, story-point data, or epic context. Jira is explicitly deferred to v2 after the GitHub profile is validated.
+- **No Jira integration in v1.** GitGud is GitHub-only. No ticket-to-PR cross-referencing, story-point data, or epic context. Jira is explicitly deferred to v2 after the GitHub profile is validated.
 - **No IC ranking or comparative views.** No team leaderboard, no percentile scores, no "top reviewer" views. The absence of comparison is a design constraint, not a UX omission — it is what makes the tool safe to use transparently.
 - **No real-time or webhook-based data sync.** Data is fetched on demand (pull-based). No live GitHub event streaming, no background push updates. The profile reflects data as of the last fetch.
 
