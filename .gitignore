@@ -6,6 +6,7 @@ CLAUDE.md
 # from 10x-astro-starter
 # build output
 dist/
+dist-dryrun/
 
 # generated types
 .astro/
