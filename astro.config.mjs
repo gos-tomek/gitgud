@@ -1,5 +1,5 @@
 // @ts-check
-import { defineConfig, envField } from "astro/config";
+import { defineConfig, envField, sessionDrivers } from "astro/config";
 
 import react from "@astrojs/react";
 import sitemap from "@astrojs/sitemap";
@@ -13,7 +13,10 @@ export default defineConfig({
   vite: {
     plugins: [tailwindcss()],
   },
-  adapter: cloudflare(),
+  adapter: cloudflare({ imageService: "passthrough" }),
+  // Disable Astro's built-in session (auth is handled by Supabase SSR cookies, not KV).
+  // Without this the Cloudflare adapter v13 auto-wires a SESSION KV binding that doesn't exist.
+  session: { driver: sessionDrivers.null() },
   env: {
     schema: {
       SUPABASE_URL: envField.string({ context: "server", access: "secret", optional: true }),
