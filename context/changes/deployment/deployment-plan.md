@@ -127,20 +127,23 @@ Fix applied to `astro.config.mjs`:
 - [x] **Supabase Auth dashboard → URL Configuration:** Site URL set to `https://gitgud.getgitgud.workers.dev`; Redirect URLs include `https://gitgud.getgitgud.workers.dev/auth/callback`.
 - [x] Sign up → confirmation email flow works end-to-end.
 - [x] `/dashboard` (protected) — signed-out access redirects to `/auth/signin` (HTTP 200 at redirect target confirmed).
-- [ ] Sign in → `/dashboard` loads authenticated.
-- [ ] Sign out clears the session cookie.
-- [ ] Watch `wrangler tail` for any `CPU exceeded` / `Exceeded resources` errors on SSR pages (free-tier **10ms CPU/request** hard cap — infrastructure.md risk). If a page hits it, the mitigation is the **$5/mo** plan (up to 5-min CPU), not a code change.
+- [x] Sign in → `/dashboard` loads authenticated.
+- [x] Sign out clears the session cookie.
+- [x] No `CPU exceeded` / `Exceeded resources` errors observed in `wrangler tail` during full auth loop.
 
 ## Phase 6 — Operational runbook (record, don't execute)
 
-- [ ] **Rollback:** `npx wrangler rollback [version-id]` reverts the Worker near-instantly. Caveat: rolls back **only the Worker** — Supabase schema is NOT included (none exists yet, but true once migrations land).
-- [ ] **Logs:** `wrangler tail` (live) + dashboard Workers Observability (historical; `observability.enabled` is on).
-- [ ] **Secret rotation:** re-run `wrangler secret put <NAME>` (human-only).
-- [ ] **Approval boundary:** `wrangler deploy`, secret rotation, and any future DB drop/alter are human-by-hand. An agent may run builds, dry-runs, and `wrangler tail` unattended (per CLAUDE.md production-access boundary).
+- [x] **Rollback:** `npx wrangler rollback [version-id]` reverts the Worker near-instantly. Caveat: rolls back **only the Worker** — Supabase schema is NOT included (none exists yet, but true once migrations land).
+- [x] **Logs:** `wrangler tail` (live) + dashboard Workers Observability (historical; `observability.enabled` is on).
+- [x] **Secret rotation:** re-run `wrangler secret put <NAME>` (human-only). Both `SUPABASE_URL` and `SUPABASE_KEY` are wired.
+- [x] **Approval boundary:** `wrangler deploy`, secret rotation, and any future DB drop/alter are human-by-hand. An agent may run builds, dry-runs, and `wrangler tail` unattended (per CLAUDE.md production-access boundary).
 
 ## Phase 7 — Persist the artifact
 
-- [ ] After approval + a successful deploy, record the live URL, version ID, and which secrets are wired in this file (and/or the CLAUDE.md-referenced `context/deployment/deploy-plan.md`). Never write to `context/archive/`.
+- [x] **Live URL:** `https://gitgud.getgitgud.workers.dev`
+- [x] **Final version ID:** `d42bc255-fb54-4b5d-9987-49bfde14bb6d`
+- [x] **Secrets wired:** `SUPABASE_URL` (`https://zirxmltlswpylbfqiqnz.supabase.co`), `SUPABASE_KEY` (anon/publishable key)
+- [x] **Rollback target:** previous version `e2388999-992a-43fc-8169-8bc03904adcf` (first deploy, pre-callback-fix)
 
 ---
 
