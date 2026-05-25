@@ -33,18 +33,18 @@ first, then hand the plan back for execution.
 
 ### A. Cloudflare account & CLI auth
 
-- [x] Sign up / log in at dash.cloudflare.com. On first use enable your `*.workers.dev` subdomain (Workers & Pages → pick a subdomain). Choose **Free** (fine for MVP) or **$5/mo Workers Paid** (only if an SSR page hits the 10ms CPU cap).
-- [x] Run `npx wrangler login` yourself — browser OAuth, the agent cannot complete it. Multiple Cloudflare accounts? select the right one during login (or set `CLOUDFLARE_ACCOUNT_ID`). Confirm with `npx wrangler whoami`.
-- [x] Confirm the Worker name `gitgud` (`wrangler.jsonc`) is what you want — it becomes the `gitgud.<subdomain>.workers.dev` URL.
-- [x] Node active locally — running v24.14.1 (`.nvmrc` pins 22.14.0; proceeding with 24.14.1, no wrangler issues observed).
+- [ ] Sign up / log in at dash.cloudflare.com. On first use enable your `*.workers.dev` subdomain (Workers & Pages → pick a subdomain). Choose **Free** (fine for MVP) or **$5/mo Workers Paid** (only if an SSR page hits the 10ms CPU cap).
+- [ ] Run `npx wrangler login` yourself — browser OAuth, the agent cannot complete it. Multiple Cloudflare accounts? select the right one during login (or set `CLOUDFLARE_ACCOUNT_ID`). Confirm with `npx wrangler whoami`.
+- [ ] Confirm the Worker name `gitgud` (`wrangler.jsonc`) is what you want — it becomes the `gitgud.<subdomain>.workers.dev` URL.
+- [ ] Node 22.14.0 active locally (`nvm use`, per `.nvmrc`).
 
 ### B. Database (Supabase) configuration
 
-- [x] Create a **hosted** project at supabase.com (pick a region near your users; save the DB password). The `.env` localhost values do NOT work in production.
-- [x] Project Settings → API: copy the **Project URL** and the **anon / publishable key** — these become the two Worker secrets set in Phase 2. Never put the **service_role** key in this app (it bypasses RLS).
-- [x] Authentication → Providers → enable **Email** (the app uses email/password signup). Decide whether "Confirm email" is on.
-- [x] If email confirmation is on, the built-in Supabase mailer is heavily rate-limited — for real signups configure **custom SMTP** (Authentication → Emails / SMTP Settings). Edge case: without it, confirmation emails silently throttle and signups appear to hang.
-- [x] **Schema:** none required for the web tier — the app uses Supabase's built-in auth tables only (`supabase/migrations/` doesn't exist yet; `src/types.ts` is empty). When the batch lands later, add migrations under `supabase/migrations/` (with RLS) and apply via `npx supabase link --project-ref <ref>` then `npx supabase db push`.
+- [ ] Create a **hosted** project at supabase.com (pick a region near your users; save the DB password). The `.env` localhost values do NOT work in production.
+- [ ] Project Settings → API: copy the **Project URL** and the **anon / publishable key** — these become the two Worker secrets set in Phase 2. Never put the **service_role** key in this app (it bypasses RLS).
+- [ ] Authentication → Providers → enable **Email** (the app uses email/password signup). Decide whether "Confirm email" is on.
+- [ ] If email confirmation is on, the built-in Supabase mailer is heavily rate-limited — for real signups configure **custom SMTP** (Authentication → Emails / SMTP Settings). Edge case: without it, confirmation emails silently throttle and signups appear to hang.
+- [ ] **Schema:** none required for the web tier — the app uses Supabase's built-in auth tables only (`supabase/migrations/` doesn't exist yet; `src/types.ts` is empty). When the batch lands later, add migrations under `supabase/migrations/` (with RLS) and apply via `npx supabase link --project-ref <ref>` then `npx supabase db push`.
 - [ ] (Set in Phase 5, flagged here) After deploy, set Authentication → URL Configuration → **Site URL** + **Redirect URLs** to the workers.dev URL, or signin/confirm-email redirects break.
 
 ### C. CI/CD secrets
@@ -56,17 +56,17 @@ first, then hand the plan back for execution.
 
 ## Phase 0 — Pre-flight (read-only, no mutations)
 
-- [x] Confirm `astro.config.mjs` still uses `cloudflare()` + `output: "server"` (it does).
-- [x] Confirm `wrangler.jsonc` `main` = `@astrojs/cloudflare/entrypoints/server` and assets dir `./dist`.
-- [x] Confirm `compatibility_flags` includes `nodejs_compat` (required for `@supabase/ssr` on workerd).
-- [x] Confirm Node version: running v24.14.1 (`.nvmrc` pins 22.14.0; no issues observed).
-- [x] Decide deploy identity: production Supabase Project URL and anon key confirmed ready.
+- [ ] Confirm `astro.config.mjs` still uses `cloudflare()` + `output: "server"` (it does).
+- [ ] Confirm `wrangler.jsonc` `main` = `@astrojs/cloudflare/entrypoints/server` and assets dir `./dist`.
+- [ ] Confirm `compatibility_flags` includes `nodejs_compat` (required for `@supabase/ssr` on workerd).
+- [ ] Confirm Node version matches `.nvmrc` (`22.14.0`): `node -v`.
+- [ ] Decide deploy identity: production needs a **hosted Supabase project**, not the localhost values in `.env`. Have its **Project URL** and **anon/publishable key** ready (NOT the service_role key — cookie SSR auth uses the anon key).
 
 ## Phase 1 — Cloudflare account + auth (manual gate)
 
-- [x] Ensure a Cloudflare account exists and `workers.dev` subdomain is enabled (first Worker deploy provisions `gitgud.<subdomain>.workers.dev`).
-- [x] Authenticate Wrangler interactively — `npx wrangler login` completed.
-- [x] Verify auth: `npx wrangler whoami` — logged in as sierpinski.tomasz@gmail.com, account ID `5d4e8b17dbb2ea81b1fdf20fb1be1f02`, workers (write) scope confirmed.
+- [ ] Ensure a Cloudflare account exists and `workers.dev` subdomain is enabled (first Worker deploy provisions `gitgud.<subdomain>.workers.dev`).
+- [ ] Authenticate Wrangler interactively — run yourself in this session: `! npx wrangler login` (opens a browser; the agent cannot complete OAuth).
+- [ ] Verify auth: `npx wrangler whoami` (should print account + email).
 
 ## Phase 2 — Production secrets wiring
 
@@ -74,34 +74,26 @@ The named imports from `astro:env/server` resolve at **runtime** from the Worker
 secrets (confirmed against the adapter docs — `astro:env` is compatible, no `getSecret()`
 rewrite needed). So the only wiring is uploading two Worker secrets.
 
-- [x] `npx wrangler secret put SUPABASE_URL` → uploaded.
-- [x] `npx wrangler secret put SUPABASE_KEY` → uploaded.
-- [x] Verify: `npx wrangler secret list` — both `SUPABASE_KEY` and `SUPABASE_URL` confirmed (type: secret_text).
+- [ ] `npx wrangler secret put SUPABASE_URL` → paste the production Supabase URL.
+- [ ] `npx wrangler secret put SUPABASE_KEY` → paste the production anon key.
+- [ ] Verify: `npx wrangler secret list` shows both names (values are write-only).
 - [ ] (Optional, local workerd fidelity) create `.dev.vars` (gitignored) with the same two keys so `npm run dev`/`wrangler dev` mirror prod. `.env` already serves Node dev.
 
 ## Phase 3 — Build + dry-run validation (catch config errors before mutating prod)
 
-**Build blocker resolved:** `@astrojs/cloudflare` v13 auto-enables a SESSION KV binding and
-an IMAGES binding that aren't in `wrangler.jsonc`, crashing the workerd prerender runner.
-Fix applied to `astro.config.mjs`:
-- `cloudflare({ imageService: "passthrough" })` — uses passthrough image service (no IMAGES binding).
-- `session: { driver: sessionDrivers.null() }` — prevents auto-KV wiring (auth handled by Supabase SSR cookies).
-
-- [x] `npm run build` — build succeeded (1m 57s). Sitemap warns about missing `site` URL (non-blocking, add later).
-- [x] `npx wrangler deploy --dry-run --outdir=dist-dryrun` — passed. Bundle: 1911 KiB / gzip 391 KiB (no size warning). Only `ASSETS` binding present. No `nodejs_compat` errors.
-- [x] No errors to resolve — proceeding to deploy.
+- [ ] `npm run build` — Astro SSR build emits the Worker + client assets into `./dist`.
+- [ ] `npx wrangler deploy --dry-run --outdir=dist-dryrun` — validates `wrangler.jsonc`, bindings, and bundle **without publishing**. Watch for script-size warnings (React 19 bundle — infrastructure.md risk).
+- [ ] Resolve any `nodejs_compat` / unresolved-import errors surfaced by the dry run before proceeding.
 
 ## Phase 4 — First production deploy (human-gated)
 
-- [x] **Deploy:** `npx wrangler deploy` — succeeded (19 sec upload + 6 sec trigger registration).
+- [ ] **Deploy:** `npx wrangler deploy`.
   - ⚠️ Use `wrangler deploy`, **never** `wrangler pages deploy` — the v13 adapter dropped Pages support (infrastructure.md risk row). This is a Workers deploy.
-- [x] **Live URL:** `https://gitgud.getgitgud.workers.dev`
-- [x] **Version ID:** `e2388999-992a-43fc-8169-8bc03904adcf`
-- Note: `workers_dev` and `preview_urls` were enabled by default (wrangler warnings). Add `workers_dev = true` / `preview_urls = false` to `wrangler.jsonc` explicitly when hardening.
+- [ ] Note the printed `https://gitgud.<subdomain>.workers.dev` URL and the version ID.
 
 ## Phase 5 — Post-deploy verification
 
-**Two bugs found and fixed during verification:**
+**Bug found and fixed during verification:**
 
 1. **Adapter auto-bindings (build blocker):** `@astrojs/cloudflare` v13 auto-enables a SESSION KV
    binding and an IMAGES binding when neither is in `wrangler.jsonc`, crashing the workerd
@@ -109,22 +101,9 @@ Fix applied to `astro.config.mjs`:
    - `cloudflare({ imageService: "passthrough" })` — no IMAGES binding required.
    - `session: { driver: sessionDrivers.null() }` — prevents auto-KV wiring (auth is Supabase cookie-based).
 
-2. **PKCE callback route missing (signup blocker):** `@supabase/ssr` uses PKCE flow by default.
-   `signUp` without `emailRedirectTo` causes GoTrue to reject the request with
-   "Invalid path specified in request URL". Fixed by:
-   - Adding `options: { emailRedirectTo: \`${origin}/auth/callback\` }` to the `signUp` call
-     (`src/pages/api/auth/signup.ts`).
-   - Creating `src/pages/auth/callback.ts` — GET route that calls
-     `supabase.auth.exchangeCodeForSession(code)` and redirects to `/dashboard`.
-   - Adding `https://gitgud.getgitgud.workers.dev/auth/callback` to Supabase Redirect URLs.
-
-3. **SUPABASE_URL trailing slash:** GoTrue returns "Invalid path specified in request URL" when
-   `SUPABASE_URL` has a trailing slash (produces `…co//auth/v1/signup`). Re-uploaded secret
-   without trailing slash: `https://zirxmltlswpylbfqiqnz.supabase.co`.
-
 - [x] `npx wrangler tail` — log streaming confirmed, no CPU-cap errors observed.
 - [x] Open the workers.dev URL: home page (`/`) renders (SSR) — HTTP 200 confirmed.
-- [x] **Supabase Auth dashboard → URL Configuration:** Site URL set to `https://gitgud.getgitgud.workers.dev`; Redirect URLs include `https://gitgud.getgitgud.workers.dev/auth/callback`.
+- [x] **Supabase Auth dashboard → URL Configuration:** Site URL set to `https://gitgud.getgitgud.workers.dev`; Redirect URLs include `https://gitgud.getgitgud.workers.dev`.
 - [x] Sign up → confirmation email flow works end-to-end.
 - [x] `/dashboard` (protected) — signed-out access redirects to `/auth/signin` (HTTP 200 at redirect target confirmed).
 - [x] Sign in → `/dashboard` loads authenticated.
@@ -143,7 +122,7 @@ Fix applied to `astro.config.mjs`:
 - [x] **Live URL:** `https://gitgud.getgitgud.workers.dev`
 - [x] **Final version ID:** `d42bc255-fb54-4b5d-9987-49bfde14bb6d`
 - [x] **Secrets wired:** `SUPABASE_URL` (`https://zirxmltlswpylbfqiqnz.supabase.co`), `SUPABASE_KEY` (anon/publishable key)
-- [x] **Rollback target:** previous version `e2388999-992a-43fc-8169-8bc03904adcf` (first deploy, pre-callback-fix)
+- [x] **Rollback target:** previous version `e2388999-992a-43fc-8169-8bc03904adcf` (first deploy)
 
 ---
 
