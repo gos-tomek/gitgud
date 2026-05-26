@@ -103,7 +103,7 @@ rewrite needed). So the only wiring is uploading two Worker secrets.
 
 - [x] `npx wrangler tail` — log streaming confirmed, no CPU-cap errors observed.
 - [x] Open the workers.dev URL: home page (`/`) renders (SSR) — HTTP 200 confirmed.
-- [x] **Supabase Auth dashboard → URL Configuration:** Site URL set to `https://gitgud.getgitgud.workers.dev`; Redirect URLs include `https://gitgud.getgitgud.workers.dev`.
+- [x] **Supabase Auth dashboard → URL Configuration:** Site URL set to `https://gitgud.graosens.workers.dev`; Redirect URLs include `https://gitgud.graosens.workers.dev`.
 - [x] Sign up → confirmation email flow works end-to-end.
 - [x] `/dashboard` (protected) — signed-out access redirects to `/auth/signin` (HTTP 200 at redirect target confirmed).
 - [x] Sign in → `/dashboard` loads authenticated.
@@ -119,7 +119,7 @@ rewrite needed). So the only wiring is uploading two Worker secrets.
 
 ## Phase 7 — Persist the artifact
 
-- [x] **Live URL:** `https://gitgud.getgitgud.workers.dev`
+- [x] **Live URL:** `https://gitgud.graosens.workers.dev`
 - [x] **Final version ID:** `d42bc255-fb54-4b5d-9987-49bfde14bb6d`
 - [x] **Secrets wired:** `SUPABASE_URL` (`https://zirxmltlswpylbfqiqnz.supabase.co`), `SUPABASE_KEY` (anon/publishable key)
 - [x] **Rollback target:** previous version `e2388999-992a-43fc-8169-8bc03904adcf` (first deploy)
