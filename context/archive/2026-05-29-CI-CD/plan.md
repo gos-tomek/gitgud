@@ -332,17 +332,17 @@ on the board + roadmap Done table, not here.
 - [x] Reconcile hosted Supabase migration history before first `db push` (see Out-of-scope/risks)
 
 ### Workstream 0/5 — Doc fixes
-- [x] `github-workflow.md`: `bodpl`→`gos-tomek`; add `done` status row (`fe521554`)
-- [x] `infrastructure.md`: Approval/Rollback/Out-of-Scope → PR-gated auto-deploy posture
-- [x] `tech-stack.md`: `cloudflare-pages` → Workers + `wrangler deploy`
-- [x] `deployment-plan.md`: append realized CI/CD automation
+- [x] `github-workflow.md`: `bodpl`→`gos-tomek`; add `done` status row (`fe521554`) — 03a6537
+- [x] `infrastructure.md`: Approval/Rollback/Out-of-Scope → PR-gated auto-deploy posture — 03a6537
+- [x] `tech-stack.md`: `cloudflare-pages` → Workers + `wrangler deploy` — 03a6537
+- [x] `deployment-plan.md`: append realized CI/CD automation — 03a6537
 
 ### Workstream 3 — CI/CD pipeline
-- [x] `ci.yml`: scope to PR + non-`main` pushes; stable `ci` check; add `wrangler deploy --dry-run`
-- [x] `deploy.yml` (new): build → `db push` → `wrangler-action` deploy → smoke check (with retry) → board update
+- [x] `ci.yml`: scope to PR + non-`main` pushes; stable `ci` check; add `wrangler deploy --dry-run` — 03a6537
+- [x] `deploy.yml` (new): build → `db push` → `wrangler-action` deploy → smoke check (with retry) → board update — 03a6537
 
 ### Workstream 2 — Force branching
-- [x] `CLAUDE.md`: top-of-file "Git workflow" section (branch-per-change, PR-only, agent never deploys, expand/contract)
+- [x] `CLAUDE.md`: top-of-file "Git workflow" section (branch-per-change, PR-only, agent never deploys, expand/contract) — 03a6537
 
 ### Workstream 1 — Branch protection
 - [x] Apply `main` ruleset via `gh api` — **SKIPPED**: GitHub Free plan blocks rulesets and branch-protection API on private repos (403). CLAUDE.md rule (WS2) is the only guard; revisit if repo goes public or plan upgrades.
