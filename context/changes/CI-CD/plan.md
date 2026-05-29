@@ -325,24 +325,24 @@ Manual execution (see **Execution model**). Tick items as they land; record the 
 on the board + roadmap Done table, not here.
 
 ### Workstream 4 — Credentials & secrets (human pre-work; gates first deploy)
-- [ ] Scoped `CLOUDFLARE_API_TOKEN` (Edit Workers, this account only) + `CLOUDFLARE_ACCOUNT_ID` repo secrets
-- [ ] Confirm `SUPABASE_URL` / `SUPABASE_KEY` repo secrets (anon key, prod values)
-- [ ] `SUPABASE_ACCESS_TOKEN` + `SUPABASE_DB_PASSWORD` + project ref (db push)
-- [ ] `PROJECT_TOKEN` PAT (`project` scope) for board writes
-- [ ] Reconcile hosted Supabase migration history before first `db push` (see Out-of-scope/risks)
+- [x] Scoped `CLOUDFLARE_API_TOKEN` (Edit Workers, this account only) + `CLOUDFLARE_ACCOUNT_ID` repo secrets
+- [x] Confirm `SUPABASE_URL` / `SUPABASE_KEY` repo secrets (anon key, prod values)
+- [x] `SUPABASE_ACCESS_TOKEN` + `SUPABASE_DB_PASSWORD` + project ref (db push)
+- [x] `PROJECT_TOKEN` PAT (`project` scope) for board writes
+- [x] Reconcile hosted Supabase migration history before first `db push` (see Out-of-scope/risks)
 
 ### Workstream 0/5 — Doc fixes
-- [x] `github-workflow.md`: `bodpl`→`gos-tomek`; add `done` status row (`fe521554`)
-- [x] `infrastructure.md`: Approval/Rollback/Out-of-Scope → PR-gated auto-deploy posture
-- [x] `tech-stack.md`: `cloudflare-pages` → Workers + `wrangler deploy`
-- [x] `deployment-plan.md`: append realized CI/CD automation
+- [x] `github-workflow.md`: `bodpl`→`gos-tomek`; add `done` status row (`fe521554`) — 03a6537
+- [x] `infrastructure.md`: Approval/Rollback/Out-of-Scope → PR-gated auto-deploy posture — 03a6537
+- [x] `tech-stack.md`: `cloudflare-pages` → Workers + `wrangler deploy` — 03a6537
+- [x] `deployment-plan.md`: append realized CI/CD automation — 03a6537
 
 ### Workstream 3 — CI/CD pipeline
-- [x] `ci.yml`: scope to PR + non-`main` pushes; stable `ci` check; add `wrangler deploy --dry-run`
-- [x] `deploy.yml` (new): build → `db push` → `wrangler-action` deploy → smoke check (with retry) → board update
+- [x] `ci.yml`: scope to PR + non-`main` pushes; stable `ci` check; add `wrangler deploy --dry-run` — 03a6537
+- [x] `deploy.yml` (new): build → `db push` → `wrangler-action` deploy → smoke check (with retry) → board update — 03a6537
 
 ### Workstream 2 — Force branching
-- [x] `CLAUDE.md`: top-of-file "Git workflow" section (branch-per-change, PR-only, agent never deploys, expand/contract)
+- [x] `CLAUDE.md`: top-of-file "Git workflow" section (branch-per-change, PR-only, agent never deploys, expand/contract) — 03a6537
 
 ### Workstream 1 — Branch protection
 - [ ] Apply `main` ruleset via `gh api` (PR + `ci` status check + block force-push/deletion) — after CI check is selectable
