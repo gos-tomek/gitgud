@@ -353,4 +353,4 @@ on the board + roadmap Done table, not here.
 - [x] Merge → `deploy.yml`: `db push` = "Remote database is up to date" (idempotent); `wrangler deploy` published (Version ID: `4b3eb92e-13f3-45ba-8a54-91257fdd685d`)
 - [x] Smoke check: HTTP 200 on attempt 1; negative scenarios (failing migration / failing smoke) not exercised but exit paths are in code
 - [ ] Linked issue → Status `done`, closed, version-ID/URL comment posted (verify on first feature PR with `Closes #N`)
-- [ ] `wrangler rollback <prev-version-id>` confirmed available (does not revert DB)
+- [x] `wrangler rollback <prev-version-id>` confirmed available (does not revert DB) — 5 versions visible in `wrangler deployments list`; previous version `e5d69db0` is the rollback target
