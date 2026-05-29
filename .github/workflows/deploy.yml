@@ -73,7 +73,7 @@ jobs:
 
           # Find the PR that merged this commit
           pr_number=$(gh api repos/gos-tomek/gitgud/commits/${commit_sha}/pulls 2>/dev/null \
-            | jq -r '.[0].number // empty' 2>/dev/null)
+            | jq -r '.[0].number // empty' 2>/dev/null) || true
 
           if [ -z "$pr_number" ]; then
             echo "No PR found for commit ${commit_sha}; skipping board update"
