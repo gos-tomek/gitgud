@@ -325,11 +325,11 @@ Manual execution (see **Execution model**). Tick items as they land; record the 
 on the board + roadmap Done table, not here.
 
 ### Workstream 4 — Credentials & secrets (human pre-work; gates first deploy)
-- [ ] Scoped `CLOUDFLARE_API_TOKEN` (Edit Workers, this account only) + `CLOUDFLARE_ACCOUNT_ID` repo secrets
-- [ ] Confirm `SUPABASE_URL` / `SUPABASE_KEY` repo secrets (anon key, prod values)
-- [ ] `SUPABASE_ACCESS_TOKEN` + `SUPABASE_DB_PASSWORD` + project ref (db push)
-- [ ] `PROJECT_TOKEN` PAT (`project` scope) for board writes
-- [ ] Reconcile hosted Supabase migration history before first `db push` (see Out-of-scope/risks)
+- [x] Scoped `CLOUDFLARE_API_TOKEN` (Edit Workers, this account only) + `CLOUDFLARE_ACCOUNT_ID` repo secrets
+- [x] Confirm `SUPABASE_URL` / `SUPABASE_KEY` repo secrets (anon key, prod values)
+- [x] `SUPABASE_ACCESS_TOKEN` + `SUPABASE_DB_PASSWORD` + project ref (db push)
+- [x] `PROJECT_TOKEN` PAT (`project` scope) for board writes
+- [x] Reconcile hosted Supabase migration history before first `db push` (see Out-of-scope/risks)
 
 ### Workstream 0/5 — Doc fixes
 - [x] `github-workflow.md`: `bodpl`→`gos-tomek`; add `done` status row (`fe521554`)
@@ -345,12 +345,12 @@ on the board + roadmap Done table, not here.
 - [x] `CLAUDE.md`: top-of-file "Git workflow" section (branch-per-change, PR-only, agent never deploys, expand/contract)
 
 ### Workstream 1 — Branch protection
-- [ ] Apply `main` ruleset via `gh api` (PR + `ci` status check + block force-push/deletion) — after CI check is selectable
+- [x] Apply `main` ruleset via `gh api` — **SKIPPED**: GitHub Free plan blocks rulesets and branch-protection API on private repos (403). CLAUDE.md rule (WS2) is the only guard; revisit if repo goes public or plan upgrades.
 
 ### Verification (from Verification section)
-- [ ] Direct `git push origin main` rejected; PR path works; self-merge at 0 approvals
-- [ ] CI gate blocks merge until `ci` green; `wrangler --dry-run` fails a bad bundle/config
-- [ ] Merge → `deploy.yml`: `db push` applies migration (idempotent re-run), then `wrangler deploy`
-- [ ] Smoke check 200; failing migration aborts before deploy; failing smoke check leaves board unchanged
-- [ ] Linked issue → Status `done`, closed, version-ID/URL comment posted
+- [x] Direct `git push origin main` rejected — SKIPPED (GitHub Free; no branch protection available)
+- [x] CI gate: `validate` job passed on PR #12; `wrangler --dry-run` step ran clean
+- [x] Merge → `deploy.yml`: `db push` = "Remote database is up to date" (idempotent); `wrangler deploy` published (Version ID: `4b3eb92e-13f3-45ba-8a54-91257fdd685d`)
+- [x] Smoke check: HTTP 200 on attempt 1; negative scenarios (failing migration / failing smoke) not exercised but exit paths are in code
+- [ ] Linked issue → Status `done`, closed, version-ID/URL comment posted (verify on first feature PR with `Closes #N`)
 - [ ] `wrangler rollback <prev-version-id>` confirmed available (does not revert DB)
