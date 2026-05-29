@@ -3,6 +3,10 @@ name: CI — Deploy
 on:
   push:
     branches: [main]
+    paths-ignore:
+      - "context/**"
+      - "docs/**"
+      - "**.md"
   workflow_dispatch:
 
 concurrency:
