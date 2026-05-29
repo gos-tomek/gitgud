@@ -13,9 +13,9 @@ jobs:
   deploy-production:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v6
         with:
           node-version: 24
           cache: npm
@@ -31,7 +31,7 @@ jobs:
           SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
 
       - name: Apply DB migrations
-        uses: supabase/setup-cli@v1
+        uses: supabase/setup-cli@v2
         with:
           version: latest
 
@@ -44,7 +44,7 @@ jobs:
 
       - name: Deploy to Cloudflare Workers
         id: deploy
-        uses: cloudflare/wrangler-action@v3
+        uses: cloudflare/wrangler-action@v4
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
