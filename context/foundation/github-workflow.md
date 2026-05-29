@@ -7,7 +7,7 @@ This document describes the conventions for creating and maintaining GitHub issu
 ## Project Board
 
 **Project:** GitGud MVP  
-**URL:** https://github.com/users/bodpl/projects/X (check `gh project list --owner bodpl` for exact URL)  
+**URL:** https://github.com/users/gos-tomek/projects/X (check `gh project list --owner gos-tomek` for exact URL)  
 **Project ID:** `PVT_kwHOERqfPM4BY-xN`
 
 ---
@@ -32,6 +32,7 @@ Every issue on the board has four custom fields. All must be filled when creatin
 | `blocked` | Waiting on a dependency or external decision |
 | `in-progress` | Actively being worked on |
 | `in-review` | PR open, awaiting review |
+| `done` | Deployed to production (option id `fe521554`) — set automatically by `deploy.yml` on successful deploy |
 | `rejected` | Descoped or cancelled |
 
 Default for new issues: **`proposed`**. Set to `ready` once all prerequisites in `roadmap.md` are done.
@@ -174,6 +175,6 @@ mutation {
 
 1. Get the roadmap item details from `context/foundation/roadmap.md`
 2. Create the issue with the correct title and body (use the template above)
-3. Add the issue to the project board: `gh project item-add <project-number> --owner bodpl --url <issue-url>`
+3. Add the issue to the project board: `gh project item-add <project-number> --owner gos-tomek --url <issue-url>`
 4. Set **Change ID**, **Roadmap ID**, **Status**, and **Stream** fields via GraphQL
 5. Set board position to match roadmap order via `updateProjectV2ItemPosition`

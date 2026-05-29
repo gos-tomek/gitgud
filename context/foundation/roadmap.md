@@ -29,10 +29,10 @@ Mentoring, code-review quality, and unblocking — the "glue work" that keeps en
 
 | ID    | Change ID                       | Outcome (user can …)                                              | Prerequisites      | PRD refs                                  | Status   |
 | ----- | ------------------------------- | ----------------------------------------------------------------- | ------------------ | ----------------------------------------- | -------- |
-| F-01  | access-control-and-membership   | (foundation) IC/EM roles, board + membership, RLS on present auth | —                  | Access Control, FR-014, FR-015, FR-016    | ready    |
+| F-01  | access-control-and-membership   | (foundation) IC/EM roles, board + membership, RLS on present auth | —                  | Access Control, FR-014, FR-015, FR-016    | done     |
 | F-02  | github-ingestion-access         | (foundation) authenticated read of an org's PRs/reviews/comments  | —                  | FR-002, FR-009, FR-010, FR-011, US-01     | ready    |
 | F-03  | classification-batch            | (foundation) daily durable batch classifies comments by intent    | F-01, F-02         | FR-012, Business Logic, NFR accuracy-floor | blocked  |
-| S-01  | board-create-with-em-role       | create a board and be explicitly assigned the EM role             | F-01               | FR-001, FR-016, FR-017                    | proposed |
+| S-01  | board-create-with-em-role       | create a board and be explicitly assigned the EM role             | F-01               | FR-001, FR-016, FR-017                    | ready    |
 | S-02  | link-board-to-github-org        | link a board to a GitHub org so its activity feeds the board      | S-01, F-02         | FR-002, US-01                             | proposed |
 | S-03  | invite-and-join-board           | invite ICs by email; IC joins via invite link                     | S-01, F-01         | FR-003, FR-004, FR-005, FR-014, FR-015    | proposed |
 | S-04  | profile-raw-github-metrics      | view a contribution profile: PRs, reviews, comment counts         | F-02, S-02, S-03   | FR-006, FR-008, FR-009, FR-010, FR-011, NFR progressive-load, NFR data-parity | proposed |
@@ -75,7 +75,7 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **Blockers:** —
 - **Unknowns:** —
 - **Risk:** Conventional Supabase schema + RLS work; low risk. Sequenced first because it has the highest fan-out of any ready item and the north star needs IC accounts to exist.
-- **Status:** ready
+- **Status:** done
 
 ### F-02: GitHub org ingestion access
 
@@ -118,7 +118,7 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **Blockers:** —
 - **Unknowns:** —
 - **Risk:** Role auto-assignment must be explicit (confirmation/label), not silent — surfaced by FR-016's resolution. Otherwise conventional CRUD.
-- **Status:** proposed
+- **Status:** ready
 
 ### S-02: EM links a board to a GitHub org
 
@@ -231,4 +231,6 @@ Foundations below assume these are present and do NOT re-scaffold them.
 
 ## Done
 
-(Empty on first generation. `/10x-archive` appends entries here when a change whose Change ID matches a roadmap item is archived.)
+| ID   | Change ID                     | Deployed                  | Version ID                           |
+| ---- | ----------------------------- | ------------------------- | ------------------------------------ |
+| F-01 | access-control-and-membership | 2026-05-29 (prod)         | 375fb8d4-8d75-4aa0-91f3-7ec6ab4b11e9 |

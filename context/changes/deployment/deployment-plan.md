@@ -120,9 +120,9 @@ rewrite needed). So the only wiring is uploading two Worker secrets.
 ## Phase 7 — Persist the artifact
 
 - [x] **Live URL:** `https://gitgud.graosens.workers.dev`
-- [x] **Final version ID:** `d42bc255-fb54-4b5d-9987-49bfde14bb6d`
+- [x] **Final version ID:** `375fb8d4-8d75-4aa0-91f3-7ec6ab4b11e9` (F-01 deploy, 2026-05-29)
 - [x] **Secrets wired:** `SUPABASE_URL` (`https://zirxmltlswpylbfqiqnz.supabase.co`), `SUPABASE_KEY` (anon/publishable key)
-- [x] **Rollback target:** previous version `e2388999-992a-43fc-8169-8bc03904adcf` (first deploy)
+- [x] **Rollback target:** previous version `d42bc255-fb54-4b5d-9987-49bfde14bb6d` (pre-F-01 deploy)
 
 ---
 
@@ -177,3 +177,22 @@ loop (signup → email confirm → signin → `/dashboard` → signout) works ag
 Supabase project, `wrangler tail` shows no CPU-cap errors, and `wrangler rollback` is
 confirmed available. The pre-publish `wrangler deploy --dry-run` is the safety gate that
 catches config/bundle errors before anything touches production.
+
+---
+
+## Realized: CI/CD Automation (supersedes "Deferred" note above)
+
+The "automate later" deferral above has been realized. As of `context/changes/CI-CD/`:
+
+- **Branch protection:** `main` is protected by a GitHub ruleset — changes only land via merged PR; direct pushes are rejected.
+- **CI gate (`ci.yml`):** runs lint + build + `wrangler deploy --dry-run` on every PR to `main` and on non-`main` branch pushes. A bad config or bundle fails the PR before it can merge.
+- **Auto-deploy (`deploy.yml`):** on merge to `main`, CI automatically runs:
+  1. `npm run build` (production build)
+  2. `supabase db push` (applies pending migrations idempotently — before the Worker deploy, so schema is always ahead of code)
+  3. `wrangler deploy` via `cloudflare/wrangler-action@v3` (never `wrangler pages deploy`)
+  4. Post-deploy smoke check (`curl` with retry) against `https://gitgud.graosens.workers.dev/`
+  5. Board update: linked issue → Status `done` (`fe521554`), closed, version-ID comment posted (uses `PROJECT_TOKEN` PAT with `project` scope)
+- **Migration discipline:** DB migrations must be **expand/contract** (backward-compatible). Additive changes ship freely; destructive `DROP`/`ALTER` must lag one release behind the code that stops using the column — `wrangler rollback` reverts only the Worker, not the DB.
+- **Runtime secrets** (`SUPABASE_URL`, `SUPABASE_KEY`) persist across `wrangler deploy` and are managed by `wrangler secret put` (human-only rotation). They are **not** touched by `deploy.yml`.
+
+See `context/changes/CI-CD/plan.md` for the full design, workstream breakdown, and credential requirements.
