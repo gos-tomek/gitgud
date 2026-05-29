@@ -6,7 +6,7 @@ import { getUserBoards } from "@/lib/services/boards";
 const { user } = Astro.locals;
 
 const supabase = createClient(Astro.request.headers, Astro.cookies);
-const boards = supabase ? await getUserBoards(supabase) : [];
+const boards = supabase && user ? await getUserBoards(supabase, user.id).catch(() => []) : [];
 ---
 
 <Layout title="Dashboard">

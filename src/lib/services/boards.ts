@@ -23,31 +23,23 @@ function toUserBoard(row: BoardRow, userId: string): UserBoard {
   };
 }
 
-export async function getUserBoards(supabase: SupabaseClient): Promise<UserBoard[]> {
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) return [];
-
+export async function getUserBoards(supabase: SupabaseClient, userId: string): Promise<UserBoard[]> {
   const { data, error } = await supabase
     .from("boards")
     .select("id,name,owner_user_id,created_at,updated_at,board_members!inner(user_id)")
-    .eq("board_members.user_id", user.id)
+    .eq("board_members.user_id", userId)
     .order("created_at", { ascending: false });
 
   if (error) throw error;
 
-  return (data as BoardRow[]).map((row) => toUserBoard(row, user.id));
+  return (data as BoardRow[]).map((row) => toUserBoard(row, userId));
 }
 
-export async function getBoardWithRole(supabase: SupabaseClient, boardId: string): Promise<UserBoard | null> {
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) return null;
-
+export async function getBoardWithRole(
+  supabase: SupabaseClient,
+  boardId: string,
+  userId: string,
+): Promise<UserBoard | null> {
   const { data, error } = await supabase
     .from("boards")
     .select("id,name,owner_user_id,created_at,updated_at")
@@ -57,5 +49,5 @@ export async function getBoardWithRole(supabase: SupabaseClient, boardId: string
   if (error) throw error;
   if (!data) return null;
 
-  return toUserBoard(data, user.id);
+  return toUserBoard(data, userId);
 }
