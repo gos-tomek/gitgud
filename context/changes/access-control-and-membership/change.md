@@ -1,7 +1,7 @@
 ---
 change_id: access-control-and-membership
 title: IC/EM roles, board and membership entities, and per-operation RLS
-status: implementing
+status: implemented
 created: 2026-05-29
 updated: 2026-05-29
 archived_at: null

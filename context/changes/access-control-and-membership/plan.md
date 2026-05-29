@@ -283,13 +283,13 @@ If a future slice adds high-cardinality lookups (e.g., per-comment classificatio
 
 #### Automated
 
-- [x] 2.1 `npx supabase db reset` re-applies migration + seed cleanly
-- [x] 2.2 `npm run lint` passes
-- [x] 2.3 `npm run build` passes
+- [x] 2.1 `npx supabase db reset` re-applies migration + seed cleanly — ec36d52
+- [x] 2.2 `npm run lint` passes — ec36d52
+- [x] 2.3 `npm run build` passes — ec36d52
 
 #### Manual
 
-- [x] 2.4 `em-1@example.test` dashboard shows one board with `EM` badge
-- [x] 2.5 `ic-1@example.test` dashboard shows both boards with `IC` badge
-- [x] 2.6 SQL Editor walk-through snippets return expected rows
-- [x] 2.7 Newly signed-up user sees empty-state on the dashboard
+- [x] 2.4 `em-1@example.test` dashboard shows one board with `EM` badge — ec36d52
+- [x] 2.5 `ic-1@example.test` dashboard shows both boards with `IC` badge — ec36d52
+- [x] 2.6 SQL Editor walk-through snippets return expected rows — ec36d52
+- [x] 2.7 Newly signed-up user sees empty-state on the dashboard — ec36d52
