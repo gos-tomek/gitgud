@@ -1,6 +1,6 @@
 10x-*
 .10x-*
-CLAUDE.md
+.claude/prompts
 .vscode
 
 # from 10x-astro-starter
