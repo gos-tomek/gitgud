@@ -1,47 +1,45 @@
-# 10x Astro Starter
+# GitGud
 
-![](./public/template.png)
+GitGud makes invisible engineering contributions visible. Code reviews, mentoring, and unblocking work are the highest-leverage activities on any team — and the ones most likely to disappear from performance data. GitGud pulls that signal out of GitHub: it classifies each review comment by semantic intent (mentoring, architecture, bug-catch, nitpick, unblocking, question) so the reviewer's actual contribution is legible, not just their volume.
 
-A modern, opinionated starter template for building fast, accessible web applications.
+Built for engineering managers who want to retain the engineers doing the most critical but least visible work, and for the ICs who want their contribution profile to reflect reality at review time.
 
 ## Tech Stack
 
-- [Astro](https://astro.build/) v6 - Modern web framework with server-first rendering
-- [React](https://react.dev/) v19 - UI library for interactive components
-- [TypeScript](https://www.typescriptlang.org/) v5 - Type-safe JavaScript
-- [Tailwind CSS](https://tailwindcss.com/) v4 - Utility-first CSS framework
-- [Supabase](https://supabase.com/) - Authentication and backend-as-a-service
-- [Cloudflare Workers](https://workers.cloudflare.com/) - Edge deployment runtime
+- [Astro](https://astro.build/) v6 — SSR framework (all routes server-rendered)
+- [React](https://react.dev/) v19 — interactive islands
+- [TypeScript](https://www.typescriptlang.org/) v5
+- [Tailwind CSS](https://tailwindcss.com/) v4 + [shadcn/ui](https://ui.shadcn.com/)
+- [Supabase](https://supabase.com/) — auth (email/password) + PostgreSQL
+- [Cloudflare Workers](https://workers.cloudflare.com/) — edge runtime (`wrangler deploy`)
 
 ## Prerequisites
 
-- Node.js v22.14.0 (as specified in `.nvmrc`)
-- npm (comes with Node.js)
+- Node.js v22.14.0 (see `.nvmrc`)
+- npm
 
 ## Getting Started
 
-1. Clone the repository:
-
-```bash
-git clone https://github.com/przeprogramowani/10x-astro-starter.git
-cd 10x-astro-starter
-```
-
-2. Install dependencies:
+1. Install dependencies:
 
 ```bash
 npm install
 ```
 
-3. Set up Supabase and configure environment variables — see [Supabase Configuration](#supabase-configuration) below.
+2. Set up environment variables. Create `.env` (Node dev) and `.dev.vars` (Cloudflare workerd dev):
 
-4. Create a `.dev.vars` file for local Cloudflare dev secrets:
-
-```bash
-cp .env.example .dev.vars
+```
+SUPABASE_URL=https://<project-ref>.supabase.co
+SUPABASE_KEY=<anon key>
 ```
 
-5. Run the development server:
+Ask the team for production values. For local dev, spin up a local Supabase stack:
+
+```bash
+npx supabase start   # requires Docker
+```
+
+3. Run the development server (Cloudflare workerd runtime):
 
 ```bash
 npm run dev
@@ -49,126 +47,79 @@ npm run dev
 
 ## Available Scripts
 
-- `npm run dev` - Start development server (Cloudflare workerd runtime)
-- `npm run build` - Build for production
-- `npm run preview` - Preview production build
-- `npm run lint` - Run ESLint with type-checked rules
-- `npm run lint:fix` - Auto-fix ESLint issues
-- `npm run format` - Run Prettier
+- `npm run dev` — start dev server (Cloudflare workerd runtime)
+- `npm run build` — production build
+- `npm run preview` — preview production build
+- `npm run lint` — ESLint with type-checked rules
+- `npm run lint:fix` — auto-fix ESLint issues
+- `npm run format` — Prettier
 
 ## Project Structure
 
-```md
-.
-├── src/
-│ ├── layouts/ # Astro layouts
-│ ├── pages/ # Astro pages
-│ │ └── api/ # API endpoints
-│ ├── components/ # UI components (Astro & React)
-│ └── assets/ # Static assets
-├── public/ # Public assets
-├── wrangler.jsonc # Cloudflare Workers config
+```
+src/
+├── pages/          # Astro pages + API routes (src/pages/api/)
+├── components/     # UI components (Astro + React islands, shadcn in components/ui/)
+├── layouts/        # Astro layouts
+├── lib/            # Supabase client, helpers, services
+├── hooks/          # React hooks
+└── types.ts        # Shared entity/DTO types
 ```
 
-## Supabase Configuration
+## Auth Routes
 
-This project uses [Supabase](https://supabase.com/) for authentication. Environment variables are declared via Astro's `astro:env` schema and are treated as **server-only secrets** — they are never exposed to the client.
+| Route | Description |
+|---|---|
+| `/auth/signin` | Email/password sign-in |
+| `/auth/signup` | Email/password sign-up |
+| `/auth/confirm-email` | Post-signup confirmation page |
+| `/dashboard` | Protected — redirects to `/auth/signin` if unauthenticated |
 
-### First-time setup (local, no cloud project needed)
+Route protection is in `src/middleware.ts`. Add paths to `PROTECTED_ROUTES` to require auth.
 
-Requires [Docker](https://www.docker.com/) and ~7 GB RAM.
+## CI / Deployment
 
-1. Create your `.env` file:
+Changes to `main` are delivery-gated — direct pushes are rejected by branch protection.
 
-```bash
-cp .env.example .env
-```
+**Branch workflow:** `change/<id>` branch → PR → CI gate → merge → auto-deploy.
 
-2. Initialize the local Supabase project (creates a `supabase/` config folder):
+**CI (`ci.yml`)** runs on every PR to `main` and on non-`main` branch pushes:
+- lint + build
+- `wrangler deploy --dry-run` — validates config and bundle without publishing
 
-```bash
-npx supabase init
-```
+**Deploy (`deploy.yml`)** runs automatically on merge to `main`:
+1. Production build
+2. `supabase db push` — applies pending migrations (idempotent, runs before deploy)
+3. `wrangler deploy` — publishes to Cloudflare Workers
+4. Smoke check — `curl` with retry against the live URL
+5. Project board issue → Status `done`, closed, version-ID comment posted
 
-3. Start the local stack (downloads Docker images on first run):
+Required repository secrets: `SUPABASE_URL`, `SUPABASE_KEY`, `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`, `SUPABASE_ACCESS_TOKEN`, `SUPABASE_DB_PASSWORD`, `SUPABASE_PROJECT_REF`, `PROJECT_TOKEN`.
 
-```bash
-npx supabase start
-```
+**Live URL:** `https://gitgud.graosens.workers.dev`
 
-4. Copy the credentials printed by the CLI into your `.env` and `.dev.vars`:
+## Project Context
 
-```
-SUPABASE_URL=http://127.0.0.1:54321
-SUPABASE_KEY=<anon key from CLI output>
-```
-
-5. To stop the stack when done:
-
-```bash
-npx supabase stop
-```
-
-The local Studio UI is available at `http://localhost:54323`.
-
-No database tables or migrations are required — this project uses Supabase Auth's built-in `auth.users` table only.
-
-### Using a cloud Supabase project instead
-
-If you prefer to use a hosted Supabase project, add these variables to your `.env` and `.dev.vars` files:
-
-| Variable       | Description                                                |
-| -------------- | ---------------------------------------------------------- |
-| `SUPABASE_URL` | Project URL from Supabase dashboard → Settings → API       |
-| `SUPABASE_KEY` | `anon` public key from Supabase dashboard → Settings → API |
+The `context/` directory is the source of truth for product decisions, architecture, and implementation state. It's written for both humans and AI agents working on the codebase.
 
 ```
-SUPABASE_URL=https://<project-ref>.supabase.co
-SUPABASE_KEY=<anon-key>
+context/
+├── foundation/         # Stable project docs (edit-in-place, never archived)
+│   ├── roadmap.md      # ← start here: all roadmap items, status, dependencies
+│   ├── prd.md          # Product requirements and user stories
+│   ├── infrastructure.md  # Platform decisions (Cloudflare Workers, Supabase)
+│   ├── tech-stack.md   # Stack choices and rationale
+│   └── github-workflow.md # Issue/board conventions, GraphQL IDs
+├── changes/            # One folder per active roadmap item being implemented
+│   └── <change-id>/
+│       ├── change.md   # Identity and status (planned → implementing → implemented)
+│       └── plan.md     # Implementation contract with phases and progress
+└── archive/            # Closed changes (immutable — do not edit)
 ```
 
-### Email confirmation in local development
+**Current implementation state** is in `context/foundation/roadmap.md` — the "At a glance" table shows every roadmap item with its status (`done`, `ready`, `in-progress`, `blocked`, `proposed`). The "Done" table at the bottom records deployed versions.
 
-By default Supabase requires email confirmation before a user can sign in. To skip this during local development:
-
-1. Open the Supabase dashboard for your project
-2. Go to **Authentication → Email → Confirm email**
-3. Toggle it **off**
-
-Users can then sign in immediately after sign-up without clicking a confirmation link.
-
-### Auth routes
-
-| Route                 | Description                                                             |
-| --------------------- | ----------------------------------------------------------------------- |
-| `/auth/signin`        | Email/password sign-in form                                             |
-| `/auth/signup`        | Email/password sign-up form                                             |
-| `/auth/confirm-email` | Post-signup "check your inbox" page                                     |
-| `/dashboard`          | Example protected page (redirects to `/auth/signin` if unauthenticated) |
-
-Route protection is handled in `src/middleware.ts`. Add paths to the `PROTECTED_ROUTES` array there to require authentication.
-
-## Deployment
-
-This project deploys to [Cloudflare Workers](https://workers.cloudflare.com/).
-
-1. Build the project:
-
-```bash
-npm run build
-```
-
-2. Deploy with Wrangler:
-
-```bash
-npx wrangler deploy
-```
-
-Set `SUPABASE_URL` and `SUPABASE_KEY` as secrets in your Cloudflare dashboard or via `npx wrangler secret put`.
-
-## CI
-
-GitHub Actions runs lint + build on every push and PR to `master`. Configure `SUPABASE_URL` and `SUPABASE_KEY` as repository secrets in GitHub for the build step.
+Active changes live in `context/changes/`. Each `change.md` has a `status:` field that tracks the lifecycle from `planned` through `implementing` to `implemented`.
 
 ## License
 

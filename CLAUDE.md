@@ -2,6 +2,13 @@
 
 This file provides guidance to AI Agent when working with code in this repository.
 
+## Git workflow
+
+- **Never commit or push directly to `main`.** Before the first change of any unit of work, create a branch named `change/<change-id>` (matching the `context/changes/<change-id>` identity).
+- Work on the branch → `git push origin change/<change-id>` → open a PR with `gh pr create`, body containing `Closes #<issue>`.
+- `main` only advances via merged PR. The agent must never run `wrangler deploy` or `supabase db push` against production — `deploy.yml` owns both.
+- **Migrations must be backward-compatible (expand/contract):** additive changes (`ADD COLUMN`, new table) ship freely. Destructive `DROP`/`ALTER` must lag one release behind the code that stops using the column, because `wrangler rollback` reverts only the Worker — the DB schema does not roll back with it.
+
 ## Commands
 
 - `npm run dev` — start dev server (Cloudflare workerd runtime)

@@ -1,0 +1,158 @@
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-main
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - run: npx astro sync
+
+      - name: Build
+        run: npm run build
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+
+      - name: Apply DB migrations
+        uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Link Supabase project and push migrations
+        run: |
+          supabase link --project-ref ${{ secrets.SUPABASE_PROJECT_REF }} --password ${{ secrets.SUPABASE_DB_PASSWORD }}
+          supabase db push
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+
+      - name: Deploy to Cloudflare Workers
+        id: deploy
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: deploy
+
+      - name: Post-deploy smoke check
+        run: |
+          url="https://gitgud.graosens.workers.dev/"
+          for i in 1 2 3 4 5; do
+            status=$(curl -o /dev/null -s -w "%{http_code}" "$url")
+            if [ "$status" = "200" ]; then
+              echo "Smoke check passed (attempt $i): HTTP $status"
+              exit 0
+            fi
+            echo "Attempt $i: HTTP $status — retrying in 5s"
+            sleep 5
+          done
+          echo "Smoke check failed after 5 attempts"
+          exit 1
+
+      - name: Update project board issue to done
+        env:
+          GH_TOKEN: ${{ secrets.PROJECT_TOKEN }}
+        run: |
+          commit_sha="${{ github.sha }}"
+
+          # Find the PR that merged this commit
+          pr_number=$(gh api repos/gos-tomek/gitgud/commits/${commit_sha}/pulls \
+            --jq '.[0].number' 2>/dev/null || echo "")
+
+          if [ -z "$pr_number" ]; then
+            echo "No PR found for commit ${commit_sha}; skipping board update"
+            exit 0
+          fi
+
+          echo "PR: #${pr_number}"
+
+          # Find the issue linked via 'Closes #N' in the PR
+          issue_number=$(gh api graphql -f query='
+            query($owner: String!, $repo: String!, $pr: Int!) {
+              repository(owner: $owner, name: $repo) {
+                pullRequest(number: $pr) {
+                  closingIssuesReferences(first: 1) {
+                    nodes { number }
+                  }
+                }
+              }
+            }' -f owner=gos-tomek -f repo=gitgud -F pr=${pr_number} \
+            --jq '.data.repository.pullRequest.closingIssuesReferences.nodes[0].number' 2>/dev/null || echo "")
+
+          if [ -z "$issue_number" ]; then
+            echo "No linked issue found for PR #${pr_number}; skipping board update"
+            exit 0
+          fi
+
+          echo "Linked issue: #${issue_number}"
+
+          # Get the project item ID for this issue
+          item_id=$(gh api graphql -f query='
+            query($project: ID!) {
+              node(id: $project) {
+                ... on ProjectV2 {
+                  items(first: 50) {
+                    nodes {
+                      id
+                      content { ... on Issue { number } }
+                    }
+                  }
+                }
+              }
+            }' -f project=PVT_kwHOERqfPM4BY-xN \
+            --jq ".data.node.items.nodes[] | select(.content.number == ${issue_number}) | .id" 2>/dev/null || echo "")
+
+          if [ -z "$item_id" ]; then
+            echo "Issue #${issue_number} not found on project board; skipping"
+            exit 0
+          fi
+
+          echo "Board item: ${item_id}"
+
+          # Set Status → done (option id fe521554)
+          gh api graphql -f query='
+            mutation($project: ID!, $item: ID!, $field: ID!, $option: String!) {
+              updateProjectV2ItemFieldValue(input: {
+                projectId: $project
+                itemId: $item
+                fieldId: $field
+                value: { singleSelectOptionId: $option }
+              }) { clientMutationId }
+            }' \
+            -f project=PVT_kwHOERqfPM4BY-xN \
+            -f item="${item_id}" \
+            -f field=PVTSSF_lAHOERqfPM4BY-xNzhUAs5E \
+            -f option=fe521554
+
+          echo "Status set to done"
+
+          # Post deploy comment on the issue
+          deploy_output="${{ steps.deploy.outputs.command-output }}"
+          version_id=$(echo "$deploy_output" | grep -oP 'Version ID: \K[a-f0-9-]+' || echo "see Cloudflare dashboard")
+          gh issue comment ${issue_number} \
+            --repo gos-tomek/gitgud \
+            --body "**Deployed to production** :rocket:
+          - **Version ID:** \`${version_id}\`
+          - **URL:** https://gitgud.graosens.workers.dev/
+          - **Date:** $(date -u '+%Y-%m-%d %H:%M UTC')"
+
+          # Close the issue (idempotent if already closed by 'Closes #N' on merge)
+          gh issue close ${issue_number} --repo gos-tomek/gitgud || true
+
+          echo "Board update complete"

@@ -79,8 +79,8 @@ The web app shipped fine — SSR pages, Supabase auth, and shadcn all worked on 
 
 - **Preview deploys**: Connect the repo to **Workers Builds** for per-branch/PR preview deployments, or upload a non-production version with `wrangler versions upload` (returns a preview URL). Production publish is `wrangler deploy`. Preview URLs are public by default — gate them with **Cloudflare Access** if previews shouldn't be open.
 - **Secrets**: `SUPABASE_URL` and `SUPABASE_KEY` live in **Workers Secrets** (`wrangler secret put <NAME>`, encrypted at rest) for runtime, and as **GitHub Actions repository secrets** for the CI build step. Read in code via `astro:env/server`. Rotation = re-run `wrangler secret put`. Never commit them; `.dev.vars` (gitignored) holds them for local dev.
-- **Rollback**: `wrangler rollback [version-id]` reverts to a prior deployed version near-instantly. Caveat: this rolls back **only the Worker** — Supabase schema migrations do *not* roll back with it, so coordinate DB migrations carefully.
-- **Approval**: Production publish (`wrangler deploy`), primary-secret rotation, and any Supabase database drop/alter are **human-only** by hand. An agent may run builds, `wrangler tail` logs, and preview/version uploads unattended.
+- **Rollback**: `wrangler rollback [version-id]` reverts to a prior deployed version near-instantly. Caveat: this rolls back **only the Worker** — Supabase schema migrations do *not* roll back with it. The **expand/contract discipline** (additive changes ship freely; destructive `DROP`/`ALTER` must lag one release behind the code that stops using the column) is what keeps a Worker rollback safe. See `CLAUDE.md` Git workflow section.
+- **Approval**: Production publish (`wrangler deploy`) and Supabase `db push` are now **PR-gated auto-deploy** — the PR review is the human gate. `deploy.yml` runs both automatically on merge to `main`. Primary-secret rotation remains **human-only** (`wrangler secret put`). An agent may run builds, `wrangler tail` logs, and preview/version uploads unattended. See `context/changes/CI-CD/` for the full CI/CD design.
 - **Logs**: `wrangler tail` streams live runtime logs (web requests, Cron runs, Workflow steps). Workers Observability/Logs in the dashboard and the Workflows instances view give historical/structured access; the Cloudflare MCP server exposes these as structured tools when CLI parsing gets tedious.
 
 ## Risk Register
@@ -112,5 +112,5 @@ These commands are validated against the stack's pinned versions (`@astrojs/clou
 
 The following were not evaluated in this research:
 - Docker image configuration
-- CI/CD pipeline setup (a GitHub Actions workflow already exists; pipeline design was not part of this decision)
+- CI/CD pipeline setup — now implemented in `context/changes/CI-CD/` (branch protection, automated deploy-on-merge, board update)
 - Production-scale architecture (multi-region, HA, DR)
