@@ -16,6 +16,7 @@ export default defineConfig({
   adapter: cloudflare({ imageService: "passthrough" }),
   // Disable Astro's built-in session (auth is handled by Supabase SSR cookies, not KV).
   // Without this the Cloudflare adapter v13 auto-wires a SESSION KV binding that doesn't exist.
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call
   session: { driver: sessionDrivers.null() },
   env: {
     schema: {
