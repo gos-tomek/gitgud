@@ -274,22 +274,22 @@ If a future slice adds high-cardinality lookups (e.g., per-comment classificatio
 
 #### Automated
 
-- [x] 1.1 Migration applies cleanly: `npx supabase db reset`
-- [x] 1.2 RLS smoke check passes: self-contained rolled-back psql script asserts member sees 1 board, outsider sees 0, no recursion error
-- [x] 1.3 Linting passes: `npm run lint`
-- [x] 1.4 Build passes: `npm run build`
+- [x] 1.1 Migration applies cleanly: `npx supabase db reset` — 62baceb
+- [x] 1.2 RLS smoke check passes: self-contained rolled-back psql script asserts member sees 1 board, outsider sees 0, no recursion error — 62baceb
+- [x] 1.3 Linting passes: `npm run lint` — 62baceb
+- [x] 1.4 Build passes: `npm run build` — 62baceb
 
 ### Phase 2: Verification surface
 
 #### Automated
 
-- [ ] 2.1 `npx supabase db reset` re-applies migration + seed cleanly
-- [ ] 2.2 `npm run lint` passes
-- [ ] 2.3 `npm run build` passes
+- [x] 2.1 `npx supabase db reset` re-applies migration + seed cleanly
+- [x] 2.2 `npm run lint` passes
+- [x] 2.3 `npm run build` passes
 
 #### Manual
 
-- [ ] 2.4 `em-1@example.test` dashboard shows one board with `EM` badge
-- [ ] 2.5 `ic-1@example.test` dashboard shows both boards with `IC` badge
-- [ ] 2.6 SQL Editor walk-through snippets return expected rows
-- [ ] 2.7 Newly signed-up user sees empty-state on the dashboard
+- [x] 2.4 `em-1@example.test` dashboard shows one board with `EM` badge
+- [x] 2.5 `ic-1@example.test` dashboard shows both boards with `IC` badge
+- [x] 2.6 SQL Editor walk-through snippets return expected rows
+- [x] 2.7 Newly signed-up user sees empty-state on the dashboard

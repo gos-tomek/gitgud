@@ -1,7 +1,12 @@
 ---
 import Layout from "@/layouts/Layout.astro";
+import { createClient } from "@/lib/supabase";
+import { getUserBoards } from "@/lib/services/boards";
 
 const { user } = Astro.locals;
+
+const supabase = createClient(Astro.request.headers, Astro.cookies);
+const boards = supabase ? await getUserBoards(supabase) : [];
 ---
 
 <Layout title="Dashboard">
@@ -14,6 +19,29 @@ const { user } = Astro.locals;
         Welcome, <span class="font-semibold text-white">{user?.email}</span>
       </p>
       <p class="mt-2 text-sm text-blue-100/50">This page is only for authenticated users.</p>
+
+      <div class="mt-6 text-left">
+        <h2 class="mb-3 text-lg font-semibold text-blue-100">Your boards</h2>
+        {
+          boards.length === 0 ? (
+            <p class="text-sm text-blue-100/50 italic">You don't belong to any boards yet.</p>
+          ) : (
+            <ul class="space-y-2">
+              {boards.map((board) => (
+                <li class="flex items-center justify-between rounded-lg border border-white/10 bg-white/5 px-4 py-2">
+                  <span class="text-sm text-white">{board.name}</span>
+                  <span
+                    class:list={`rounded px-2 py-0.5 text-xs font-semibold ${board.role === "supervisor" ? "bg-blue-500/30 text-blue-200" : "bg-purple-500/30 text-purple-200"}`}
+                  >
+                    {board.role === "supervisor" ? "Supervisor" : "Contributor"}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )
+        }
+      </div>
+
       <form method="POST" action="/api/auth/signout" class="mt-6">
         <button
           type="submit"
