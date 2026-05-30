@@ -244,3 +244,9 @@ The unique index is additive and backward-compatible (expand/contract safe) — 
 - [x] 2.5 New board appears on `/dashboard` with a Supervisor badge; row click opens the detail page — eb8bb25
 - [x] 2.6 `/boards/<id>` for a non-member redirects to `/dashboard` (RLS returns null) — eb8bb25
 - [x] 2.7 Duplicate name shows the inline error and creates nothing — eb8bb25
+
+### Addenda (unplanned changes discovered during implementation)
+
+- **eslint.config.js** — disabled `@typescript-eslint/no-misused-promises` for `.astro` files. Required because `astro-eslint-parser` crashes on `return Astro.redirect()` inside async functions; without this the lint step fails on every `.astro` route that redirects.
+- **src/pages/api/auth/signin.ts** — changed post-signin redirect from `/` to `/dashboard`. Makes the auth flow coherent with the new `/boards` routes; the old `/` redirect landed on a mostly-empty index page.
+- **src/pages/index.astro** — added a redirect to `/dashboard` for authenticated users. Paired with the signin-redirect change above so the root path is never a dead end for signed-in users.
