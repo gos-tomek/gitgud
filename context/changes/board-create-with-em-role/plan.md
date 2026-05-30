@@ -220,27 +220,27 @@ The unique index is additive and backward-compatible (expand/contract safe) — 
 
 #### Automated
 
-- [x] 1.1 Linting passes: `npm run lint`
-- [x] 1.2 Build + type-check passes: `npm run build`
-- [x] 1.3 Migration applies cleanly on local reset: `npx supabase db reset`
-- [x] 1.4 `zod` is declared in `package.json` `dependencies` (`npm ls zod` shows it at root)
+- [x] 1.1 Linting passes: `npm run lint` — eb8bb25
+- [x] 1.2 Build + type-check passes: `npm run build` — eb8bb25
+- [x] 1.3 Migration applies cleanly on local reset: `npx supabase db reset` — eb8bb25
+- [x] 1.4 `zod` is declared in `package.json` `dependencies` (`npm ls zod` shows it at root) — eb8bb25
 
 #### Manual
 
-- [x] 1.5 Creating a board yields one `boards` row + one matching `board_members` row (trigger) for the creator
-- [x] 1.6 Same-name board for the same owner is rejected; a different owner can reuse the name
+- [x] 1.5 Creating a board yields one `boards` row + one matching `board_members` row (trigger) for the creator — eb8bb25
+- [x] 1.6 Same-name board for the same owner is rejected; a different owner can reuse the name — eb8bb25
 
 ### Phase 2: Frontend — create page, detail page, nav, route protection
 
 #### Automated
 
-- [x] 2.1 Linting passes: `npm run lint`
-- [x] 2.2 Build + type-check passes: `npm run build`
+- [x] 2.1 Linting passes: `npm run lint` — eb8bb25
+- [x] 2.2 Build + type-check passes: `npm run build` — eb8bb25
 
 #### Manual
 
-- [x] 2.3 `/boards/new` signed out redirects to `/auth/signin`; signed in shows the form with the explicit Supervisor (EM) note
-- [x] 2.4 Creating a board redirects to `/boards/<id>` showing name + Supervisor badge
-- [x] 2.5 New board appears on `/dashboard` with a Supervisor badge; row click opens the detail page
-- [x] 2.6 `/boards/<id>` for a non-member redirects to `/dashboard` (RLS returns null)
-- [x] 2.7 Duplicate name shows the inline error and creates nothing
+- [x] 2.3 `/boards/new` signed out redirects to `/auth/signin`; signed in shows the form with the explicit Supervisor (EM) note — eb8bb25
+- [x] 2.4 Creating a board redirects to `/boards/<id>` showing name + Supervisor badge — eb8bb25
+- [x] 2.5 New board appears on `/dashboard` with a Supervisor badge; row click opens the detail page — eb8bb25
+- [x] 2.6 `/boards/<id>` for a non-member redirects to `/dashboard` (RLS returns null) — eb8bb25
+- [x] 2.7 Duplicate name shows the inline error and creates nothing — eb8bb25
