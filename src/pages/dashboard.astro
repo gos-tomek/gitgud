@@ -21,20 +21,38 @@ const boards = supabase && user ? await getUserBoards(supabase, user.id).catch((
       <p class="mt-2 text-sm text-blue-100/50">This page is only for authenticated users.</p>
 
       <div class="mt-6 text-left">
-        <h2 class="mb-3 text-lg font-semibold text-blue-100">Your boards</h2>
+        <div class="mb-3 flex items-center justify-between">
+          <h2 class="text-lg font-semibold text-blue-100">Your boards</h2>
+          <a
+            href="/boards/new"
+            class="rounded-lg border border-white/20 bg-purple-600/30 px-3 py-1 text-sm font-medium text-purple-200 transition-colors hover:bg-purple-600/50"
+          >
+            + New board
+          </a>
+        </div>
         {
           boards.length === 0 ? (
             <p class="text-sm text-blue-100/50 italic">You don't belong to any boards yet.</p>
           ) : (
             <ul class="space-y-2">
               {boards.map((board) => (
-                <li class="flex items-center justify-between rounded-lg border border-white/10 bg-white/5 px-4 py-2">
-                  <span class="text-sm text-white">{board.name}</span>
-                  <span
-                    class:list={`rounded px-2 py-0.5 text-xs font-semibold ${board.role === "supervisor" ? "bg-blue-500/30 text-blue-200" : "bg-purple-500/30 text-purple-200"}`}
+                <li>
+                  <a
+                    href={`/boards/${board.id}`}
+                    class="flex items-center justify-between rounded-lg border border-white/10 bg-white/5 px-4 py-2 transition-colors hover:bg-white/10"
                   >
-                    {board.role === "supervisor" ? "Supervisor" : "Contributor"}
-                  </span>
+                    <span class="text-sm text-white">{board.name}</span>
+                    <span
+                      class:list={[
+                        "rounded px-2 py-0.5 text-xs font-semibold",
+                        board.role === "supervisor"
+                          ? "bg-blue-500/30 text-blue-200"
+                          : "bg-purple-500/30 text-purple-200",
+                      ]}
+                    >
+                      {board.role === "supervisor" ? "Supervisor" : "Contributor"}
+                    </span>
+                  </a>
                 </li>
               ))}
             </ul>
