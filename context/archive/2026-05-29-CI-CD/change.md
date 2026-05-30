@@ -1,10 +1,10 @@
 ---
 change_id: CI-CD
 title: Branch/PR workflow + automated deploy-on-merge to Cloudflare with board updates
-status: implementing
+status: archived
 created: 2026-05-29
 updated: 2026-05-29
-archived_at: null
+archived_at: 2026-05-29T18:11:51Z
 ---
 
 ## Notes
