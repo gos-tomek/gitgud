@@ -34,7 +34,7 @@ Mentoring, code-review quality, and unblocking — the "glue work" that keeps en
 | F-03  | classification-batch            | (foundation) daily durable batch classifies comments by intent    | F-01, F-02         | FR-012, Business Logic, NFR accuracy-floor | blocked  |
 | S-01  | board-create-with-em-role       | create a board and be explicitly assigned the EM role             | F-01               | FR-001, FR-016, FR-017                    | done     |
 | S-02  | link-board-to-github-org        | link a board to a GitHub org so its activity feeds the board      | S-01, F-02         | FR-002, US-01                             | ready    |
-| S-03  | invite-and-join-board           | invite ICs by email; IC joins via invite link                     | S-01, F-01         | FR-003, FR-004, FR-005, FR-014, FR-015    | ready    |
+| S-03  | invite-and-join-board           | invite ICs by email; IC joins via invite link                     | S-01, F-01, S-02   | FR-003, FR-004, FR-005, FR-014, FR-015    | deferred |
 | S-04  | profile-raw-github-metrics      | view a contribution profile: PRs, reviews, comment counts         | F-02, S-02, S-03   | FR-006, FR-008, FR-009, FR-010, FR-011, NFR progressive-load, NFR data-parity | proposed |
 | S-05  | profile-classified-comments     | see own review comments broken down by semantic category          | F-03, S-04         | FR-012, Business Logic, NFR accuracy-floor, NFR data-parity | blocked  |
 | S-06  | em-switch-ic-dropdown           | switch between ICs on a board without a full page reload          | S-04               | FR-007, US-01                             | proposed |
@@ -46,7 +46,7 @@ Navigation aid — groups items that share a Prerequisites chain. Canonical orde
 
 | Stream | Theme                  | Chain                                  | Note                                                                       |
 | ------ | ---------------------- | -------------------------------------- | -------------------------------------------------------------------------- |
-| A      | Access & membership    | `F-01` → `S-01` → `S-03`               | Conventional, low-risk track; produces the IC accounts the north star needs. |
+| A      | Access & membership    | `F-01` → `S-01` → `S-02` → `S-03`      | S-03 now depends on S-02 (GitHub org link) — EM selects ICs from GitHub contributor list. |
 | B      | GitHub data & profile  | `F-02` → `S-02` → `S-04` → `S-06`      | `S-04` joins Stream A at `S-03` (needs memberships). De-risks the #1 blocker first. |
 | C      | Classification (wedge) | `F-03` → `S-05` → `S-07`               | `F-03` needs `F-01`+`F-02`; `S-05` joins Stream B at `S-04`. Blocked on Q1.  |
 
@@ -138,12 +138,13 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **Outcome:** An EM invites an IC by email; the IC creates an account via the invite link, logs in, and is automatically added to the board (and can belong to several boards).
 - **Change ID:** invite-and-join-board
 - **PRD refs:** FR-003, FR-004, FR-005, FR-014, FR-015
-- **Prerequisites:** S-01, F-01
-- **Parallel with:** S-02
+- **Prerequisites:** S-01, F-01, S-02
+- **Parallel with:** —
 - **Blockers:** —
 - **Unknowns:** —
 - **Risk:** Invite link + implicit consent on account creation (per FR-004 resolution) — no separate acceptance gate. Builds on the present sign-up/login scaffold.
-- **Status:** ready
+- **Status:** deferred
+- **Deferral note:** Deferred 2026-05-30 — EM should select ICs from GitHub contributor list, which requires S-02 (GitHub org link). Email-only invite flow rejected in favor of GitHub-aware UX.
 
 ### S-04: Contribution profile shows raw GitHub metrics
 
@@ -205,7 +206,7 @@ Foundations below assume these are present and do NOT re-scaffold them.
 | F-03       | classification-batch            | Daily classification batch (Cron + Workflow + hosted AI)   | no                    | Blocked on Q1 (accuracy validation) |
 | S-01       | board-create-with-em-role       | EM creates a board and is assigned the EM role             | done                  | Merged 2026-05-30 |
 | S-02       | link-board-to-github-org        | Link a board to a GitHub org                               | yes                   | Needs F-02 |
-| S-03       | invite-and-join-board           | Invite ICs by email; IC joins via invite link             | yes                   | Ready; can parallel with S-02 |
+| S-03       | invite-and-join-board           | Invite ICs by email; IC joins via invite link             | no                    | Deferred; needs S-02 (GitHub-aware IC selection) |
 | S-04       | profile-raw-github-metrics      | Contribution profile: PRs, reviews, comment counts         | no                    | Needs F-02, S-02, S-03 |
 | S-05       | profile-classified-comments     | Contribution profile: semantically classified comments     | no                    | North star; blocked on Q1 via F-03 |
 | S-06       | em-switch-ic-dropdown           | EM switches between ICs via dropdown (no full reload)      | no                    | Needs S-04 |
