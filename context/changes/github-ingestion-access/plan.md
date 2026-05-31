@@ -369,27 +369,27 @@ Build the sync service that fetches PRs, reviews, and review comments for all re
 
 #### Automated
 
-- [x] 1.1 Migration applies cleanly: `npx supabase db reset`
-- [x] 1.2 Build passes: `npm run build`
-- [x] 1.3 Lint passes: `npm run lint`
+- [x] 1.1 Migration applies cleanly: `npx supabase db reset` — cd8e464
+- [x] 1.2 Build passes: `npm run build` — cd8e464
+- [x] 1.3 Lint passes: `npm run lint` — cd8e464
 
 #### Manual
 
-- [ ] 1.4 All tables exist with correct columns in local Supabase
-- [ ] 1.5 RLS prevents cross-board data access
-- [ ] 1.6 `set_board_github_pat` / `get_board_github_pat` round-trip correctly
+- [x] 1.4 All tables exist with correct columns in local Supabase — cd8e464
+- [x] 1.5 RLS prevents cross-board data access — cd8e464
+- [x] 1.6 `set_board_github_pat` / `get_board_github_pat` round-trip correctly — cd8e464
 
 ### Phase 2: GitHub API Client
 
 #### Automated
 
-- [ ] 2.1 Build passes: `npm run build`
-- [ ] 2.2 Lint passes: `npm run lint`
+- [x] 2.1 Build passes: `npm run build`
+- [x] 2.2 Lint passes: `npm run lint`
 
 #### Manual
 
-- [ ] 2.3 `createGitHubClient` returns authenticated Octokit with a real PAT
-- [ ] 2.4 Factory returns null when no PAT is stored
+- [x] 2.3 `createGitHubClient` returns authenticated Octokit with a real PAT
+- [x] 2.4 Factory returns null when no PAT is stored
 
 ### Phase 3: Fetch Service & Integration Verification
 
