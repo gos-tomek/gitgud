@@ -3,7 +3,7 @@ project: GitGud
 version: 1
 status: draft
 created: 2026-05-27
-updated: 2026-05-30
+updated: 2026-05-31
 prd_version: 1
 main_goal: market-feedback
 top_blocker: skills
@@ -30,7 +30,7 @@ Mentoring, code-review quality, and unblocking — the "glue work" that keeps en
 | ID    | Change ID                       | Outcome (user can …)                                              | Prerequisites      | PRD refs                                  | Status   |
 | ----- | ------------------------------- | ----------------------------------------------------------------- | ------------------ | ----------------------------------------- | -------- |
 | F-01  | access-control-and-membership   | (foundation) IC/EM roles, board + membership, RLS on present auth | —                  | Access Control, FR-014, FR-015, FR-016    | done     |
-| F-02  | github-ingestion-access         | (foundation) authenticated read of an org's PRs/reviews/comments  | —                  | FR-002, FR-009, FR-010, FR-011, US-01     | ready    |
+| F-02  | github-ingestion-access         | (foundation) authenticated read of an org's PRs/reviews/comments  | —                  | FR-002, FR-009, FR-010, FR-011, US-01     | done     |
 | F-03  | classification-batch            | (foundation) daily durable batch classifies comments by intent    | F-01, F-02         | FR-012, Business Logic, NFR accuracy-floor | blocked  |
 | S-01  | board-create-with-em-role       | create a board and be explicitly assigned the EM role             | F-01               | FR-001, FR-016, FR-017                    | done     |
 | S-02  | link-board-to-github-org        | link a board to a GitHub org so its activity feeds the board      | S-01, F-02         | FR-002, US-01                             | ready    |
@@ -89,7 +89,7 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **Unknowns:**
   - How does the app authenticate to a GitHub org given MVP auth is email+password with no OAuth? (recommended default: GitHub App install or fine-grained PAT supplied at board-link time) — Owner: user. Block: no.
 - **Risk:** First exposure to the #1 blocker (`skills`): GitHub client behavior on the Cloudflare workerd runtime (Octokit / pagination edges surface only in prod). De-risked early on purpose — prefer a fetch-based client, test on workerd before building on top.
-- **Status:** ready
+- **Status:** done
 
 ### F-03: Daily classification batch (Cron + Workflow + hosted AI)
 
@@ -236,5 +236,6 @@ Foundations below assume these are present and do NOT re-scaffold them.
 | ---- | ----------------------------- | ------------------------- | ------------------------------------ |
 | F-01 | access-control-and-membership | 2026-05-29 (prod)         | 375fb8d4-8d75-4aa0-91f3-7ec6ab4b11e9 |
 | S-01 | board-create-with-em-role     | 2026-05-30 (prod)         | 7d44d9ff07b5c31e4be36eaa06d4caf1f7366df9 |
+| F-02 | github-ingestion-access       | Archived 2026-05-31 → `context/archive/2026-05-30-github-ingestion-access/` | — |
 
 - **S-01: A user can create a board, see they are explicitly assigned the EM role at creation time, and own more than one board.** — Archived 2026-05-30 → `context/archive/2026-05-29-board-create-with-em-role/`. Lesson: —.
