@@ -369,9 +369,9 @@ Build the sync service that fetches PRs, reviews, and review comments for all re
 
 #### Automated
 
-- [ ] 1.1 Migration applies cleanly: `npx supabase db reset`
-- [ ] 1.2 Build passes: `npm run build`
-- [ ] 1.3 Lint passes: `npm run lint`
+- [x] 1.1 Migration applies cleanly: `npx supabase db reset`
+- [x] 1.2 Build passes: `npm run build`
+- [x] 1.3 Lint passes: `npm run lint`
 
 #### Manual
 

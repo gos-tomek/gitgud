@@ -72,3 +72,14 @@ VALUES
   ('11111111-aaaa-0000-0000-000000000001', 'cccccccc-0000-0000-0000-000000000001'),
   ('22222222-bbbb-0000-0000-000000000001', 'cccccccc-0000-0000-0000-000000000001')
 ON CONFLICT (board_id, user_id) DO NOTHING;
+
+-- F-02 seed: test GitHub repo connection for Board Alpha (no PAT — provide manually during dev)
+INSERT INTO public.github_repos (id, board_id, repo_owner, repo_name, connected_by)
+VALUES (
+  'dddddddd-0000-0000-0000-000000000001',
+  '11111111-aaaa-0000-0000-000000000001',
+  'octocat',
+  'Hello-World',
+  'aaaaaaaa-0000-0000-0000-000000000001'
+)
+ON CONFLICT (board_id, repo_owner, repo_name) DO NOTHING;

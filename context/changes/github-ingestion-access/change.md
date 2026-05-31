@@ -1,7 +1,7 @@
 ---
 change_id: github-ingestion-access
 title: Github ingestion access
-status: plan_reviewed
+status: implementing
 created: 2026-05-30
 updated: 2026-05-31
 archived_at: null
