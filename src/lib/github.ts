@@ -1,6 +1,10 @@
 import { Octokit } from "@octokit/rest";
+import { retry } from "@octokit/plugin-retry";
 import type { createClient } from "@/lib/supabase";
 import { GITHUB_TOKEN_ENCRYPTION_KEY } from "astro:env/server";
+import { logger } from "@/lib/logger";
+
+const OctokitWithRetry = Octokit.plugin(retry);
 
 type SupabaseClient = NonNullable<ReturnType<typeof createClient>>;
 
@@ -27,12 +31,8 @@ export class GitHubAuthError extends Error {
   }
 }
 
-async function delay(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
-
 function makeOctokit(token: string): Octokit {
-  const octokit = new Octokit({
+  const octokit = new OctokitWithRetry({
     auth: token,
     userAgent: "gitgud/0.0.1",
     request: { fetch: globalThis.fetch },
@@ -48,39 +48,26 @@ function makeOctokit(token: string): Octokit {
     }
 
     if (remaining <= 10) {
-      console.warn(
+      logger.warn(
         `[github] rate-limit warning: ${remaining} requests remaining, resets at ${new Date(reset * 1000).toISOString()}`,
       );
     }
   });
 
-  octokit.hook.error("request", async (error, options) => {
+  octokit.hook.error("request", (error) => {
     const status = (error as { status?: number }).status ?? 0;
-
     if (status === 401 || status === 403) {
       throw new GitHubAuthError(`GitHub API auth error ${status}: ${error.message}`);
     }
-
-    // Retry transient errors (5xx or network) up to 3 times with exponential backoff
-    if (status >= 500 || status === 0) {
-      const retries = ((options as Record<string, unknown>)._retries as number | undefined) ?? 0;
-      if (retries < 3) {
-        (options as Record<string, unknown>)._retries = retries + 1;
-        await delay(1000 * Math.pow(2, retries));
-        return octokit.request(options);
-      }
-    }
-
     throw error;
   });
 
   return octokit;
 }
 
-export async function createGitHubClient(supabase: SupabaseClient, boardId: string): Promise<Octokit | null> {
+export async function createGitHubClient(supabase: SupabaseClient, boardId: string): Promise<Octokit> {
   if (!GITHUB_TOKEN_ENCRYPTION_KEY) {
-    console.warn("[github] GITHUB_TOKEN_ENCRYPTION_KEY is not set");
-    return null;
+    throw new GitHubTokenMissingError();
   }
 
   const result = await supabase.rpc("get_board_github_pat", {
@@ -89,13 +76,12 @@ export async function createGitHubClient(supabase: SupabaseClient, boardId: stri
   });
 
   if (result.error) {
-    console.error("[github] Failed to decrypt PAT:", result.error.message);
-    return null;
+    throw new GitHubTokenMissingError();
   }
 
   const token = result.data as string | null;
   if (!token) {
-    return null;
+    throw new GitHubTokenMissingError();
   }
 
   return makeOctokit(token);

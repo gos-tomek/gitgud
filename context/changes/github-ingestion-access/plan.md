@@ -361,6 +361,18 @@ Build the sync service that fetches PRs, reviews, and review comments for all re
 - Octokit compatibility with workerd: requires `nodejs_compat` flag (present in `wrangler.jsonc:6`) and per-request instantiation
 - GitHub REST API: `GET /repos/{owner}/{repo}/pulls`, `.../pulls/{number}/reviews`, `.../pulls/{number}/comments`
 
+## Addenda
+
+### Rate-limit handling deviation (Phase 2)
+
+The plan specified: "If remaining = 0, compute wait time from `x-ratelimit-reset` and delay." The implementation instead throws `GitHubRateLimitError` when `remaining === 0`. This is intentional and preferable:
+
+- Sleeping inside a Worker request burns wall-clock time toward the 30s limit.
+- Throwing lets callers decide the retry strategy (e.g., F-03 Workflows can reschedule the durable task).
+- `GitHubRateLimitError.resetAt` carries the reset timestamp, so callers have everything they need to reschedule.
+
+---
+
 ## Progress
 
 > Convention: `- [ ]` pending, `- [x]` done. Append ` — <commit sha>` when a step lands. Do not rename step titles.

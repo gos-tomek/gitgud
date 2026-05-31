@@ -1,6 +1,10 @@
 import type { Octokit } from "@octokit/rest";
 import type { createClient } from "@/lib/supabase";
 import { createGitHubClient } from "@/lib/github";
+import { logger } from "@/lib/logger";
+
+// F-03 (Workflows) will lift this cap via durable execution; until then, protect against Worker timeout
+const MAX_PRS_PER_REPO = 200;
 
 type SupabaseClient = NonNullable<ReturnType<typeof createClient>>;
 
@@ -9,6 +13,7 @@ export interface SyncResult {
   pullRequests: number;
   reviews: number;
   comments: number;
+  errors: string[];
 }
 
 type PrItem = Awaited<ReturnType<Octokit["rest"]["pulls"]["list"]>>["data"][number];
@@ -68,8 +73,8 @@ async function upsertComments(supabase: SupabaseClient, prId: number, comments: 
     id: c.id,
     pull_request_id: prId,
     review_id: c.pull_request_review_id,
-    commenter_login: c.user?.login ?? "[deleted]",
-    commenter_github_id: c.user?.id ?? 0,
+    commenter_login: c.user.login,
+    commenter_github_id: c.user.id,
     body: c.body,
     path: c.path,
     position_line: (c.line as number | null) ?? null,
@@ -96,11 +101,8 @@ export async function syncBoardGitHubData(
   if (repos.length === 0) return { repos: 0, pullRequests: 0, reviews: 0, comments: 0 };
 
   const octokit = await createGitHubClient(supabase, boardId);
-  if (!octokit) {
-    throw new Error("No GitHub PAT configured for this board");
-  }
 
-  const result: SyncResult = { repos: repos.length, pullRequests: 0, reviews: 0, comments: 0 };
+  const result: SyncResult = { repos: repos.length, pullRequests: 0, reviews: 0, comments: 0, errors: [] };
 
   for (const repo of repos as RepoRow[]) {
     const { repo_owner: owner, repo_name: repoName, id: repoId } = repo;
@@ -120,30 +122,43 @@ export async function syncBoardGitHubData(
       },
     );
 
-    await upsertPullRequests(supabase, repoId, prs);
-    result.pullRequests += prs.length;
+    if (prs.length > MAX_PRS_PER_REPO) {
+      logger.warn(
+        `[github-sync] ${owner}/${repoName}: ${prs.length} PRs found, capping at ${MAX_PRS_PER_REPO}. Full sync deferred to F-03.`,
+      );
+    }
+    const cappedPrs = prs.slice(0, MAX_PRS_PER_REPO);
 
-    for (const pr of prs) {
-      const [reviews, comments] = await Promise.all([
-        octokit.paginate(octokit.rest.pulls.listReviews, {
-          owner,
-          repo: repoName,
-          pull_number: pr.number,
-          per_page: 100,
-        }),
-        octokit.paginate(octokit.rest.pulls.listReviewComments, {
-          owner,
-          repo: repoName,
-          pull_number: pr.number,
-          per_page: 100,
-        }),
-      ]);
+    await upsertPullRequests(supabase, repoId, cappedPrs);
+    result.pullRequests += cappedPrs.length;
 
-      await upsertReviews(supabase, pr.id, reviews);
-      await upsertComments(supabase, pr.id, comments);
+    for (const pr of cappedPrs) {
+      try {
+        const [reviews, comments] = await Promise.all([
+          octokit.paginate(octokit.rest.pulls.listReviews, {
+            owner,
+            repo: repoName,
+            pull_number: pr.number,
+            per_page: 100,
+          }),
+          octokit.paginate(octokit.rest.pulls.listReviewComments, {
+            owner,
+            repo: repoName,
+            pull_number: pr.number,
+            per_page: 100,
+          }),
+        ]);
 
-      result.reviews += reviews.length;
-      result.comments += comments.length;
+        await upsertReviews(supabase, pr.id, reviews);
+        await upsertComments(supabase, pr.id, comments);
+
+        result.reviews += reviews.length;
+        result.comments += comments.length;
+      } catch (err) {
+        const msg = `PR #${pr.number} (${owner}/${repoName}): ${err instanceof Error ? err.message : String(err)}`;
+        result.errors.push(msg);
+        logger.warn(`[github-sync] Skipping ${msg}`);
+      }
     }
   }
 

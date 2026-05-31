@@ -3,6 +3,7 @@ import { z } from "zod";
 import { createClient } from "@/lib/supabase";
 import { getBoardWithRole } from "@/lib/services/boards";
 import { syncBoardGitHubData } from "@/lib/services/github-sync";
+import { logger } from "@/lib/logger";
 
 const syncSchema = z.object({
   boardId: z.string().regex(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i, "Invalid board ID"),
@@ -55,7 +56,7 @@ export const POST: APIRoute = async (context) => {
     const result = await syncBoardGitHubData(supabase, boardId);
     return json(result);
   } catch (err) {
-    console.error("[github-sync]", err);
+    logger.error("[github-sync]", err);
     const message = err instanceof Error ? err.message : "Sync failed";
     return json({ error: message }, 500);
   }
