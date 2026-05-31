@@ -22,6 +22,7 @@ export default defineConfig({
     schema: {
       SUPABASE_URL: envField.string({ context: "server", access: "secret", optional: true }),
       SUPABASE_KEY: envField.string({ context: "server", access: "secret", optional: true }),
+      GITHUB_TOKEN_ENCRYPTION_KEY: envField.string({ context: "server", access: "secret", optional: true }),
     },
   },
 });
