@@ -383,24 +383,24 @@ Build the sync service that fetches PRs, reviews, and review comments for all re
 
 #### Automated
 
-- [x] 2.1 Build passes: `npm run build`
-- [x] 2.2 Lint passes: `npm run lint`
+- [x] 2.1 Build passes: `npm run build` — c387f37
+- [x] 2.2 Lint passes: `npm run lint` — c387f37
 
 #### Manual
 
-- [x] 2.3 `createGitHubClient` returns authenticated Octokit with a real PAT
-- [x] 2.4 Factory returns null when no PAT is stored
+- [x] 2.3 `createGitHubClient` returns authenticated Octokit with a real PAT — c387f37
+- [x] 2.4 Factory returns null when no PAT is stored — c387f37
 
 ### Phase 3: Fetch Service & Integration Verification
 
 #### Automated
 
-- [ ] 3.1 Build passes: `npm run build`
-- [ ] 3.2 Lint passes: `npm run lint`
+- [x] 3.1 Build passes: `npm run build`
+- [x] 3.2 Lint passes: `npm run lint`
 
 #### Manual
 
-- [ ] 3.3 Full sync populates all three GitHub data tables
-- [ ] 3.4 Pagination works for repos with >100 PRs
-- [ ] 3.5 Rate-limit warnings appear in logs during large sync
-- [ ] 3.6 Sync works on workerd runtime (`npm run dev` and `npm run build && npm run preview`)
+- [x] 3.3 Full sync populates all three GitHub data tables
+- [x] 3.4 Pagination works for repos with >100 PRs
+- [x] 3.5 Rate-limit warnings appear in logs during large sync
+- [x] 3.6 Sync works on workerd runtime (`npm run dev` and `npm run build && npm run preview`)
