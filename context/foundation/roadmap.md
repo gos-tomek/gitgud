@@ -236,6 +236,4 @@ Foundations below assume these are present and do NOT re-scaffold them.
 | ---- | ----------------------------- | ------------------------- | ------------------------------------ |
 | F-01 | access-control-and-membership | 2026-05-29 (prod)         | 375fb8d4-8d75-4aa0-91f3-7ec6ab4b11e9 |
 | S-01 | board-create-with-em-role     | 2026-05-30 (prod)         | 7d44d9ff07b5c31e4be36eaa06d4caf1f7366df9 |
-| F-02 | github-ingestion-access       | Archived 2026-05-31 → `context/archive/2026-05-30-github-ingestion-access/` | — |
-
-- **S-01: A user can create a board, see they are explicitly assigned the EM role at creation time, and own more than one board.** — Archived 2026-05-30 → `context/archive/2026-05-29-board-create-with-em-role/`. Lesson: —.
+| F-02 | github-ingestion-access       | 2026-05-31 (archived)     | — |
