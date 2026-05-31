@@ -395,12 +395,12 @@ Build the sync service that fetches PRs, reviews, and review comments for all re
 
 #### Automated
 
-- [x] 3.1 Build passes: `npm run build`
-- [x] 3.2 Lint passes: `npm run lint`
+- [x] 3.1 Build passes: `npm run build` — ba56375
+- [x] 3.2 Lint passes: `npm run lint` — ba56375
 
 #### Manual
 
-- [x] 3.3 Full sync populates all three GitHub data tables
-- [x] 3.4 Pagination works for repos with >100 PRs
-- [x] 3.5 Rate-limit warnings appear in logs during large sync
-- [x] 3.6 Sync works on workerd runtime (`npm run dev` and `npm run build && npm run preview`)
+- [x] 3.3 Full sync populates all three GitHub data tables — ba56375
+- [x] 3.4 Pagination works for repos with >100 PRs — ba56375
+- [x] 3.5 Rate-limit warnings appear in logs during large sync — ba56375
+- [x] 3.6 Sync works on workerd runtime (`npm run dev` and `npm run build && npm run preview`) — ba56375
