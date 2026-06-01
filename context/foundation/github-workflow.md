@@ -171,6 +171,21 @@ mutation {
 
 ---
 
+## Archiving a Change
+
+When `/10x-archive` completes, two GitHub steps are required:
+
+1. **Update the project board Status field** to `done` via `gh project item-edit` (or it happens automatically on deploy via `deploy.yml`).
+2. **Close the GitHub issue** via `gh issue close <number>`.
+
+The project board Status field and the issue state are independent — updating the field does not close the issue.
+
+```bash
+gh issue close <number> --comment "Completed and archived."
+```
+
+---
+
 ## Creating a New Issue for a Roadmap Item
 
 1. Get the roadmap item details from `context/foundation/roadmap.md`
