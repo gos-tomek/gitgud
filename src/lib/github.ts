@@ -31,7 +31,7 @@ export class GitHubAuthError extends Error {
   }
 }
 
-function makeOctokit(token: string): Octokit {
+export function makeOctokit(token: string): Octokit {
   const octokit = new OctokitWithRetry({
     auth: token,
     userAgent: "gitgud/0.0.1",
