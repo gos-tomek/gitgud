@@ -2,40 +2,84 @@ import type { APIRoute } from "astro";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase";
 import { createBoard, BoardNameTakenError } from "@/lib/services/boards";
+import { GITHUB_TOKEN_ENCRYPTION_KEY } from "astro:env/server";
+import { logger } from "@/lib/logger";
+
+function json(body: unknown, status = 200): Response {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { "Content-Type": "application/json" },
+  });
+}
+
+const repoSchema = z.object({
+  owner: z.string().min(1),
+  name: z.string().min(1),
+});
 
 const createBoardSchema = z.object({
   name: z.string().trim().min(1, "Board name is required").max(80, "Keep it under 80 characters"),
+  pat: z.string().min(1, "GitHub token is required"),
+  repos: z.array(repoSchema).min(1, "At least one repository is required"),
 });
 
 export const POST: APIRoute = async (context) => {
   const supabase = createClient(context.request.headers, context.cookies);
   if (!supabase) {
-    return context.redirect(`/boards/new?error=${encodeURIComponent("Supabase is not configured")}`);
+    return json({ error: "Supabase is not configured" }, 503);
   }
 
   const {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) {
-    return context.redirect("/auth/signin");
+    return json({ error: "Unauthorized" }, 401);
   }
 
-  const form = await context.request.formData();
-  const raw = { name: form.get("name") as string };
-  const parsed = createBoardSchema.safeParse(raw);
+  let body: unknown;
+  try {
+    body = await context.request.json();
+  } catch {
+    return json({ error: "Invalid JSON body" }, 400);
+  }
+
+  const parsed = createBoardSchema.safeParse(body);
   if (!parsed.success) {
     const firstIssue = parsed.error.issues.at(0);
-    const message = firstIssue?.message ?? "Invalid input";
-    return context.redirect(`/boards/new?error=${encodeURIComponent(message)}`);
+    return json({ error: firstIssue?.message ?? "Invalid input" }, 400);
   }
 
   try {
-    const { id } = await createBoard(supabase, user.id, parsed.data.name);
-    return context.redirect(`/boards/${id}`);
+    const { id: boardId } = await createBoard(supabase, user.id, parsed.data.name);
+
+    const { error: patError } = await supabase.rpc("set_board_github_pat", {
+      p_board_id: boardId,
+      p_raw_token: parsed.data.pat,
+      p_encryption_key: GITHUB_TOKEN_ENCRYPTION_KEY,
+    });
+    if (patError) {
+      logger.error(`[boards] PAT storage failed for board ${boardId}: ${patError.message}`);
+      return json({ error: "Failed to store GitHub token. Please try again." }, 500);
+    }
+
+    const { error: reposError } = await supabase.from("github_repos").insert(
+      parsed.data.repos.map((r) => ({
+        board_id: boardId,
+        repo_owner: r.owner,
+        repo_name: r.name,
+        connected_by: user.id,
+      })),
+    );
+    if (reposError) {
+      logger.warn(`[boards] Repo linking failed for board ${boardId}: ${reposError.message}`);
+    }
+
+    return json({ id: boardId }, 201);
   } catch (err) {
     if (err instanceof BoardNameTakenError) {
-      return context.redirect(`/boards/new?error=${encodeURIComponent(err.message)}`);
+      return json({ error: err.message }, 409);
     }
-    return context.redirect(`/boards/new?error=${encodeURIComponent("Something went wrong. Please try again.")}`);
+    logger.error("[boards]", err);
+    return json({ error: "Something went wrong. Please try again." }, 500);
   }
 };

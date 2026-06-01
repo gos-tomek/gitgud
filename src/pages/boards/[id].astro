@@ -1,7 +1,7 @@
 ---
 import Layout from "@/layouts/Layout.astro";
 import { createClient } from "@/lib/supabase";
-import { getBoardWithRole } from "@/lib/services/boards";
+import { getBoardWithRole, getBoardRepos } from "@/lib/services/boards";
 
 const { user } = Astro.locals;
 const { id } = Astro.params;
@@ -12,6 +12,8 @@ const board = supabase && user && id ? await getBoardWithRole(supabase, id, user
 if (!board) {
   return Astro.redirect("/dashboard");
 }
+
+const repos = supabase ? await getBoardRepos(supabase, board.id).catch(() => []) : [];
 
 const badgeClass = board.role === "supervisor" ? "bg-blue-500/30 text-blue-200" : "bg-purple-500/30 text-purple-200";
 const badgeLabel = board.role === "supervisor" ? "Supervisor" : "Contributor";
@@ -38,8 +40,20 @@ const createdDate = new Date(board.createdAt).toLocaleDateString("en-GB", {
 
       <div class="space-y-3">
         <div class="rounded-lg border border-white/10 bg-white/5 px-4 py-3">
-          <p class="text-xs font-semibold tracking-wide text-blue-100/40 uppercase">Linked GitHub org</p>
-          <p class="mt-1 text-sm text-blue-100/50 italic">Coming soon (S-02)</p>
+          <p class="text-xs font-semibold tracking-wide text-blue-100/40 uppercase">Linked repositories</p>
+          {
+            repos.length === 0 ? (
+              <p class="mt-1 text-sm text-blue-100/50 italic">No repositories linked</p>
+            ) : (
+              <ul class="mt-2 space-y-1">
+                {repos.map((repo) => (
+                  <li class="font-mono text-sm text-blue-100/80">
+                    {repo.repoOwner}/{repo.repoName}
+                  </li>
+                ))}
+              </ul>
+            )
+          }
         </div>
         <div class="rounded-lg border border-white/10 bg-white/5 px-4 py-3">
           <p class="text-xs font-semibold tracking-wide text-blue-100/40 uppercase">Contribution profiles</p>

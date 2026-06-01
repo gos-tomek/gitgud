@@ -74,3 +74,22 @@ export async function getBoardWithRole(
 
   return toUserBoard(data, userId);
 }
+
+export async function getBoardRepos(
+  supabase: SupabaseClient,
+  boardId: string,
+): Promise<{ repoOwner: string; repoName: string; connectedAt: string }[]> {
+  const { data, error } = await supabase
+    .from("github_repos")
+    .select("repo_owner,repo_name,connected_at")
+    .eq("board_id", boardId)
+    .order("connected_at", { ascending: true });
+
+  if (error) throw error;
+
+  return data.map((row) => ({
+    repoOwner: row.repo_owner as string,
+    repoName: row.repo_name as string,
+    connectedAt: row.connected_at as string,
+  }));
+}

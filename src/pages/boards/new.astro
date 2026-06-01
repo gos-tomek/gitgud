@@ -1,8 +1,6 @@
 ---
 import Layout from "@/layouts/Layout.astro";
 import CreateBoardForm from "@/components/CreateBoardForm";
-
-const error = Astro.url.searchParams.get("error");
 ---
 
 <Layout title="New board">
@@ -13,7 +11,7 @@ const error = Astro.url.searchParams.get("error");
       >
         New board
       </h1>
-      <CreateBoardForm serverError={error} client:load />
+      <CreateBoardForm client:load />
       <p class="mt-4 text-center text-sm text-blue-100/60">
         <a href="/dashboard" class="text-purple-300 hover:underline">← Back to dashboard</a>
       </p>
