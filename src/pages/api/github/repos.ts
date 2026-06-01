@@ -47,7 +47,8 @@ export const POST: APIRoute = async (context) => {
     const octokit = makeOctokit(pat);
     const repos: { owner: string; name: string; fullName: string; private: boolean; pushAccess: boolean }[] = [];
 
-    for await (const response of octokit.paginate.iterator(octokit.rest.repos.listForAuthenticatedUser, {
+    const REPO_LIMIT = 200;
+    outer: for await (const response of octokit.paginate.iterator(octokit.rest.repos.listForAuthenticatedUser, {
       per_page: 100,
     })) {
       for (const repo of response.data) {
@@ -58,6 +59,7 @@ export const POST: APIRoute = async (context) => {
           private: repo.private,
           pushAccess: repo.permissions?.push ?? false,
         });
+        if (repos.length >= REPO_LIMIT) break outer;
       }
     }
 

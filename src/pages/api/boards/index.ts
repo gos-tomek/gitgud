@@ -5,6 +5,13 @@ import { createBoard, BoardNameTakenError } from "@/lib/services/boards";
 import { GITHUB_TOKEN_ENCRYPTION_KEY } from "astro:env/server";
 import { logger } from "@/lib/logger";
 
+function json(body: unknown, status = 200): Response {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { "Content-Type": "application/json" },
+  });
+}
+
 const repoSchema = z.object({
   owner: z.string().min(1),
   name: z.string().min(1),
@@ -19,27 +26,27 @@ const createBoardSchema = z.object({
 export const POST: APIRoute = async (context) => {
   const supabase = createClient(context.request.headers, context.cookies);
   if (!supabase) {
-    return new Response(JSON.stringify({ error: "Supabase is not configured" }), { status: 500 });
+    return json({ error: "Supabase is not configured" }, 503);
   }
 
   const {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) {
-    return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401 });
+    return json({ error: "Unauthorized" }, 401);
   }
 
   let body: unknown;
   try {
     body = await context.request.json();
   } catch {
-    return new Response(JSON.stringify({ error: "Invalid JSON body" }), { status: 400 });
+    return json({ error: "Invalid JSON body" }, 400);
   }
 
   const parsed = createBoardSchema.safeParse(body);
   if (!parsed.success) {
     const firstIssue = parsed.error.issues.at(0);
-    return new Response(JSON.stringify({ error: firstIssue?.message ?? "Invalid input" }), { status: 400 });
+    return json({ error: firstIssue?.message ?? "Invalid input" }, 400);
   }
 
   try {
@@ -51,7 +58,8 @@ export const POST: APIRoute = async (context) => {
       p_encryption_key: GITHUB_TOKEN_ENCRYPTION_KEY,
     });
     if (patError) {
-      logger.warn(`[boards] PAT storage failed for board ${boardId}: ${patError.message}`);
+      logger.error(`[boards] PAT storage failed for board ${boardId}: ${patError.message}`);
+      return json({ error: "Failed to store GitHub token. Please try again." }, 500);
     }
 
     const { error: reposError } = await supabase.from("github_repos").insert(
@@ -66,11 +74,12 @@ export const POST: APIRoute = async (context) => {
       logger.warn(`[boards] Repo linking failed for board ${boardId}: ${reposError.message}`);
     }
 
-    return new Response(JSON.stringify({ id: boardId }), { status: 201 });
+    return json({ id: boardId }, 201);
   } catch (err) {
     if (err instanceof BoardNameTakenError) {
-      return new Response(JSON.stringify({ error: err.message }), { status: 409 });
+      return json({ error: err.message }, 409);
     }
-    return new Response(JSON.stringify({ error: "Something went wrong. Please try again." }), { status: 500 });
+    logger.error("[boards]", err);
+    return json({ error: "Something went wrong. Please try again." }, 500);
   }
 };

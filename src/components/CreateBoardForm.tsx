@@ -99,8 +99,8 @@ export default function CreateBoardForm() {
 
     if (value.trim().startsWith("github_pat_")) {
       setPatValidation({
-        status: "warning",
-        message: "Fine-grained tokens have limited org access. Use a classic PAT for best compatibility.",
+        status: "error",
+        message: "Fine-grained tokens are not supported. Please use a classic PAT (starts with ghp_).",
       });
       return;
     }

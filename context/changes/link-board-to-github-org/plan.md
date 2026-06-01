@@ -519,3 +519,7 @@ Replace the "Coming soon (S-02)" placeholder on the board detail page with the l
 - [x] 5.3 Board page shows linked repos (not "Coming soon") — f4f0422
 - [x] 5.4 S-04 placeholder unchanged — f4f0422
 - [x] 5.5 Legacy board (no repos) shows graceful fallback — f4f0422
+
+### Addendum: /api/boards/check-name endpoint
+
+Discovered during implementation: `src/pages/api/boards/check-name.ts` was added as a UX improvement — it provides early duplicate-name detection when the user clicks Next (before advancing to step 2), avoiding a round-trip all the way to final submit. The plan's `boards/index.ts` still handles `BoardNameTakenError` with a 409 for resilience, but the early check gives the user faster feedback. This was not in the original scope but is a benign, narrow addition.

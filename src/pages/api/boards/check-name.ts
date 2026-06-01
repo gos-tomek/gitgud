@@ -6,30 +6,37 @@ const schema = z.object({
   name: z.string().trim().min(1, "Board name is required").max(80, "Keep it under 80 characters"),
 });
 
+function json(body: unknown, status = 200): Response {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { "Content-Type": "application/json" },
+  });
+}
+
 export const POST: APIRoute = async (context) => {
   const supabase = createClient(context.request.headers, context.cookies);
   if (!supabase) {
-    return new Response(JSON.stringify({ error: "Supabase is not configured" }), { status: 500 });
+    return json({ error: "Supabase is not configured" }, 503);
   }
 
   const {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) {
-    return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401 });
+    return json({ error: "Unauthorized" }, 401);
   }
 
   let body: unknown;
   try {
     body = await context.request.json();
   } catch {
-    return new Response(JSON.stringify({ error: "Invalid JSON body" }), { status: 400 });
+    return json({ error: "Invalid JSON body" }, 400);
   }
 
   const parsed = schema.safeParse(body);
   if (!parsed.success) {
     const firstIssue = parsed.error.issues.at(0);
-    return new Response(JSON.stringify({ error: firstIssue?.message ?? "Invalid input" }), { status: 400 });
+    return json({ error: firstIssue?.message ?? "Invalid input" }, 400);
   }
 
   const { data } = await supabase
@@ -40,7 +47,7 @@ export const POST: APIRoute = async (context) => {
     .maybeSingle();
 
   if (data) {
-    return new Response(JSON.stringify({ error: "You already have a board with that name" }), { status: 409 });
+    return json({ error: "You already have a board with that name" }, 409);
   }
 
   return new Response(null, { status: 204 });
