@@ -1,10 +1,10 @@
 ---
 change_id: link-board-to-github-org
 title: Link board to GitHub org
-status: impl_reviewed
+status: archived
 created: 2026-06-01
 updated: 2026-06-01
-archived_at: null
+archived_at: 2026-06-01T17:23:01Z
 ---
 
 ## Notes

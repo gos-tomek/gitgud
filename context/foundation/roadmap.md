@@ -3,7 +3,7 @@ project: GitGud
 version: 1
 status: draft
 created: 2026-05-27
-updated: 2026-05-31
+updated: 2026-06-01
 prd_version: 1
 main_goal: market-feedback
 top_blocker: skills
@@ -33,7 +33,7 @@ Mentoring, code-review quality, and unblocking — the "glue work" that keeps en
 | F-02  | github-ingestion-access         | (foundation) authenticated read of an org's PRs/reviews/comments  | —                  | FR-002, FR-009, FR-010, FR-011, US-01     | done     |
 | F-03  | classification-batch            | (foundation) daily durable batch classifies comments by intent    | F-01, F-02         | FR-012, Business Logic, NFR accuracy-floor | blocked  |
 | S-01  | board-create-with-em-role       | create a board and be explicitly assigned the EM role             | F-01               | FR-001, FR-016, FR-017                    | done     |
-| S-02  | link-board-to-github-org        | link a board to a GitHub org so its activity feeds the board      | S-01, F-02         | FR-002, US-01                             | ready    |
+| S-02  | link-board-to-github-org        | link a board to a GitHub org so its activity feeds the board      | S-01, F-02         | FR-002, US-01                             | done     |
 | S-03  | invite-and-join-board           | invite ICs by email; IC joins via invite link                     | S-01, F-01, S-02   | FR-003, FR-004, FR-005, FR-014, FR-015    | deferred |
 | S-04  | profile-raw-github-metrics      | view a contribution profile: PRs, reviews, comment counts         | F-02, S-02, S-03   | FR-006, FR-008, FR-009, FR-010, FR-011, NFR progressive-load, NFR data-parity | proposed |
 | S-05  | profile-classified-comments     | see own review comments broken down by semantic category          | F-03, S-04         | FR-012, Business Logic, NFR accuracy-floor, NFR data-parity | blocked  |
@@ -131,7 +131,7 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **Unknowns:**
   - Confirm the chosen GitHub access mechanism from F-02 is exercised here (install vs PAT capture UX) — Owner: user. Block: no.
 - **Risk:** Org-level link can flood profiles with unrelated repos; PRD accepts this for v1 (repo filtering is v2). Sequenced after F-02 because it consumes the ingestion access.
-- **Status:** ready
+- **Status:** done
 
 ### S-03: EM invites ICs; IC joins via invite link
 
@@ -237,3 +237,4 @@ Foundations below assume these are present and do NOT re-scaffold them.
 | F-01 | access-control-and-membership | 2026-05-29 (prod)         | 375fb8d4-8d75-4aa0-91f3-7ec6ab4b11e9 |
 | S-01 | board-create-with-em-role     | 2026-05-30 (prod)         | 7d44d9ff07b5c31e4be36eaa06d4caf1f7366df9 |
 | F-02 | github-ingestion-access       | 2026-05-31 (archived)     | — |
+| S-02 | link-board-to-github-org      | 2026-06-01 (archived)     | — |
