@@ -476,36 +476,36 @@ Replace the "Coming soon (S-02)" placeholder on the board detail page with the l
 
 #### Automated
 
-- [x] 3.1 Linting passes
-- [x] 3.2 Type checking / build passes
+- [x] 3.1 Linting passes — 61c7656
+- [x] 3.2 Type checking / build passes — 61c7656
 
 #### Manual
 
-- [x] 3.3 PAT field renders with label and help text
-- [x] 3.4 Valid classic PAT triggers validation, shows @username
-- [x] 3.5 Invalid token shows error
-- [x] 3.6 github_pat_ prefix shows fine-grained warning
-- [x] 3.7 Next disabled until PAT validates
-- [x] 3.8 Back from step 2 preserves PAT + validation state
+- [x] 3.3 PAT field renders with label and help text — 61c7656
+- [x] 3.4 Valid classic PAT triggers validation, shows @username — 61c7656
+- [x] 3.5 Invalid token shows error — 61c7656
+- [x] 3.6 github_pat_ prefix shows fine-grained warning — 61c7656
+- [x] 3.7 Next disabled until PAT validates — 61c7656
+- [x] 3.8 Back from step 2 preserves PAT + validation state — 61c7656
 
 ### Phase 4: Screen 2 — Repo Picker
 
 #### Automated
 
-- [ ] 4.1 Linting passes
-- [ ] 4.2 Type checking / build passes
-- [ ] 4.3 Board creation with PAT + repos works (API level)
+- [x] 4.1 Linting passes
+- [x] 4.2 Type checking / build passes
+- [x] 4.3 Board creation with PAT + repos works (API level)
 
 #### Manual
 
-- [ ] 4.4 Step 2 loads and displays repo list
-- [ ] 4.5 Text filter narrows repos
-- [ ] 4.6 Checkbox selection works
-- [ ] 4.7 Manual repo entry validates and adds
-- [ ] 4.8 Duplicate repo entry prevented
-- [ ] 4.9 Create Board stores PAT + links repos
-- [ ] 4.10 After creation, redirect to /boards/{id} works
-- [ ] 4.11 Back to step 1 and return preserves selections (same PAT)
+- [x] 4.4 Step 2 loads and displays repo list
+- [x] 4.5 Text filter narrows repos
+- [x] 4.6 Checkbox selection works
+- [x] 4.7 Manual repo entry validates and adds
+- [x] 4.8 Duplicate repo entry prevented
+- [x] 4.9 Create Board stores PAT + links repos
+- [x] 4.10 After creation, redirect to /boards/{id} works
+- [x] 4.11 Back to step 1 and return preserves selections (same PAT)
 
 ### Phase 5: Board Detail Page — Linked Repos
 
