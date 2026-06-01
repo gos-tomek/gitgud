@@ -492,30 +492,30 @@ Replace the "Coming soon (S-02)" placeholder on the board detail page with the l
 
 #### Automated
 
-- [x] 4.1 Linting passes
-- [x] 4.2 Type checking / build passes
-- [x] 4.3 Board creation with PAT + repos works (API level)
+- [x] 4.1 Linting passes — 5ba2248
+- [x] 4.2 Type checking / build passes — 5ba2248
+- [x] 4.3 Board creation with PAT + repos works (API level) — 5ba2248
 
 #### Manual
 
-- [x] 4.4 Step 2 loads and displays repo list
-- [x] 4.5 Text filter narrows repos
-- [x] 4.6 Checkbox selection works
-- [x] 4.7 Manual repo entry validates and adds
-- [x] 4.8 Duplicate repo entry prevented
-- [x] 4.9 Create Board stores PAT + links repos
-- [x] 4.10 After creation, redirect to /boards/{id} works
-- [x] 4.11 Back to step 1 and return preserves selections (same PAT)
+- [x] 4.4 Step 2 loads and displays repo list — 5ba2248
+- [x] 4.5 Text filter narrows repos — 5ba2248
+- [x] 4.6 Checkbox selection works — 5ba2248
+- [x] 4.7 Manual repo entry validates and adds — 5ba2248
+- [x] 4.8 Duplicate repo entry prevented — 5ba2248
+- [x] 4.9 Create Board stores PAT + links repos — 5ba2248
+- [x] 4.10 After creation, redirect to /boards/{id} works — 5ba2248
+- [x] 4.11 Back to step 1 and return preserves selections (same PAT) — 5ba2248
 
 ### Phase 5: Board Detail Page — Linked Repos
 
 #### Automated
 
-- [ ] 5.1 Linting passes
-- [ ] 5.2 Type checking / build passes
+- [x] 5.1 Linting passes
+- [x] 5.2 Type checking / build passes
 
 #### Manual
 
-- [ ] 5.3 Board page shows linked repos (not "Coming soon")
-- [ ] 5.4 S-04 placeholder unchanged
-- [ ] 5.5 Legacy board (no repos) shows graceful fallback
+- [x] 5.3 Board page shows linked repos (not "Coming soon")
+- [x] 5.4 S-04 placeholder unchanged
+- [x] 5.5 Legacy board (no repos) shows graceful fallback
