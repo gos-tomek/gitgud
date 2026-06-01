@@ -511,11 +511,11 @@ Replace the "Coming soon (S-02)" placeholder on the board detail page with the l
 
 #### Automated
 
-- [x] 5.1 Linting passes
-- [x] 5.2 Type checking / build passes
+- [x] 5.1 Linting passes — f4f0422
+- [x] 5.2 Type checking / build passes — f4f0422
 
 #### Manual
 
-- [x] 5.3 Board page shows linked repos (not "Coming soon")
-- [x] 5.4 S-04 placeholder unchanged
-- [x] 5.5 Legacy board (no repos) shows graceful fallback
+- [x] 5.3 Board page shows linked repos (not "Coming soon") — f4f0422
+- [x] 5.4 S-04 placeholder unchanged — f4f0422
+- [x] 5.5 Legacy board (no repos) shows graceful fallback — f4f0422
