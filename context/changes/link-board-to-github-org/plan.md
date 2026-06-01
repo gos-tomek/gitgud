@@ -460,33 +460,33 @@ Replace the "Coming soon (S-02)" placeholder on the board detail page with the l
 
 #### Automated
 
-- [x] 2.1 Linting passes
-- [x] 2.2 Type checking / build passes
-- [x] 2.3 Board creation (name-only) works end-to-end
+- [x] 2.1 Linting passes — d489069
+- [x] 2.2 Type checking / build passes — d489069
+- [x] 2.3 Board creation (name-only) works end-to-end — d489069
 
 #### Manual
 
-- [x] 2.4 Form renders with step indicator (step 1 of 2)
-- [x] 2.5 Next advances to step 2, step 2 shows placeholder content + Create Board button
-- [x] 2.6 Back returns to step 1, preserves entered board name
-- [x] 2.7 Create Board creates board and redirects
-- [x] 2.8 Error states display correctly (empty name, duplicate name)
+- [x] 2.4 Form renders with step indicator (step 1 of 2) — d489069
+- [x] 2.5 Next advances to step 2, step 2 shows placeholder content + Create Board button — d489069
+- [x] 2.6 Back returns to step 1, preserves entered board name — d489069
+- [x] 2.7 Create Board creates board and redirects — d489069
+- [x] 2.8 Error states display correctly (empty name, duplicate name) — d489069
 
 ### Phase 3: Screen 1 — Board Name + PAT
 
 #### Automated
 
-- [ ] 3.1 Linting passes
-- [ ] 3.2 Type checking / build passes
+- [x] 3.1 Linting passes
+- [x] 3.2 Type checking / build passes
 
 #### Manual
 
-- [ ] 3.3 PAT field renders with label and help text
-- [ ] 3.4 Valid classic PAT triggers validation, shows @username
-- [ ] 3.5 Invalid token shows error
-- [ ] 3.6 github_pat_ prefix shows fine-grained warning
-- [ ] 3.7 Next disabled until PAT validates
-- [ ] 3.8 Back from step 2 preserves PAT + validation state
+- [x] 3.3 PAT field renders with label and help text
+- [x] 3.4 Valid classic PAT triggers validation, shows @username
+- [x] 3.5 Invalid token shows error
+- [x] 3.6 github_pat_ prefix shows fine-grained warning
+- [x] 3.7 Next disabled until PAT validates
+- [x] 3.8 Back from step 2 preserves PAT + validation state
 
 ### Phase 4: Screen 2 — Repo Picker
 

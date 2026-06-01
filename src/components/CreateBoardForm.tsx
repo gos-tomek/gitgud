@@ -1,8 +1,26 @@
-import React, { useState } from "react";
-import { Layout as LayoutIcon, ArrowRight, ArrowLeft } from "lucide-react";
+import React, { useState, useRef } from "react";
+import {
+  Layout as LayoutIcon,
+  ArrowRight,
+  ArrowLeft,
+  KeyRound,
+  CheckCircle2,
+  AlertTriangle,
+  Loader2,
+} from "lucide-react";
 import { FormField } from "@/components/auth/FormField";
+import { PasswordToggle } from "@/components/auth/PasswordToggle";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+
+type PatStatus = "idle" | "validating" | "valid" | "error" | "warning";
+
+interface PatValidation {
+  status: PatStatus;
+  login?: string;
+  avatarUrl?: string;
+  message?: string;
+}
 
 export default function CreateBoardForm() {
   const [step, setStep] = useState<1 | 2>(1);
@@ -11,6 +29,58 @@ export default function CreateBoardForm() {
   const [apiError, setApiError] = useState<string | undefined>();
   const [submitting, setSubmitting] = useState(false);
   const [checkingName, setCheckingName] = useState(false);
+
+  // PAT state
+  const [pat, setPat] = useState("");
+  const [patVisible, setPatVisible] = useState(false);
+  const [patValidation, setPatValidation] = useState<PatValidation>({ status: "idle" });
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  async function validatePat(token: string) {
+    try {
+      const res = await fetch("/api/github/validate-pat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ pat: token }),
+      });
+      const data = (await res.json()) as { login?: string; avatarUrl?: string; warning?: string; error?: string };
+      if (res.ok && data.login) {
+        setPatValidation({
+          status: "valid",
+          login: data.login,
+          avatarUrl: data.avatarUrl,
+          message: data.warning,
+        });
+      } else {
+        setPatValidation({ status: "error", message: data.error ?? "Token is invalid or expired" });
+      }
+    } catch {
+      setPatValidation({ status: "error", message: "Could not validate token — network error" });
+    }
+  }
+
+  function handlePatChange(value: string) {
+    setPat(value);
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+
+    if (!value.trim()) {
+      setPatValidation({ status: "idle" });
+      return;
+    }
+
+    if (value.trim().startsWith("github_pat_")) {
+      setPatValidation({
+        status: "warning",
+        message: "Fine-grained tokens have limited org access. Use a classic PAT for best compatibility.",
+      });
+      return;
+    }
+
+    setPatValidation({ status: "validating" });
+    debounceRef.current = setTimeout(() => {
+      void validatePat(value.trim());
+    }, 500);
+  }
 
   function validateName(): boolean {
     if (!name.trim()) {
@@ -22,6 +92,7 @@ export default function CreateBoardForm() {
 
   async function handleNext() {
     if (!validateName()) return;
+    if (patValidation.status !== "valid") return;
     setCheckingName(true);
     try {
       const res = await fetch("/api/boards/check-name", {
@@ -70,6 +141,8 @@ export default function CreateBoardForm() {
     }
   }
 
+  const nextDisabled = checkingName || patValidation.status !== "valid";
+
   return (
     <div className="space-y-4">
       {/* Step indicator */}
@@ -103,11 +176,66 @@ export default function CreateBoardForm() {
                 {"You'll be the "}
                 <span className="font-semibold text-white">Supervisor (EM)</span> of this board.
               </p>
+
+              <FormField
+                id="pat"
+                label="GitHub Personal Access Token"
+                type={patVisible ? "text" : "password"}
+                value={pat}
+                onChange={handlePatChange}
+                placeholder="ghp_..."
+                icon={<KeyRound className="size-4" />}
+                endContent={
+                  <PasswordToggle
+                    visible={patVisible}
+                    onToggle={() => {
+                      setPatVisible((v) => !v);
+                    }}
+                  />
+                }
+                hint={
+                  <p className="mt-1 text-xs text-blue-100/50">
+                    Requires a{" "}
+                    <a
+                      href="https://github.com/settings/tokens/new?scopes=repo,read:org&description=GitGud"
+                      target="_blank"
+                      rel="noreferrer"
+                      className="underline hover:text-blue-100/80"
+                    >
+                      classic PAT
+                    </a>{" "}
+                    with <code className="text-blue-100/70">repo</code> and{" "}
+                    <code className="text-blue-100/70">read:org</code> scopes.
+                  </p>
+                }
+              />
+
+              {patValidation.status === "validating" && (
+                <div className="flex items-center gap-2 text-sm text-blue-100/60">
+                  <Loader2 className="size-4 animate-spin" />
+                  Validating token…
+                </div>
+              )}
+              {patValidation.status === "valid" && (
+                <div className="flex items-center gap-2 text-sm text-green-400">
+                  <CheckCircle2 className="size-4" />
+                  Connected as <span className="font-semibold">@{patValidation.login}</span>
+                  {patValidation.message && <span className="ml-1 text-yellow-400/80">({patValidation.message})</span>}
+                </div>
+              )}
+              {patValidation.status === "error" && <p className="text-sm text-red-300">{patValidation.message}</p>}
+              {patValidation.status === "warning" && (
+                <div className="flex items-start gap-2 rounded-md bg-yellow-500/10 p-3 text-sm text-yellow-300">
+                  <AlertTriangle className="mt-0.5 size-4 shrink-0" />
+                  {patValidation.message}
+                </div>
+              )}
+
               <Button
                 type="button"
                 onClick={handleNext}
-                disabled={checkingName}
-                className="w-full rounded-lg bg-purple-600 px-4 py-2 font-medium text-white transition-colors hover:bg-purple-500"
+                disabled={nextDisabled}
+                className="w-full rounded-lg bg-purple-600 px-4 py-2 font-medium text-white transition-colors hover:bg-purple-500 disabled:opacity-50"
               >
                 {checkingName ? (
                   <span className="flex items-center gap-2">
