@@ -442,35 +442,35 @@ Replace the "Coming soon (S-02)" placeholder on the board detail page with the l
 
 #### Automated
 
-- [x] 1.1 Linting passes
-- [x] 1.2 Type checking / build passes
-- [x] 1.3 All 3 endpoints return correct JSON with valid inputs
-- [x] 1.4 All 3 endpoints return 401 without session
+- [x] 1.1 Linting passes — e3e5611
+- [x] 1.2 Type checking / build passes — e3e5611
+- [x] 1.3 All 3 endpoints return correct JSON with valid inputs — e3e5611
+- [x] 1.4 All 3 endpoints return 401 without session — e3e5611
 
 #### Manual
 
-- [x] 1.5 validate-pat with valid classic PAT returns login + avatar
-- [x] 1.6 validate-pat with github_pat_ prefix returns fine-grained warning
-- [x] 1.7 validate-pat with invalid token returns error
-- [x] 1.8 repos returns user's repo list with push-access flags
-- [x] 1.9 validate-repo with existing public repo returns info
-- [x] 1.10 validate-repo with nonexistent repo returns 404
+- [x] 1.5 validate-pat with valid classic PAT returns login + avatar — e3e5611
+- [x] 1.6 validate-pat with github_pat_ prefix returns fine-grained warning — e3e5611
+- [x] 1.7 validate-pat with invalid token returns error — e3e5611
+- [x] 1.8 repos returns user's repo list with push-access flags — e3e5611
+- [x] 1.9 validate-repo with existing public repo returns info — e3e5611
+- [x] 1.10 validate-repo with nonexistent repo returns 404 — e3e5611
 
 ### Phase 2: Form Architecture Refactor
 
 #### Automated
 
-- [ ] 2.1 Linting passes
-- [ ] 2.2 Type checking / build passes
-- [ ] 2.3 Board creation (name-only) works end-to-end
+- [x] 2.1 Linting passes
+- [x] 2.2 Type checking / build passes
+- [x] 2.3 Board creation (name-only) works end-to-end
 
 #### Manual
 
-- [ ] 2.4 Form renders with step indicator (step 1 of 2)
-- [ ] 2.5 Next advances to step 2, step 2 shows placeholder content + Create Board button
-- [ ] 2.6 Back returns to step 1, preserves entered board name
-- [ ] 2.7 Create Board creates board and redirects
-- [ ] 2.8 Error states display correctly (empty name, duplicate name)
+- [x] 2.4 Form renders with step indicator (step 1 of 2)
+- [x] 2.5 Next advances to step 2, step 2 shows placeholder content + Create Board button
+- [x] 2.6 Back returns to step 1, preserves entered board name
+- [x] 2.7 Create Board creates board and redirects
+- [x] 2.8 Error states display correctly (empty name, duplicate name)
 
 ### Phase 3: Screen 1 — Board Name + PAT
 

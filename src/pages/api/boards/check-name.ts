@@ -1,9 +1,8 @@
 import type { APIRoute } from "astro";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase";
-import { createBoard, BoardNameTakenError } from "@/lib/services/boards";
 
-const createBoardSchema = z.object({
+const schema = z.object({
   name: z.string().trim().min(1, "Board name is required").max(80, "Keep it under 80 characters"),
 });
 
@@ -27,19 +26,22 @@ export const POST: APIRoute = async (context) => {
     return new Response(JSON.stringify({ error: "Invalid JSON body" }), { status: 400 });
   }
 
-  const parsed = createBoardSchema.safeParse(body);
+  const parsed = schema.safeParse(body);
   if (!parsed.success) {
     const firstIssue = parsed.error.issues.at(0);
     return new Response(JSON.stringify({ error: firstIssue?.message ?? "Invalid input" }), { status: 400 });
   }
 
-  try {
-    const { id } = await createBoard(supabase, user.id, parsed.data.name);
-    return new Response(JSON.stringify({ id }), { status: 201 });
-  } catch (err) {
-    if (err instanceof BoardNameTakenError) {
-      return new Response(JSON.stringify({ error: err.message }), { status: 409 });
-    }
-    return new Response(JSON.stringify({ error: "Something went wrong. Please try again." }), { status: 500 });
+  const { data } = await supabase
+    .from("boards")
+    .select("id")
+    .eq("owner_user_id", user.id)
+    .ilike("name", parsed.data.name)
+    .maybeSingle();
+
+  if (data) {
+    return new Response(JSON.stringify({ error: "You already have a board with that name" }), { status: 409 });
   }
+
+  return new Response(null, { status: 204 });
 };
