@@ -58,6 +58,8 @@ export const POST: APIRoute = async (context) => {
     const collaboratorMap = new Map<number, { login: string; id: number; avatarUrl: string; type: string }>();
     const warnings: { repo: string; message: string }[] = [];
 
+    // listContributors (not listCollaborators) is intentional: read-only PATs work, and contributors
+    // correlate with who appears in PR/review ingestion data — the users an EM actually wants to track.
     for (const repo of repos) {
       if (collaboratorMap.size >= COLLABORATOR_LIMIT) break;
 
@@ -67,6 +69,11 @@ export const POST: APIRoute = async (context) => {
           repo: repo.name,
           per_page: 100,
         })) {
+          // GitHub returns 202 while computing contribution stats for the first time — no data yet.
+          if (response.status === 202) {
+            warnings.push({ repo: `${repo.owner}/${repo.name}`, message: "Stats still computing, try again shortly" });
+            break;
+          }
           for (const contributor of response.data) {
             if (!contributor.id) continue;
             if (!collaboratorMap.has(contributor.id)) {

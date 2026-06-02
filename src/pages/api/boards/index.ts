@@ -27,7 +27,7 @@ const createBoardSchema = z.object({
   name: z.string().trim().min(1, "Board name is required").max(80, "Keep it under 80 characters"),
   pat: z.string().min(1, "GitHub token is required"),
   repos: z.array(repoSchema).min(1, "At least one repository is required"),
-  contributors: z.array(contributorSchema).min(1, "At least one contributor is required"),
+  contributors: z.array(contributorSchema).min(1, "At least one contributor is required").max(200),
 });
 
 export const POST: APIRoute = async (context) => {
@@ -81,15 +81,25 @@ export const POST: APIRoute = async (context) => {
       logger.warn(`[boards] Repo linking failed for board ${boardId}: ${reposError.message}`);
     }
 
-    await addBoardContributors(
-      supabase,
-      boardId,
-      parsed.data.contributors.map((c) => ({
-        githubId: c.githubId,
-        githubLogin: c.githubLogin,
-        avatarUrl: c.avatarUrl ?? null,
-      })),
-    );
+    try {
+      await addBoardContributors(
+        supabase,
+        boardId,
+        parsed.data.contributors.map((c) => ({
+          githubId: c.githubId,
+          githubLogin: c.githubLogin,
+          avatarUrl: c.avatarUrl ?? null,
+        })),
+      );
+    } catch (err) {
+      // Contributor insert failed — delete the board so the user can retry cleanly.
+      // ON DELETE CASCADE removes github_repos and the encrypted PAT automatically.
+      const { error: deleteError } = await supabase.from("boards").delete().eq("id", boardId);
+      if (deleteError) {
+        logger.error(`[boards] Cleanup delete failed for orphaned board ${boardId}: ${deleteError.message}`);
+      }
+      throw err;
+    }
 
     return json({ id: boardId }, 201);
   } catch (err) {

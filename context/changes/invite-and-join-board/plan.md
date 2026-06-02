@@ -151,9 +151,11 @@ Response:
 }
 ```
 
-The endpoint calls `octokit.rest.repos.listCollaborators({ owner, repo })` for each repo, deduplicates by `id` (Map keyed on numeric ID), and returns the union. The `type` field (User/Bot/Organization) is passed through for the UI to display but not filtered server-side.
+The endpoint calls `octokit.rest.repos.listContributors({ owner, repo })` for each repo, deduplicates by `id` (Map keyed on numeric ID), and returns the union. The `type` field (User/Bot/Organization) is passed through for the UI to display but not filtered server-side.
 
-Per-repo error handling: wrap each `listCollaborators` call in a try/catch. If a repo returns 403 (PAT lacks push/admin access), skip that repo and append `{ repo: "owner/name", message: "Insufficient access" }` to the `warnings` array. If all repos fail, return 200 with an empty `collaborators` array and all warnings — the UI decides whether to block (no collaborators to pick from).
+**Note**: `listContributors` is used instead of `listCollaborators` intentionally. `listCollaborators` requires push/admin PAT scope, which many users won't have. `listContributors` works with read-only PATs and returns the people who have actually committed code — closely matching who appears in PR/review ingestion data. Trade-off: may include former contributors who no longer have repo access.
+
+Per-repo error handling: wrap each `listContributors` call in a try/catch. If a repo returns 403 (PAT has no access to this private repo), skip and append `{ repo: "owner/name", message: "Insufficient access" }` to the `warnings` array. If a repo returns 202 (GitHub still computing stats), skip and append `{ repo: "owner/name", message: "Stats still computing, try again shortly" }`. If all repos fail, return 200 with an empty `collaborators` array and all warnings — the UI decides whether to block (no contributors to pick from).
 
 Error mapping: `GitHubAuthError` → 401 (PAT itself is invalid), generic → 500. Per-repo 403s are not endpoint-level errors — they produce warnings.
 

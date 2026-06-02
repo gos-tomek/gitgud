@@ -18,3 +18,13 @@
 - **Problem**: Scattered console.* calls trigger lint warnings and can't be centrally controlled — lint suppression pragmas accumulate and there's no single swap point when a structured logger is needed.
 - **Rule**: Always use consola via `@/lib/logger` for logging. Never use `console.*` directly in application code.
 - **Applies to**: implement, impl-review
+
+## Always REVOKE ALL before relying on RLS
+
+**Context**: supabase/migrations/20260602120000_board_contributors.sql — board_contributors table secured with RLS policies.
+
+**Problem**: RLS policies restrict which rows users can access, but Postgres still grants default table-level privileges to the `anon` and `authenticated` roles unless explicitly revoked. A table protected only by RLS but without a preceding REVOKE can be accessed through privilege-escalation paths or future policy gaps.
+
+**Rule**: Every new table migration must include `REVOKE ALL ON <table> FROM anon, authenticated;` before the RLS policies.
+
+**Applies to**: All new Supabase migration files that create tables with RLS.
