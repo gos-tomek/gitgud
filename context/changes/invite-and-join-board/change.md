@@ -1,7 +1,7 @@
 ---
 change_id: invite-and-join-board
 title: Invite and join board
-status: implementing
+status: implemented
 created: 2026-05-30
 updated: 2026-06-02
 

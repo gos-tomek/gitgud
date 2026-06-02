@@ -440,12 +440,12 @@ Replace the "Contribution profiles — Coming soon" placeholder on the board det
 
 #### Automated
 
-- [x] 4.1 `npm run build` passes
-- [x] 4.2 `npm run lint` passes
+- [x] 4.1 `npm run build` passes — f7ec815
+- [x] 4.2 `npm run lint` passes — f7ec815
 
 #### Manual
 
-- [x] 4.3 Board detail shows contributor list with avatars and @login
-- [x] 4.4 Empty state displays when board has zero contributors
-- [x] 4.5 Contributors match what was selected during board creation
-- [x] 4.6 No visual regressions on board detail page
+- [x] 4.3 Board detail shows contributor list with avatars and @login — f7ec815
+- [x] 4.4 Empty state displays when board has zero contributors — f7ec815
+- [x] 4.5 Contributors match what was selected during board creation — f7ec815
+- [x] 4.6 No visual regressions on board detail page — f7ec815
