@@ -1,5 +1,5 @@
 import type { createClient } from "@/lib/supabase";
-import type { UserBoard } from "@/types";
+import type { BoardContributor, UserBoard } from "@/types";
 
 type SupabaseClient = NonNullable<ReturnType<typeof createClient>>;
 
@@ -92,4 +92,40 @@ export async function getBoardRepos(
     repoName: row.repo_name as string,
     connectedAt: row.connected_at as string,
   }));
+}
+
+export async function getBoardContributors(supabase: SupabaseClient, boardId: string): Promise<BoardContributor[]> {
+  const { data, error } = await supabase
+    .from("board_contributors")
+    .select("board_id,github_id,github_login,avatar_url,user_id,added_at")
+    .eq("board_id", boardId)
+    .order("added_at", { ascending: true });
+
+  if (error) throw error;
+
+  return data.map((row) => ({
+    boardId: row.board_id as string,
+    githubId: row.github_id as number,
+    githubLogin: row.github_login as string,
+    avatarUrl: row.avatar_url as string | null,
+    userId: row.user_id as string | null,
+    addedAt: row.added_at as string,
+  }));
+}
+
+export async function addBoardContributors(
+  supabase: SupabaseClient,
+  boardId: string,
+  contributors: { githubId: number; githubLogin: string; avatarUrl: string | null | undefined }[],
+): Promise<void> {
+  const { error } = await supabase.from("board_contributors").insert(
+    contributors.map((c) => ({
+      board_id: boardId,
+      github_id: c.githubId,
+      github_login: c.githubLogin,
+      avatar_url: c.avatarUrl ?? null,
+    })),
+  );
+
+  if (error) throw error;
 }

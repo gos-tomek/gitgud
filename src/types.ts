@@ -44,6 +44,15 @@ export interface GitHubReview {
   fetchedAt: string;
 }
 
+export interface BoardContributor {
+  boardId: string;
+  githubId: number;
+  githubLogin: string;
+  avatarUrl: string | null;
+  userId: string | null;
+  addedAt: string;
+}
+
 export interface GitHubReviewComment {
   id: number;
   pullRequestId: number;

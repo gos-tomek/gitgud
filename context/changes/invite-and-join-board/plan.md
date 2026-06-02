@@ -385,28 +385,28 @@ Replace the "Contribution profiles — Coming soon" placeholder on the board det
 
 #### Automated
 
-- [x] 1.1 Migration applies cleanly: `npx supabase db reset`
-- [x] 1.2 No RLS policy conflicts
-- [x] 1.3 `npm run build` passes
+- [x] 1.1 Migration applies cleanly: `npx supabase db reset` — 788c62c
+- [x] 1.2 No RLS policy conflicts — 788c62c
+- [x] 1.3 `npm run build` passes — 788c62c
 
 #### Manual
 
-- [ ] 1.4 Table exists with correct columns and constraints in Supabase Studio
-- [ ] 1.5 RLS policies verified (owner vs non-owner)
+- [x] 1.4 Table exists with correct columns and constraints in Supabase Studio
+- [x] 1.5 RLS policies verified (owner vs non-owner)
 
 ### Phase 2: Collaborators API + Service Layer
 
 #### Automated
 
-- [ ] 2.1 `npm run build` passes
-- [ ] 2.2 `npm run lint` passes
-- [ ] 2.3 Endpoint returns valid JSON matching the response schema
+- [x] 2.1 `npm run build` passes
+- [x] 2.2 `npm run lint` passes
+- [x] 2.3 Endpoint returns valid JSON matching the response schema
 
 #### Manual
 
-- [ ] 2.4 `/api/github/collaborators` returns deduplicated collaborator list
-- [ ] 2.5 Collaborators from multiple repos are merged by github_id (no duplicates)
-- [ ] 2.6 Error responses for invalid PAT (401) and missing repos (400)
+- [x] 2.4 `/api/github/collaborators` returns deduplicated collaborator list
+- [x] 2.5 Collaborators from multiple repos are merged by github_id (no duplicates)
+- [x] 2.6 Error responses for invalid PAT (401) and missing repos (400)
 
 ### Phase 3: Wizard Step 3 — Contributor Picker
 
