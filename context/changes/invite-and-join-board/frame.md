@@ -1,121 +1,123 @@
-# Frame Brief: Invite and Join Board
+# Frame Brief: Invite and Join Board (Confirmed)
 
 > Framing step before /10x-plan. This document captures what is *actually*
 > at issue, separated from what was initially assumed.
 
 ## Reported Observation
 
-The app has auth (email+password signup/login) and board creation (F-01, S-01 done), but no way
-for an EM to invite ICs to a board or for an IC to join one. Roadmap S-03 is the next ready slice
-in Stream A.
+The app needs IC members on boards (S-03). Boards exist with linked GitHub repos
+(S-02 done), but only the owner/supervisor is a member. There is no way to
+associate ICs with a board.
 
 ## Initial Framing (preserved)
 
-- **User's stated cause or approach**: Build an invite-by-email flow using Supabase's
-  `inviteUserByEmail()` — EM enters email, IC receives link, IC creates account, IC is auto-added
-  to the board. No separate acceptance gate (FR-004).
-- **User's proposed direction**: Implement S-03 as the next slice, parallel with S-02.
-- **Pre-dispatch narrowing**: Both new-user and existing-user invite paths matter equally.
-  EM adds ICs to the board regardless of account status — ICs should be visible in the member
-  list even before they sign in. Existing users get auto-added + notification; new users get
-  Supabase invite email. No confirmation gate for either path.
+- **User's stated cause or approach**: Instead of the email invite + invite link
+  flow originally planned (FR-003/004), add a new step to the New Board wizard
+  where the EM picks IC contributors from a GitHub collaborator list. No
+  invitation links needed.
+- **User's proposed direction**: Extend the 2-step CreateBoardForm to 3 steps:
+  (1) name + PAT, (2) repos, (3) pick ICs from contributor list. When an IC
+  later creates a Supabase account and links GitHub OAuth, they get matched to
+  their board membership.
+- **Pre-dispatch narrowing**: EM picks from repo collaborators (people with
+  push/review access) via GitHub API at wizard time. ICs are GitHub identities
+  first; account linking comes later. Scope is creation-only (S-09 handles
+  post-creation roster changes).
 
-## Dimension Map
+## Reframe Attempt (2026-06-02): Add GitHub OAuth at Registration
 
-The observation could originate at any of these dimensions:
+User proposed pulling GitHub OAuth into S-03 scope: add "connect GitHub account"
+at registration, then auto-match `board_contributors.github_id` to
+`auth.identities.provider_id` when ICs sign up. Investigated as a potential
+scope change.
 
-1. **Membership identity model** — Can `board_members` (with `user_id` FK to `auth.users`)
-   represent ICs who haven't signed up yet? If `inviteUserByEmail()` pre-creates the user in
-   `auth.users`, the FK works; if not, the schema needs a parallel track.
-2. **IC onboarding callback flow** — What happens after the IC clicks the invite link?
-   The app needs to receive the token, verify it, prompt the IC to set a password, and redirect
-   them to their board. ← **initial framing assumed Supabase handles this**
-3. **Two distinct user paths** — New users (no account → invite email) vs existing users
-   (already registered → add to board + notify). `inviteUserByEmail()` only handles new users.
-   The framing treats this as a single flow.
-4. **Admin client infrastructure** — `inviteUserByEmail()` requires the service role key,
-   which isn't configured. Env schema in `astro.config.mjs` doesn't declare it.
+### Dimension Map
 
-## Hypothesis Investigation
+| # | Dimension | What would go wrong / what the framing assumes |
+|---|-----------|------------------------------------------------|
+| 1 | OAuth needed for contributor picker? | Assumes OAuth is required to list collaborators |
+| 2 | OAuth eliminates invitation system? | Assumes invitations still exist without OAuth |
+| 3 | Downstream slices need OAuth? | Assumes S-04/S-05 need OAuth infrastructure early |
+| 4 | OAuth registration complexity | What it actually costs to add OAuth to S-03 |
+
+### Hypothesis Investigation
 
 | Hypothesis | Evidence | Verdict |
 | --- | --- | --- |
-| 1. Schema can't represent pre-signup members | `inviteUserByEmail()` pre-creates the user in `auth.users` immediately — `board_members.user_id` FK works even before IC sets a password. No schema change needed for this dimension. | WEAK |
-| 2. IC post-click onboarding flow is missing | No auth callback handler exists anywhere in the app. No token parsing in middleware (`src/middleware.ts:1-40`). `confirm-email.astro` is a static page — doesn't handle invite tokens. No "set password" page exists. If IC clicks the invite link → lands on homepage → token ignored → no way to complete onboarding. | **STRONG** |
-| 3. Two-path bifurcation is unaccounted for | `inviteUserByEmail()` is for new users only. For existing users, the EM needs to: check if email is registered, add directly to `board_members`, send a notification email. No existing-user lookup or board-add endpoint exists. User confirmed both paths must work. | MEDIUM |
-| 4. Service role key is missing | `.env` and `.dev.vars` contain only `SUPABASE_URL` and `SUPABASE_KEY` (anon). `astro.config.mjs` env schema declares only these two. Adding the service role key is a config step, not an architectural issue. | WEAK |
+| OAuth needed for picker | EM's PAT already has `repo` + `read:org` scopes — exactly what `listCollaborators` requires. All existing GitHub API routes (`validate-pat.ts`, `repos.ts`, `validate-repo.ts`) use the same PAT pattern. | **NONE** — OAuth adds nothing to the picker |
+| OAuth eliminates invitations | Previous frame (2026-06-02) already eliminated invitations by switching to "pick from GitHub collaborators." OAuth is orthogonal. | **NONE** — invitations were already gone |
+| Downstream need for OAuth | S-04 is EM-only viewing (no IC login). S-05 needs IC login but PRD says "No OAuth in MVP" — email+password is MVP auth. No slice before post-MVP needs OAuth. | **NONE** — no consumer exists |
+| Registration complexity | ~7 files to create/modify: `config.toml`, 2 new API routes, 2 UI component changes, env vars, GitHub OAuth app registration. Real engineering cost with no S-03 consumer. | **STRONG** — cost without benefit in this slice |
 
-## Narrowing Signals
+### Narrowing Signals
 
-- User confirmed: "EM should be able to switch between ICs even if they never sign in."
-  This means membership exists at invite time, not at signup time. Supabase invite's
-  pre-creation of users in `auth.users` makes this work without schema changes.
-- User confirmed: both new-user and existing-user paths must work in this slice.
-- User confirmed: Supabase invite email as delivery mechanism — ruling out custom token
-  systems.
-- User raised testability concern: "I wouldn't like to send mails to real people while
-  testing." Supabase local dev has Inbucket on port 54324 — emails are intercepted, not sent.
-  This resolves the concern for local dev but should be documented.
+- User confirmed: focus S-03 on board creation process only.
+- User agreed to split GitHub-to-GitGud account linking into a separate issue.
+- The PAT already covers everything the contributor picker needs.
 
-## Cross-System Check
+### Resolution
 
-Supabase invite flows conventionally require three components the app currently lacks:
+**The reframe attempt did not hold.** GitHub OAuth at registration is a valid
+future feature but does not belong in S-03:
+- The contributor picker works with the existing PAT — no OAuth needed.
+- Invitations were already eliminated by the original reframe.
+- No downstream slice consumes OAuth until post-MVP.
+- The cost is real (~7 files) with no S-03 benefit.
 
-1. **Auth callback route** — handles the redirect from the invite email link, exchanges the
-   token for a session. Supabase docs recommend a `/auth/callback` or `/auth/confirm` route
-   that calls `supabase.auth.exchangeCodeForSession()` or processes the token hash from the
-   URL fragment.
-2. **Password-setting flow** — after the invite token is verified, the user needs to set
-   their password via `supabase.auth.updateUser({ password })`. The existing signup page
-   (`/auth/signup`) creates a NEW user and can't be reused for this.
-3. **Redirect to board** — after password is set, redirect the IC to the board they were
-   invited to. This requires the invite context (board ID) to survive the email → click →
-   callback → password-set chain.
+**Action**: create a separate change for "link GitGud account with GitHub
+account" — likely targeting S-05 scope or a standalone foundation slice.
 
-The leading hypothesis (Dimension 2: missing callback flow) matches this convention exactly.
-The gap is not an architectural decision to make — it's a well-established pattern that hasn't
-been implemented yet.
+## Confirmed Problem Statement
 
-## Reframed Problem Statement
+> **The actual problem to plan around is**: introducing a GitHub-identity-based
+> contributor model that decouples IC membership from Supabase accounts, plus a
+> wizard step to populate it from the GitHub collaborators API.
 
-> **The actual problem to plan around is**: the IC's post-invite onboarding flow — from
-> clicking the invite link through setting a password to landing on their board — is the
-> primary engineering surface, not the invite-sending itself.
+The original reframed problem statement (2026-06-02) holds. The user's "pick
+from list" direction is correct and dramatically simpler than the invite-link
+flow. For S-03, ICs are purely GitHub identities the EM selects and tracks. No
+Supabase accounts, no OAuth, no email matching.
 
-The initial framing ("invite ICs by email using Supabase") correctly identifies the delivery
-mechanism but frames the work around the EM's action (sending the invite — a single API call).
-The actual complexity is threefold:
+S-03 deliverables (unchanged from original frame):
 
-1. **Auth callback infrastructure**: a new route to handle Supabase's invite link redirect,
-   exchange the token, and establish a session. This doesn't exist anywhere in the app today.
-2. **Password-setting UX**: a new page/flow where the invited IC sets their password after
-   clicking the invite link. The existing signup page can't serve this purpose.
-3. **Two-path branching**: when the EM enters an email, the system must check whether the
-   user exists. New user → `inviteUserByEmail()` (pre-creates user + sends email). Existing
-   user → `board_members` INSERT + notification. Both paths produce the same result (IC
-   appears on the board).
+1. **New contributor table** — `board_contributors` keyed on `(board_id,
+   github_id)` with `github_login` and `avatar_url`. No FK to `auth.users`.
+   Follows the same identity pattern as `github_pull_requests`.
+2. **Collaborators API endpoint** — new `/api/github/collaborators` route that
+   calls `octokit.rest.repos.listCollaborators()` for each selected repo and
+   deduplicates across repos.
+3. **Wizard step 3** — contributor picker in `CreateBoardForm.tsx`, similar UX
+   to the existing repo picker (checkbox list, filter, avatars).
+4. **Board detail update** — show contributors on the board detail page
+   (`boards/[id].astro`), replacing the placeholder with an actual member list.
 
-The invite-sending endpoint (EM's action) is the simplest part. The plan should weight
-the callback flow and two-path logic accordingly.
+What the plan should NOT include (deferred):
+- GitHub OAuth configuration or `linkIdentity` flow (separate change — account linking)
+- IC self-service accounts or login (S-05)
+- Post-creation roster management (S-09)
+- Email-based matching (ruled out — unreliable)
 
 ## Confidence
 
-**HIGH** — strong evidence (no callback handler, no password page, no token parsing) + matches
-Supabase convention (invite flows require callback infrastructure) + decisive narrowing signal
-(user confirmed both paths must work, ICs visible before signin).
+**HIGH** — original frame confirmed by re-investigation. OAuth reframe attempt
+found no supporting evidence across any dimension. User agreed to split OAuth
+into a separate change.
 
 ## What Changes for /10x-plan
 
-The plan should allocate primary effort to the IC onboarding callback chain (auth callback route,
-password-setting page, board redirect), not to the invite-sending endpoint. It should explicitly
-address the new-user vs existing-user bifurcation as two distinct code paths that converge on
-the same outcome (IC in `board_members`). The service role key addition is a prerequisite task.
+Nothing changes from the original frame. Plan should build a GitHub-identity
+contributor model (new table, new API endpoint, wizard step 3, board detail
+update). The `board_members` table and its `auth.users` FK remain untouched.
+Account linking via GitHub OAuth is explicitly out of scope — tracked as a
+separate change.
 
 ## References
 
-- Source files: `src/middleware.ts`, `src/pages/auth/confirm-email.astro`, `src/pages/api/auth/signup.ts`, `src/lib/supabase.ts`
-- Schema: `supabase/migrations/20260529120000_access_control_and_membership.sql`
-- Board service: `src/lib/services/boards.ts`
-- Supabase config: `supabase/config.toml` (Inbucket on port 54324, email confirmations disabled)
-- PRD refs: FR-003, FR-004, FR-005, FR-014, FR-015
-- Roadmap: S-03 (invite-and-join-board)
+- Source files: `src/components/CreateBoardForm.tsx`, `src/lib/github.ts`, `src/lib/services/boards.ts`, `src/pages/api/boards/index.ts`
+- Schema: `supabase/migrations/20260529120000_access_control_and_membership.sql:13-18` (board_members FK)
+- GitHub data model: `supabase/migrations/20260531100000_github_ingestion_access.sql:30-31,46-47,61-62` (login+id pattern)
+- Supabase config: `supabase/config.toml` (no GitHub OAuth configured)
+- Board detail: `src/pages/boards/[id].astro`
+- PRD refs: FR-003, FR-004, FR-005
+- Roadmap: S-03 (invite-and-join-board), S-05 (profile-classified-comments), S-09 (manage-ic-roster)
+- Research: `context/changes/invite-and-join-board/research.md`
