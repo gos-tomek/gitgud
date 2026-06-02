@@ -3,7 +3,7 @@ project: GitGud
 version: 1
 status: draft
 created: 2026-05-27
-updated: 2026-06-02 (F-04 added: link GitGud account with GitHub via OAuth; S-08–S-11 added earlier)
+updated: 2026-06-02
 prd_version: 1
 main_goal: market-feedback
 top_blocker: skills
@@ -35,7 +35,7 @@ Mentoring, code-review quality, and unblocking — the "glue work" that keeps en
 | S-01  | board-create-with-em-role       | create a board and be explicitly assigned the EM role             | F-01               | FR-001, FR-016, FR-017                    | done     |
 | S-02  | link-board-to-github-org        | link a board to a GitHub org so its activity feeds the board      | S-01, F-02         | FR-002, US-01                             | done     |
 | F-04  | link-github-account             | (foundation) link GitGud account with GitHub via OAuth            | —                   | Access Control                            | proposed |
-| S-03  | invite-and-join-board           | invite ICs by email; IC joins via invite link                     | S-01, F-01, S-02   | FR-003, FR-004, FR-005, FR-014, FR-015    | proposed |
+| S-03  | invite-and-join-board           | invite ICs by email; IC joins via invite link                     | S-01, F-01, S-02   | FR-003, FR-004, FR-005, FR-014, FR-015    | done     |
 | S-04  | profile-raw-github-metrics      | view a contribution profile: PRs, reviews, comment counts         | F-02, S-02, S-03   | FR-006, FR-008, FR-009, FR-010, FR-011, NFR progressive-load, NFR data-parity | proposed |
 | S-05  | profile-classified-comments     | see own review comments broken down by semantic category          | F-03, F-04, S-04   | FR-012, Business Logic, NFR accuracy-floor, NFR data-parity | blocked  |
 | S-06  | em-switch-ic-dropdown           | switch between ICs on a board without a full page reload          | S-04               | FR-007, US-01                             | proposed |
@@ -165,7 +165,7 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **Blockers:** —
 - **Unknowns:** —
 - **Risk:** Invite link + implicit consent on account creation (per FR-004 resolution) — no separate acceptance gate. Builds on the present sign-up/login scaffold.
-- **Status:** proposed
+- **Status:** done
 - **Reinstatement note:** Reinstated 2026-06-01 — S-02 (GitHub org link) is now done, satisfying the prerequisite for GitHub-aware IC selection from the contributor list. All prerequisites met; no outstanding unknowns.
 
 ### S-04: Contribution profile shows raw GitHub metrics
@@ -317,3 +317,4 @@ Foundations below assume these are present and do NOT re-scaffold them.
 | S-01 | board-create-with-em-role     | 2026-05-30 (prod)         | 7d44d9ff07b5c31e4be36eaa06d4caf1f7366df9 |
 | F-02 | github-ingestion-access       | 2026-05-31 (archived)     | — |
 | S-02 | link-board-to-github-org      | 2026-06-01 (archived)     | — |
+| S-03 | invite-and-join-board         | 2026-06-02 (archived)     | — |
