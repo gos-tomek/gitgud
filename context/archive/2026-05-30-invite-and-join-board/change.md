@@ -1,10 +1,12 @@
 ---
 change_id: invite-and-join-board
 title: Invite and join board
-status: deferred
+status: archived
 created: 2026-05-30
-updated: 2026-05-30
-archived_at: null
+updated: 2026-06-02
+triage_completed: 2026-06-02
+
+archived_at: 2026-06-02T16:42:21Z
 ---
 
 ## Notes

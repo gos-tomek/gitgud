@@ -1,7 +1,7 @@
 ---
 import Layout from "@/layouts/Layout.astro";
 import { createClient } from "@/lib/supabase";
-import { getBoardWithRole, getBoardRepos } from "@/lib/services/boards";
+import { getBoardWithRole, getBoardRepos, getBoardContributors } from "@/lib/services/boards";
 
 const { user } = Astro.locals;
 const { id } = Astro.params;
@@ -14,6 +14,7 @@ if (!board) {
 }
 
 const repos = supabase ? await getBoardRepos(supabase, board.id).catch(() => []) : [];
+const contributors = supabase ? await getBoardContributors(supabase, board.id).catch(() => []) : [];
 
 const badgeClass = board.role === "supervisor" ? "bg-blue-500/30 text-blue-200" : "bg-purple-500/30 text-purple-200";
 const badgeLabel = board.role === "supervisor" ? "Supervisor" : "Contributor";
@@ -56,8 +57,26 @@ const createdDate = new Date(board.createdAt).toLocaleDateString("en-GB", {
           }
         </div>
         <div class="rounded-lg border border-white/10 bg-white/5 px-4 py-3">
-          <p class="text-xs font-semibold tracking-wide text-blue-100/40 uppercase">Contribution profiles</p>
-          <p class="mt-1 text-sm text-blue-100/50 italic">Coming soon (S-04)</p>
+          <p class="text-xs font-semibold tracking-wide text-blue-100/40 uppercase">Contributors</p>
+          {
+            contributors.length === 0 ? (
+              <p class="mt-1 text-sm text-blue-100/50 italic">No contributors yet</p>
+            ) : (
+              <ul class="mt-2 space-y-1.5">
+                {contributors.map((contributor) => (
+                  <li class="flex items-center gap-2">
+                    {contributor.avatarUrl ? (
+                      <img src={contributor.avatarUrl} alt={contributor.githubLogin} class="h-6 w-6 rounded-full" />
+                    ) : (
+                      <div class="h-6 w-6 rounded-full bg-white/10" />
+                    )}
+                    <span class="font-mono text-sm text-blue-100/80">@{contributor.githubLogin}</span>
+                    <span class="ml-auto" />
+                  </li>
+                ))}
+              </ul>
+            )
+          }
         </div>
       </div>
 

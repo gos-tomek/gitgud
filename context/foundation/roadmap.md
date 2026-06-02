@@ -3,7 +3,7 @@ project: GitGud
 version: 1
 status: draft
 created: 2026-05-27
-updated: 2026-06-02 (S-08–S-11 added: edit board settings, IC roster, delete board, PAT-expiry freeze)
+updated: 2026-06-02
 prd_version: 1
 main_goal: market-feedback
 top_blocker: skills
@@ -34,9 +34,10 @@ Mentoring, code-review quality, and unblocking — the "glue work" that keeps en
 | F-03  | classification-batch            | (foundation) daily durable batch classifies comments by intent    | F-01, F-02         | FR-012, Business Logic, NFR accuracy-floor | blocked  |
 | S-01  | board-create-with-em-role       | create a board and be explicitly assigned the EM role             | F-01               | FR-001, FR-016, FR-017                    | done     |
 | S-02  | link-board-to-github-org        | link a board to a GitHub org so its activity feeds the board      | S-01, F-02         | FR-002, US-01                             | done     |
-| S-03  | invite-and-join-board           | invite ICs by email; IC joins via invite link                     | S-01, F-01, S-02   | FR-003, FR-004, FR-005, FR-014, FR-015    | proposed |
+| F-04  | link-github-account             | (foundation) link GitGud account with GitHub via OAuth            | —                   | Access Control                            | proposed |
+| S-03  | invite-and-join-board           | invite ICs by email; IC joins via invite link                     | S-01, F-01, S-02   | FR-003, FR-004, FR-005, FR-014, FR-015    | done     |
 | S-04  | profile-raw-github-metrics      | view a contribution profile: PRs, reviews, comment counts         | F-02, S-02, S-03   | FR-006, FR-008, FR-009, FR-010, FR-011, NFR progressive-load, NFR data-parity | proposed |
-| S-05  | profile-classified-comments     | see own review comments broken down by semantic category          | F-03, S-04         | FR-012, Business Logic, NFR accuracy-floor, NFR data-parity | blocked  |
+| S-05  | profile-classified-comments     | see own review comments broken down by semantic category          | F-03, F-04, S-04   | FR-012, Business Logic, NFR accuracy-floor, NFR data-parity | blocked  |
 | S-06  | em-switch-ic-dropdown           | switch between ICs on a board without a full page reload          | S-04               | FR-007, US-01                             | proposed |
 | S-07  | flag-classification-inaccurate  | flag a comment's assigned category as inaccurate                  | S-05               | FR-013                                    | blocked  |
 | S-08  | edit-board-connection           | update Board PAT and linked org; both forms re-validate accessible repos/ICs when PAT changes | S-01, S-02         | FR-018, FR-020                            | ready    |
@@ -52,7 +53,7 @@ Navigation aid — groups items that share a Prerequisites chain. Canonical orde
 | ------ | ---------------------- | -------------------------------------------- | -------------------------------------------------------------------------------------------- |
 | A      | Access & membership    | `F-01` → `S-01` → `S-02` → `S-03` → `S-09`  | S-03 depends on S-02 — EM selects ICs from GitHub contributor list; S-09 extends the roster after initial setup. |
 | B      | GitHub data & profile  | `F-02` → `S-02` → `S-04` → `S-06`            | `S-04` joins Stream A at `S-03` (needs memberships). De-risks the #1 blocker first.          |
-| C      | Classification (wedge) | `F-03` → `S-05` → `S-07`                     | `F-03` needs `F-01`+`F-02`; `S-05` joins Stream B at `S-04`. Blocked on Q1.                  |
+| C      | Classification (wedge) | `F-03` → `S-05` → `S-07`                     | `F-03` needs `F-01`+`F-02`; `S-05` joins Stream B at `S-04` and needs `F-04` (GitHub OAuth). Blocked on Q1. |
 | D      | Board lifecycle        | `S-10` / `S-08` → `S-11`                     | S-10 (delete, from S-01) and S-08 (edit connection, from S-02) are both ready and can run in parallel; S-11 (PAT-expiry freeze) builds on S-08. |
 
 ## Baseline
@@ -111,6 +112,22 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **Risk:** This is the `skills` blocker made concrete — Cloudflare Workflows durable-execution semantics (idempotent steps, retries) are a new programming model, and the accuracy guardrail gates launch. Highest-risk foundation; build the batch as a Workflow from day one rather than a single request.
 - **Status:** blocked
 
+### F-04: Link GitGud account with GitHub via OAuth
+
+- **Outcome:** (foundation) a user can connect their GitGud account to GitHub via OAuth, establishing a verified bridge between `auth.users.id` and their GitHub numeric ID. When an IC with an existing `board_contributors` record links GitHub, the system auto-matches via `github_id`.
+- **Change ID:** link-github-account
+- **PRD refs:** Access Control (identity linking)
+- **Unlocks:** S-05 (ICs must be linked to see their own classified comments)
+- **Prerequisites:** — (builds on email+password auth from Baseline; does not depend on S-03 — can be planned and built independently)
+- **Parallel with:** S-03, S-04, F-03
+- **Blockers:** —
+- **Unknowns:**
+  - GitHub App vs OAuth App? GitHub Apps offer finer-grained permissions and higher rate limits. Evaluate whether a GitHub App (installed on the org) would be better than individual OAuth tokens. — Owner: user. Block: no.
+  - Should the PAT owner's GitHub identity be persisted at board creation? Currently discarded after validation (`validate-pat.ts`). Storing it would pre-link the EM without separate OAuth. — Owner: user. Block: no.
+  - Multiple GitHub accounts: a developer might have personal and work accounts. If they link the wrong one, the match fails silently. — Owner: user. Block: no.
+- **Risk:** First OAuth integration — requires GitHub OAuth app creation, Supabase provider config, callback route, `linkIdentity` flow, and a database trigger for auto-matching `board_contributors`. Moderate complexity but well-documented by Supabase. Research complete in `context/changes/invite-and-join-board/research.md`.
+- **Status:** proposed
+
 ## Slices
 
 ### S-01: EM creates a board and is assigned the EM role
@@ -148,7 +165,7 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **Blockers:** —
 - **Unknowns:** —
 - **Risk:** Invite link + implicit consent on account creation (per FR-004 resolution) — no separate acceptance gate. Builds on the present sign-up/login scaffold.
-- **Status:** proposed
+- **Status:** done
 - **Reinstatement note:** Reinstated 2026-06-01 — S-02 (GitHub org link) is now done, satisfying the prerequisite for GitHub-aware IC selection from the contributor list. All prerequisites met; no outstanding unknowns.
 
 ### S-04: Contribution profile shows raw GitHub metrics
@@ -169,7 +186,7 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **Outcome:** An IC can see their own review comments broken down by semantic category (mentoring, architecture, bug-catch, nitpick, unblocking, question) — the same breakdown an EM sees for that profile — with click-through to per-comment labels.
 - **Change ID:** profile-classified-comments
 - **PRD refs:** FR-012, Business Logic, NFR accuracy-floor, NFR data-parity
-- **Prerequisites:** F-03, S-04
+- **Prerequisites:** F-03, F-04, S-04
 - **Parallel with:** S-06
 - **Blockers:** —
 - **Unknowns:**
@@ -263,6 +280,7 @@ Foundations below assume these are present and do NOT re-scaffold them.
 | F-03       | classification-batch            | Daily classification batch (Cron + Workflow + hosted AI)   | no                    | Blocked on Q1 (accuracy validation) |
 | S-01       | board-create-with-em-role       | EM creates a board and is assigned the EM role             | done                  | Merged 2026-05-30 |
 | S-02       | link-board-to-github-org        | Link a board to a GitHub org                               | done                  | Archived 2026-06-01 |
+| F-04       | link-github-account             | Link GitGud account with GitHub via OAuth                  | yes                   | No prerequisites; can run in parallel with S-03. Research done in `invite-and-join-board/research.md` |
 | S-03       | invite-and-join-board           | Invite ICs by email; IC joins via invite link             | yes                   | Reinstated 2026-06-01; all prerequisites met (S-01, F-01, S-02 done) |
 | S-04       | profile-raw-github-metrics      | Contribution profile: PRs, reviews, comment counts         | no                    | Needs S-03 (F-02, S-02 now done) |
 | S-05       | profile-classified-comments     | Contribution profile: semantically classified comments     | no                    | North star; blocked on Q1 via F-03 |
@@ -299,3 +317,4 @@ Foundations below assume these are present and do NOT re-scaffold them.
 | S-01 | board-create-with-em-role     | 2026-05-30 (prod)         | 7d44d9ff07b5c31e4be36eaa06d4caf1f7366df9 |
 | F-02 | github-ingestion-access       | 2026-05-31 (archived)     | — |
 | S-02 | link-board-to-github-org      | 2026-06-01 (archived)     | — |
+| S-03 | invite-and-join-board         | 2026-06-02 (archived)     | — |
