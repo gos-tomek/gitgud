@@ -70,7 +70,7 @@ export const POST: APIRoute = async (context) => {
           per_page: 100,
         })) {
           // GitHub returns 202 while computing contribution stats for the first time — no data yet.
-          if (response.status === 202) {
+          if ((response.status as number) === 202) {
             warnings.push({ repo: `${repo.owner}/${repo.name}`, message: "Stats still computing, try again shortly" });
             break;
           }
