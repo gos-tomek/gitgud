@@ -422,30 +422,30 @@ Replace the "Contribution profiles — Coming soon" placeholder on the board det
 
 #### Automated
 
-- [x] 3.1 `npm run build` passes
-- [x] 3.2 `npm run lint` passes
-- [x] 3.3 `npm run format` passes
+- [x] 3.1 `npm run build` passes — 09e654e
+- [x] 3.2 `npm run lint` passes — 09e654e
+- [x] 3.3 `npm run format` passes — 09e654e
 
 #### Manual
 
-- [x] 3.4 Full 3-step wizard flow works end-to-end
-- [x] 3.5 Step 3 shows deduplicated collaborators from selected repos
-- [x] 3.6 Filter narrows the list by login
-- [x] 3.7 At least 1 contributor required — button disabled when none selected
-- [x] 3.8 Back navigation preserves selections across all steps
-- [x] 3.9 Board creation succeeds and redirects to detail page
-- [x] 3.10 `board_contributors` rows match selection in database
+- [x] 3.4 Full 3-step wizard flow works end-to-end — 09e654e
+- [x] 3.5 Step 3 shows deduplicated collaborators from selected repos — 09e654e
+- [x] 3.6 Filter narrows the list by login — 09e654e
+- [x] 3.7 At least 1 contributor required — button disabled when none selected — 09e654e
+- [x] 3.8 Back navigation preserves selections across all steps — 09e654e
+- [x] 3.9 Board creation succeeds and redirects to detail page — 09e654e
+- [x] 3.10 `board_contributors` rows match selection in database — 09e654e
 
 ### Phase 4: Board Detail Update
 
 #### Automated
 
-- [ ] 4.1 `npm run build` passes
-- [ ] 4.2 `npm run lint` passes
+- [x] 4.1 `npm run build` passes
+- [x] 4.2 `npm run lint` passes
 
 #### Manual
 
-- [ ] 4.3 Board detail shows contributor list with avatars and @login
-- [ ] 4.4 Empty state displays when board has zero contributors
-- [ ] 4.5 Contributors match what was selected during board creation
-- [ ] 4.6 No visual regressions on board detail page
+- [x] 4.3 Board detail shows contributor list with avatars and @login
+- [x] 4.4 Empty state displays when board has zero contributors
+- [x] 4.5 Contributors match what was selected during board creation
+- [x] 4.6 No visual regressions on board detail page
