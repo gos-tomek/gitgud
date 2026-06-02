@@ -403,8 +403,8 @@ Replace the "Contribution profiles — Coming soon" placeholder on the board det
 
 #### Manual
 
-- [x] 1.4 Table exists with correct columns and constraints in Supabase Studio
-- [x] 1.5 RLS policies verified (owner vs non-owner)
+- [x] 1.4 Table exists with correct columns and constraints in Supabase Studio — 788c62c
+- [x] 1.5 RLS policies verified (owner vs non-owner) — 788c62c
 
 ### Phase 2: Collaborators API + Service Layer
 
