@@ -62,18 +62,19 @@ export const POST: APIRoute = async (context) => {
       if (collaboratorMap.size >= COLLABORATOR_LIMIT) break;
 
       try {
-        for await (const response of octokit.paginate.iterator(octokit.rest.repos.listCollaborators, {
+        for await (const response of octokit.paginate.iterator(octokit.rest.repos.listContributors, {
           owner: repo.owner,
           repo: repo.name,
           per_page: 100,
         })) {
-          for (const collaborator of response.data) {
-            if (!collaboratorMap.has(collaborator.id)) {
-              collaboratorMap.set(collaborator.id, {
-                login: collaborator.login,
-                id: collaborator.id,
-                avatarUrl: collaborator.avatar_url,
-                type: collaborator.type,
+          for (const contributor of response.data) {
+            if (!contributor.id) continue;
+            if (!collaboratorMap.has(contributor.id)) {
+              collaboratorMap.set(contributor.id, {
+                login: contributor.login ?? "",
+                id: contributor.id,
+                avatarUrl: contributor.avatar_url ?? "",
+                type: contributor.type,
               });
             }
             if (collaboratorMap.size >= COLLABORATOR_LIMIT) break;
@@ -81,8 +82,8 @@ export const POST: APIRoute = async (context) => {
           if (collaboratorMap.size >= COLLABORATOR_LIMIT) break;
         }
       } catch (err) {
-        // Per-repo 403 means PAT lacks push/admin access to this repo — skip with a warning
-        if (err instanceof GitHubAuthError && err.message.includes("auth error 403")) {
+        // Per-repo auth error — PAT has no access to this private repo; skip with a warning
+        if (err instanceof GitHubAuthError) {
           warnings.push({ repo: `${repo.owner}/${repo.name}`, message: "Insufficient access" });
           continue;
         }

@@ -71,6 +71,7 @@ Create the `board_contributors` table and RLS policies. This is the data foundat
 **Contract**:
 
 Table schema:
+
 ```sql
 board_contributors (
   board_id     uuid NOT NULL REFERENCES boards(id) ON DELETE CASCADE,
@@ -84,9 +85,11 @@ board_contributors (
 ```
 
 Indexes:
+
 - `board_contributors_user_id_idx` on `user_id` — for future F-04 reverse lookup
 
 RLS policies (same pattern as `board_members` and `github_repos`):
+
 - SELECT: `is_board_member(board_id)` — any board member can see contributors
 - INSERT: `is_board_owner(board_id)` — only board owner can add contributors
 - DELETE: `is_board_owner(board_id)` — only board owner can remove contributors
@@ -134,11 +137,13 @@ Add the GitHub collaborators endpoint and the service functions for reading/writ
 **Contract**:
 
 Request schema (Zod):
+
 ```typescript
 { pat: string, repos: Array<{ owner: string, name: string }> }
 ```
 
 Response:
+
 ```typescript
 {
   collaborators: Array<{ login: string, id: number, avatarUrl: string, type: string }>,
@@ -206,6 +211,7 @@ Extend the CreateBoardForm from 2 steps to 3, adding a contributor picker that f
 **Intent**: Add state for collaborators (fetched list), selected contributors, loading/error states, and a filter string. Fetch collaborators from `/api/github/collaborators` when transitioning from step 2 → step 3.
 
 **Contract**: New state variables following the same pattern as the repo state (lines 51-58):
+
 - `collaborators: CollaboratorItem[]` — fetched from API
 - `selectedContributors: CollaboratorItem[]` — EM's selection
 - `collaboratorsLoading: boolean`
@@ -241,12 +247,13 @@ Navigation: "Back" returns to step 2 (preserving repo selection). "Create Board"
 **Intent**: Extend the POST body sent to `/api/boards` to include the selected contributors.
 
 **Contract**: The `handleCreate()` function at line 237 adds `contributors` to the JSON body:
+
 ```typescript
-contributors: selectedContributors.map(c => ({
+contributors: selectedContributors.map((c) => ({
   githubId: c.id,
   githubLogin: c.login,
   avatarUrl: c.avatarUrl,
-}))
+}));
 ```
 
 #### 6. Update board creation API to accept and store contributors
@@ -256,12 +263,15 @@ contributors: selectedContributors.map(c => ({
 **Intent**: Extend the Zod schema and POST handler to accept a `contributors` array and insert into `board_contributors` after board creation.
 
 **Contract**: Add to `createBoardSchema`:
+
 ```typescript
-contributors: z.array(z.object({
-  githubId: z.number().int().positive(),
-  githubLogin: z.string().min(1),
-  avatarUrl: z.string().optional(),
-})).min(1, "At least one contributor is required")
+contributors: z.array(
+  z.object({
+    githubId: z.number().int().positive(),
+    githubLogin: z.string().min(1),
+    avatarUrl: z.string().optional(),
+  }),
+).min(1, "At least one contributor is required");
 ```
 
 After PAT storage (line 63), call `addBoardContributors()` from the service layer. Unlike the repo insert (which logs a warning and continues), contributor insert failure is a blocking error — return 500. The wizard enforces "at least 1 contributor"; a board with 0 contributors contradicts that guarantee.
@@ -398,33 +408,33 @@ Replace the "Contribution profiles — Coming soon" placeholder on the board det
 
 #### Automated
 
-- [x] 2.1 `npm run build` passes
-- [x] 2.2 `npm run lint` passes
-- [x] 2.3 Endpoint returns valid JSON matching the response schema
+- [x] 2.1 `npm run build` passes — 413106a
+- [x] 2.2 `npm run lint` passes — 413106a
+- [x] 2.3 Endpoint returns valid JSON matching the response schema — 413106a
 
 #### Manual
 
-- [x] 2.4 `/api/github/collaborators` returns deduplicated collaborator list
-- [x] 2.5 Collaborators from multiple repos are merged by github_id (no duplicates)
-- [x] 2.6 Error responses for invalid PAT (401) and missing repos (400)
+- [x] 2.4 `/api/github/collaborators` returns deduplicated collaborator list — 413106a
+- [x] 2.5 Collaborators from multiple repos are merged by github_id (no duplicates) — 413106a
+- [x] 2.6 Error responses for invalid PAT (401) and missing repos (400) — 413106a
 
 ### Phase 3: Wizard Step 3 — Contributor Picker
 
 #### Automated
 
-- [ ] 3.1 `npm run build` passes
-- [ ] 3.2 `npm run lint` passes
-- [ ] 3.3 `npm run format` passes
+- [x] 3.1 `npm run build` passes
+- [x] 3.2 `npm run lint` passes
+- [x] 3.3 `npm run format` passes
 
 #### Manual
 
-- [ ] 3.4 Full 3-step wizard flow works end-to-end
-- [ ] 3.5 Step 3 shows deduplicated collaborators from selected repos
-- [ ] 3.6 Filter narrows the list by login
-- [ ] 3.7 At least 1 contributor required — button disabled when none selected
-- [ ] 3.8 Back navigation preserves selections across all steps
-- [ ] 3.9 Board creation succeeds and redirects to detail page
-- [ ] 3.10 `board_contributors` rows match selection in database
+- [x] 3.4 Full 3-step wizard flow works end-to-end
+- [x] 3.5 Step 3 shows deduplicated collaborators from selected repos
+- [x] 3.6 Filter narrows the list by login
+- [x] 3.7 At least 1 contributor required — button disabled when none selected
+- [x] 3.8 Back navigation preserves selections across all steps
+- [x] 3.9 Board creation succeeds and redirects to detail page
+- [x] 3.10 `board_contributors` rows match selection in database
 
 ### Phase 4: Board Detail Update
 

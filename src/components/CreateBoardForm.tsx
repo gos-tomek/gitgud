@@ -9,6 +9,7 @@ import {
   Loader2,
   Search,
   Plus,
+  Users,
 } from "lucide-react";
 import { FormField } from "@/components/auth/FormField";
 import { PasswordToggle } from "@/components/auth/PasswordToggle";
@@ -36,8 +37,15 @@ interface RepoItem {
   pushAccess: boolean;
 }
 
+interface CollaboratorItem {
+  login: string;
+  id: number;
+  avatarUrl: string;
+  type: string;
+}
+
 export default function CreateBoardForm() {
-  const [step, setStep] = useState<1 | 2>(1);
+  const [step, setStep] = useState<1 | 2 | 3>(1);
   const [name, setName] = useState("");
   const [nameError, setNameError] = useState<string | undefined>();
   const [apiError, setApiError] = useState<string | undefined>();
@@ -63,7 +71,17 @@ export default function CreateBoardForm() {
   const [manualEntryLoading, setManualEntryLoading] = useState(false);
   const [manualEntryError, setManualEntryError] = useState<string | undefined>();
 
+  // Contributor picker state
+  const [collaborators, setCollaborators] = useState<CollaboratorItem[]>([]);
+  const [selectedContributors, setSelectedContributors] = useState<CollaboratorItem[]>([]);
+  const [collaboratorsLoading, setCollaboratorsLoading] = useState(false);
+  const [collaboratorsError, setCollaboratorsError] = useState<string | undefined>();
+  const [contributorFilter, setContributorFilter] = useState("");
+
   const filteredRepos = repos.filter((r) => r.fullName.toLowerCase().includes(repoFilter.toLowerCase()));
+  const filteredCollaborators = collaborators.filter((c) =>
+    c.login.toLowerCase().includes(contributorFilter.toLowerCase()),
+  );
 
   async function validatePat(token: string) {
     try {
@@ -142,6 +160,32 @@ export default function CreateBoardForm() {
     }
   }
 
+  async function fetchCollaborators() {
+    setCollaboratorsLoading(true);
+    setCollaboratorsError(undefined);
+    try {
+      const res = await fetch("/api/github/collaborators", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ pat, repos: selectedRepos.map((r) => ({ owner: r.owner, name: r.name })) }),
+      });
+      const data = (await res.json()) as {
+        collaborators?: CollaboratorItem[];
+        warnings?: { repo: string; message: string }[];
+        error?: string;
+      };
+      if (res.ok && data.collaborators) {
+        setCollaborators(data.collaborators);
+      } else {
+        setCollaboratorsError(data.error ?? "Failed to load collaborators");
+      }
+    } catch {
+      setCollaboratorsError("Network error — failed to load collaborators");
+    } finally {
+      setCollaboratorsLoading(false);
+    }
+  }
+
   async function handleNext() {
     if (!validateName()) return;
     if (patValidation.status !== "valid") return;
@@ -176,6 +220,18 @@ export default function CreateBoardForm() {
   function handleBack() {
     setApiError(undefined);
     setStep(1);
+  }
+
+  function handleBackToStep2() {
+    setApiError(undefined);
+    setStep(2);
+  }
+
+  function handleNextToStep3() {
+    if (selectedRepos.length === 0) return;
+    setApiError(undefined);
+    setStep(3);
+    void fetchCollaborators();
   }
 
   async function handleAddManual() {
@@ -245,6 +301,11 @@ export default function CreateBoardForm() {
           name: name.trim(),
           pat,
           repos: selectedRepos.map((r) => ({ owner: r.owner, name: r.name })),
+          contributors: selectedContributors.map((c) => ({
+            githubId: c.id,
+            githubLogin: c.login,
+            avatarUrl: c.avatarUrl,
+          })),
         }),
       });
       const data = (await res.json()) as { id?: string; error?: string };
@@ -266,13 +327,13 @@ export default function CreateBoardForm() {
     <div className="space-y-4">
       {/* Step indicator */}
       <div className="flex items-center justify-center gap-2">
-        {[1, 2].map((n) => (
+        {[1, 2, 3].map((n) => (
           <div
             key={n}
             className={`size-2 rounded-full transition-colors ${step === n ? "bg-purple-400" : "bg-white/20"}`}
           />
         ))}
-        <span className="ml-2 text-xs text-blue-100/50">Step {step} of 2</span>
+        <span className="ml-2 text-xs text-blue-100/50">Step {step} of 3</span>
       </div>
 
       <Card className="border-white/10 bg-white/5">
@@ -500,8 +561,135 @@ export default function CreateBoardForm() {
                 </Button>
                 <Button
                   type="button"
-                  onClick={handleCreate}
-                  disabled={submitting || selectedRepos.length === 0}
+                  onClick={handleNextToStep3}
+                  disabled={selectedRepos.length === 0}
+                  className="flex-1 rounded-lg bg-purple-600 px-4 py-2 font-medium text-white transition-colors hover:bg-purple-500 disabled:opacity-50"
+                >
+                  <span className="flex items-center gap-2">
+                    Next
+                    <ArrowRight className="size-4" />
+                  </span>
+                </Button>
+              </div>
+              <p className="text-sm text-blue-100/60">
+                {"You'll be the "}
+                <span className="font-semibold text-white">Supervisor</span> of this board.
+              </p>
+            </div>
+          )}
+
+          {step === 3 && (
+            <div className="space-y-4">
+              {/* Collaborator loading skeletons */}
+              {collaboratorsLoading && (
+                <div className="space-y-2">
+                  {[1, 2, 3].map((i) => (
+                    <Skeleton key={i} className="h-10 w-full bg-white/10" />
+                  ))}
+                </div>
+              )}
+
+              {/* Collaborator fetch error */}
+              {!collaboratorsLoading && collaboratorsError && (
+                <div className="rounded-md bg-red-500/10 p-3">
+                  <p className="text-sm text-red-300">{collaboratorsError}</p>
+                  <button
+                    type="button"
+                    onClick={() => void fetchCollaborators()}
+                    className="mt-1 text-xs text-blue-100/60 underline hover:text-blue-100/80"
+                  >
+                    Retry
+                  </button>
+                </div>
+              )}
+
+              {/* Collaborator picker */}
+              {!collaboratorsLoading && !collaboratorsError && (
+                <>
+                  {collaborators.length > 0 ? (
+                    <>
+                      <div className="relative">
+                        <Search className="absolute top-1/2 left-3 size-4 -translate-y-1/2 text-blue-100/40" />
+                        <Input
+                          placeholder="Filter contributors..."
+                          value={contributorFilter}
+                          onChange={(e) => {
+                            setContributorFilter(e.target.value);
+                          }}
+                          className="border-white/10 bg-white/5 pl-9 text-white placeholder:text-blue-100/40 focus-visible:ring-purple-500"
+                        />
+                      </div>
+
+                      <div className="max-h-60 space-y-0.5 overflow-y-auto rounded-lg border border-white/10 p-1">
+                        {filteredCollaborators.length === 0 ? (
+                          <p className="px-3 py-2 text-sm text-blue-100/50">No contributors match your filter.</p>
+                        ) : (
+                          filteredCollaborators.map((collab) => {
+                            const isSelected = selectedContributors.some((c) => c.id === collab.id);
+                            return (
+                              <label
+                                key={collab.id}
+                                className="flex cursor-pointer items-center gap-3 rounded-md px-3 py-2 hover:bg-white/5"
+                              >
+                                <Checkbox
+                                  checked={isSelected}
+                                  onCheckedChange={(checked) => {
+                                    if (checked) {
+                                      setSelectedContributors((prev) => [...prev, collab]);
+                                    } else {
+                                      setSelectedContributors((prev) => prev.filter((c) => c.id !== collab.id));
+                                    }
+                                  }}
+                                />
+                                <img
+                                  src={collab.avatarUrl}
+                                  alt={collab.login}
+                                  className="size-8 rounded-full"
+                                  width={32}
+                                  height={32}
+                                />
+                                <span className="flex-1 truncate text-sm text-white">@{collab.login}</span>
+                                <span className="shrink-0 text-xs text-blue-100/40">{collab.type}</span>
+                              </label>
+                            );
+                          })
+                        )}
+                      </div>
+
+                      {selectedContributors.length > 0 && (
+                        <p className="text-xs text-blue-100/50">
+                          {selectedContributors.length} contributor{selectedContributors.length !== 1 ? "s" : ""}{" "}
+                          selected
+                        </p>
+                      )}
+                    </>
+                  ) : (
+                    <div className="flex flex-col items-center gap-2 py-6 text-blue-100/50">
+                      <Users className="size-8" />
+                      <p className="text-sm">No collaborators found for the selected repositories.</p>
+                    </div>
+                  )}
+                </>
+              )}
+
+              {apiError && <p className="rounded-md bg-red-500/10 p-3 text-sm text-red-300">{apiError}</p>}
+
+              <div className="flex gap-2">
+                <Button
+                  type="button"
+                  onClick={handleBackToStep2}
+                  variant="outline"
+                  className="flex-1 rounded-lg border-white/20 bg-white/5 text-white hover:bg-white/10"
+                >
+                  <span className="flex items-center gap-2">
+                    <ArrowLeft className="size-4" />
+                    Back
+                  </span>
+                </Button>
+                <Button
+                  type="button"
+                  onClick={() => void handleCreate()}
+                  disabled={submitting || selectedContributors.length === 0}
                   className="flex-1 rounded-lg bg-purple-600 px-4 py-2 font-medium text-white transition-colors hover:bg-purple-500 disabled:opacity-50"
                 >
                   {submitting ? (
@@ -517,10 +705,6 @@ export default function CreateBoardForm() {
                   )}
                 </Button>
               </div>
-              <p className="text-sm text-blue-100/60">
-                {"You'll be the "}
-                <span className="font-semibold text-white">Supervisor</span> of this board.
-              </p>
             </div>
           )}
         </CardContent>

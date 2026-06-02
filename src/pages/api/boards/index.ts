@@ -1,7 +1,7 @@
 import type { APIRoute } from "astro";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase";
-import { createBoard, BoardNameTakenError } from "@/lib/services/boards";
+import { createBoard, BoardNameTakenError, addBoardContributors } from "@/lib/services/boards";
 import { GITHUB_TOKEN_ENCRYPTION_KEY } from "astro:env/server";
 import { logger } from "@/lib/logger";
 
@@ -17,10 +17,17 @@ const repoSchema = z.object({
   name: z.string().min(1),
 });
 
+const contributorSchema = z.object({
+  githubId: z.number().int().positive(),
+  githubLogin: z.string().min(1),
+  avatarUrl: z.string().optional(),
+});
+
 const createBoardSchema = z.object({
   name: z.string().trim().min(1, "Board name is required").max(80, "Keep it under 80 characters"),
   pat: z.string().min(1, "GitHub token is required"),
   repos: z.array(repoSchema).min(1, "At least one repository is required"),
+  contributors: z.array(contributorSchema).min(1, "At least one contributor is required"),
 });
 
 export const POST: APIRoute = async (context) => {
@@ -73,6 +80,16 @@ export const POST: APIRoute = async (context) => {
     if (reposError) {
       logger.warn(`[boards] Repo linking failed for board ${boardId}: ${reposError.message}`);
     }
+
+    await addBoardContributors(
+      supabase,
+      boardId,
+      parsed.data.contributors.map((c) => ({
+        githubId: c.githubId,
+        githubLogin: c.githubLogin,
+        avatarUrl: c.avatarUrl ?? null,
+      })),
+    );
 
     return json({ id: boardId }, 201);
   } catch (err) {
