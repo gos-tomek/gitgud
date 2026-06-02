@@ -84,6 +84,21 @@ Comment classification is visible to the IC: each classified comment shows its a
 - FR-017: EM can create and belong to more than one Board. Priority: must-have
   > Socrates: No counter-argument considered; stands as written.
 
+- FR-018: EM can update a Board's GitHub connection settings (PAT, linked org). Priority: must-have
+  > Socrates: No counter-argument considered; stands as written.
+
+- FR-019: EM can add or remove ICs from a Board after initial setup. Priority: must-have
+  > Socrates: No counter-argument considered; stands as written.
+
+- FR-020: When the PAT is changed on either the Board-creation or Board-edit form, the app re-validates that the previously accessible repos and ICs remain reachable with the new credential; the EM is notified of any scope changes. Priority: must-have
+  > Socrates: No counter-argument considered; stands as written.
+
+- FR-021: EM can delete a Board and all its associated membership and profile data. Priority: must-have
+  > Socrates: No counter-argument considered; stands as written.
+
+- FR-022: When a Board's GitHub PAT expires or becomes invalid, the Board enters a frozen state (new data syncs are suspended); the EM is shown a persistent in-app prompt to update the PAT before data freshness degrades. Priority: must-have
+  > Socrates: No counter-argument considered; stands as written.
+
 ### Contribution profile
 - FR-006: EM can view any IC's contribution profile on their Board. Priority: must-have
   > Socrates: No counter-argument considered; stands as written.

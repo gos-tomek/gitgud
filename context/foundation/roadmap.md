@@ -3,7 +3,7 @@ project: GitGud
 version: 1
 status: draft
 created: 2026-05-27
-updated: 2026-06-01 (S-03 reinstated)
+updated: 2026-06-02 (S-08–S-11 added: edit board settings, IC roster, delete board, PAT-expiry freeze)
 prd_version: 1
 main_goal: market-feedback
 top_blocker: skills
@@ -39,16 +39,21 @@ Mentoring, code-review quality, and unblocking — the "glue work" that keeps en
 | S-05  | profile-classified-comments     | see own review comments broken down by semantic category          | F-03, S-04         | FR-012, Business Logic, NFR accuracy-floor, NFR data-parity | blocked  |
 | S-06  | em-switch-ic-dropdown           | switch between ICs on a board without a full page reload          | S-04               | FR-007, US-01                             | proposed |
 | S-07  | flag-classification-inaccurate  | flag a comment's assigned category as inaccurate                  | S-05               | FR-013                                    | blocked  |
+| S-08  | edit-board-connection           | update Board PAT and linked org; both forms re-validate accessible repos/ICs when PAT changes | S-01, S-02         | FR-018, FR-020                            | ready    |
+| S-09  | manage-ic-roster                | add or remove ICs from a Board after initial setup                | S-03               | FR-019                                    | proposed |
+| S-10  | delete-board                    | delete a Board and all associated membership and profile data     | S-01               | FR-021                                    | ready    |
+| S-11  | board-pat-expiry-freeze         | see the Board frozen and be prompted to update PAT when it expires or becomes invalid | S-08               | FR-022                                    | proposed |
 
 ## Streams
 
 Navigation aid — groups items that share a Prerequisites chain. Canonical ordering still lives in the dependency graph below; this table is the proposed reading order across parallel tracks.
 
-| Stream | Theme                  | Chain                                  | Note                                                                       |
-| ------ | ---------------------- | -------------------------------------- | -------------------------------------------------------------------------- |
-| A      | Access & membership    | `F-01` → `S-01` → `S-02` → `S-03`      | S-03 now depends on S-02 (GitHub org link) — EM selects ICs from GitHub contributor list. |
-| B      | GitHub data & profile  | `F-02` → `S-02` → `S-04` → `S-06`      | `S-04` joins Stream A at `S-03` (needs memberships). De-risks the #1 blocker first. |
-| C      | Classification (wedge) | `F-03` → `S-05` → `S-07`               | `F-03` needs `F-01`+`F-02`; `S-05` joins Stream B at `S-04`. Blocked on Q1.  |
+| Stream | Theme                  | Chain                                        | Note                                                                                         |
+| ------ | ---------------------- | -------------------------------------------- | -------------------------------------------------------------------------------------------- |
+| A      | Access & membership    | `F-01` → `S-01` → `S-02` → `S-03` → `S-09`  | S-03 depends on S-02 — EM selects ICs from GitHub contributor list; S-09 extends the roster after initial setup. |
+| B      | GitHub data & profile  | `F-02` → `S-02` → `S-04` → `S-06`            | `S-04` joins Stream A at `S-03` (needs memberships). De-risks the #1 blocker first.          |
+| C      | Classification (wedge) | `F-03` → `S-05` → `S-07`                     | `F-03` needs `F-01`+`F-02`; `S-05` joins Stream B at `S-04`. Blocked on Q1.                  |
+| D      | Board lifecycle        | `S-10` / `S-08` → `S-11`                     | S-10 (delete, from S-01) and S-08 (edit connection, from S-02) are both ready and can run in parallel; S-11 (PAT-expiry freeze) builds on S-08. |
 
 ## Baseline
 
@@ -197,6 +202,58 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **Risk:** Nice-to-have, dependency-constrained. Delivers the secondary success criterion (IC can signal agreement/correction), but only once a correction-signal pathway exists.
 - **Status:** blocked
 
+### S-08: EM updates Board connection settings
+
+- **Outcome:** An EM can change a Board's GitHub PAT and linked org on a dedicated settings page. When the PAT is changed on either the create form or the edit form, the app re-validates which repos and ICs remain accessible with the new credential and notifies the EM of any scope changes.
+- **Change ID:** edit-board-connection
+- **PRD refs:** FR-018, FR-020
+- **Prerequisites:** S-01, S-02
+- **Parallel with:** S-03, S-10
+- **Blockers:** —
+- **Unknowns:**
+  - What should happen to a board's existing profile data if the EM switches to a PAT scoped to a different org entirely? (retain stale data vs. purge and re-sync) — Owner: user. Block: no.
+- **Risk:** PAT updates touch live credentials; the re-validation step (FR-020) must surface scope regressions (repos/ICs no longer accessible) without silently dropping data. Retroactively adding PAT-change validation to the create form (S-02, already shipped) must not regress the existing create flow.
+- **Status:** ready
+
+### S-09: EM manages Board IC roster
+
+- **Outcome:** An EM can add new ICs to a Board and remove existing ICs from the Board after initial setup.
+- **Change ID:** manage-ic-roster
+- **PRD refs:** FR-019
+- **Prerequisites:** S-03
+- **Parallel with:** S-04
+- **Blockers:** —
+- **Unknowns:**
+  - What happens to an IC's historical profile data when they are removed from a board — retained for the EM's record or purged? — Owner: user. Block: no.
+- **Risk:** Removal without a clear retention policy could silently discard classification data that the EM may still need. Define the retention default before implementing the delete path.
+- **Status:** proposed
+
+### S-10: EM deletes a Board
+
+- **Outcome:** An EM can delete a Board, removing all its associated membership records and profile data.
+- **Change ID:** delete-board
+- **PRD refs:** FR-021
+- **Prerequisites:** S-01
+- **Parallel with:** S-03, S-08
+- **Blockers:** —
+- **Unknowns:**
+  - Data-retention policy on board delete: cascade-delete all profile and classification data immediately, or soft-delete for an audit window? — Owner: user. Block: no.
+- **Risk:** Destructive operation with no automatic undo. Cascades into membership, profile, and classification data could be expensive at scale. A confirmation gate is required; define the retention default before implementing.
+- **Status:** ready
+
+### S-11: Board is frozen when PAT expires
+
+- **Outcome:** When a Board's GitHub PAT expires or becomes invalid, the Board enters a frozen state (no new data syncs run) and the EM sees a persistent in-app prompt to update the PAT to restore data freshness.
+- **Change ID:** board-pat-expiry-freeze
+- **PRD refs:** FR-022
+- **Prerequisites:** S-08
+- **Parallel with:** S-09
+- **Blockers:** —
+- **Unknowns:**
+  - What is the detection mechanism for PAT expiry — detected on the next sync failure, via a proactive periodic health-check, or via a GitHub webhook? — Owner: user. Block: no.
+- **Risk:** Detection must not spam GitHub API calls. The frozen-state UX (banner vs. modal vs. overlay) affects all board views; align on the pattern before implementation to avoid rework.
+- **Status:** proposed
+
 ## Backlog Handoff
 
 | Roadmap ID | Change ID                       | Suggested issue title                                      | Ready for `/10x-plan` | Notes |
@@ -211,6 +268,10 @@ Foundations below assume these are present and do NOT re-scaffold them.
 | S-05       | profile-classified-comments     | Contribution profile: semantically classified comments     | no                    | North star; blocked on Q1 via F-03 |
 | S-06       | em-switch-ic-dropdown           | EM switches between ICs via dropdown (no full reload)      | no                    | Needs S-04 |
 | S-07       | flag-classification-inaccurate  | IC flags a classified comment as inaccurate                | no                    | Blocked on Q2 |
+| S-08       | edit-board-connection           | Update Board connection settings (PAT, linked org + PAT-change re-validation) | yes        | Run `/10x-plan edit-board-connection` |
+| S-09       | manage-ic-roster                | Manage Board IC roster: add and remove ICs after initial setup | no                  | Needs S-03 |
+| S-10       | delete-board                    | Delete a Board and all associated data                     | yes                   | Run `/10x-plan delete-board` |
+| S-11       | board-pat-expiry-freeze         | Freeze Board and prompt EM to update PAT on expiry         | no                    | Needs S-08 |
 
 ## Open Roadmap Questions
 
