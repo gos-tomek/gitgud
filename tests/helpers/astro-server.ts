@@ -36,8 +36,6 @@ export async function startAstroServer(port: number): Promise<AstroServerHandle>
     detached: true,
     stdio: ["ignore", "pipe", "pipe"],
   });
-  // Prevent the Node process from waiting on this child
-  proc.unref();
 
   // Resolve to the actual base URL once the server is accepting connections.
   // Strategy: parse Astro's "Local  http://…" line to get the real origin, then

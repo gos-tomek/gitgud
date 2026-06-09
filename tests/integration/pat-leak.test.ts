@@ -92,9 +92,12 @@ describe.skipIf(!canRun)("PAT non-leakage (Risk #2)", () => {
   }, 150_000);
 
   afterAll(async () => {
-    await server.stop();
-    await cleanupBoard(ownerBoardId);
-    await Promise.all([cleanupUser(ownerUserId), cleanupUser(contributorUserId)]);
+    try {
+      await server.stop();
+    } finally {
+      await cleanupBoard(ownerBoardId);
+      await Promise.all([cleanupUser(ownerUserId), cleanupUser(contributorUserId)]);
+    }
   });
 
   // ─── Vector #1/#2: response body ────────────────────────────────────────────

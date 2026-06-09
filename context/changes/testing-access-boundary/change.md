@@ -1,7 +1,7 @@
 ---
 change_id: testing-access-boundary
 title: Testing access boundary
-status: implemented
+status: done
 created: 2026-06-09
 updated: 2026-06-09
 
