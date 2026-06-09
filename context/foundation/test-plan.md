@@ -75,7 +75,7 @@ orchestrator updates Status as artifacts appear on disk.
 
 | #   | Phase name                        | Goal (one line)                                                                         | Risks covered        | Test types                                                      | Status        | Change folder                            |
 | --- | --------------------------------- | --------------------------------------------------------------------------------------- | -------------------- | --------------------------------------------------------------- | ------------- | ---------------------------------------- |
-| 1   | Bootstrap + access boundary       | Install test runner; prove cross-board isolation and PAT non-leakage with real DB tests | #1, #2, #5           | integration (real Supabase)                                     | change opened | context/changes/testing-access-boundary/ |
+| 1   | Bootstrap + access boundary       | Install test runner; prove cross-board isolation and PAT non-leakage with real DB tests | #1, #2, #5           | integration (real Supabase)                                     | shipped       | context/changes/testing-access-boundary/ |
 | 2   | Board creation contract           | Prove wizard state machine and API orchestration handle happy + failure paths           | #3, #4               | component (vitest + testing-library), hermetic (stubbed client) | not started   | —                                        |
 | 3   | Validation + data layer templates | RLS regression template for new tables; validation test template for API routes         | #5, #6               | integration (RLS per-table), unit (Zod schemas)                 | not started   | —                                        |
 | 4   | Quality gates                     | Wire vitest into CI; set minimum signal floor; update project conventions               | cross-cutting        | CI gates                                                        | not started   | —                                        |
@@ -118,7 +118,114 @@ the relevant rollout phase ships; before that, the sub-section reads
 
 ### 6.1 Adding an integration test (RLS / access boundary)
 
-TBD — see §3 Phase 1 for cross-board isolation and PAT non-leakage patterns.
+**Reference implementation**: `tests/integration/access-boundary.test.ts`, `tests/integration/pat-leak.test.ts`
+
+#### Two-client pattern
+
+Every integration test uses two Supabase clients with different privilege levels:
+
+- **Admin client** (`adminClient` from `tests/helpers/supabase.ts`) — initialized with the service-role key, bypasses RLS. Use for setup (insert seed data), teardown (delete rows/users), and post-operation verification (confirm UPDATE/DELETE affected 0 rows).
+- **User client** (returned by `createTestUser`) — initialized with the anon key, signed in as a specific user, enforces RLS. Use for all assertions about what a user can or cannot access.
+
+Never use the admin client to assert access control — it bypasses RLS and will always succeed.
+
+#### Test user factory
+
+```ts
+import { createTestUser, cleanupUser, adminClient } from "../helpers/supabase.js";
+
+const ts = Date.now();
+const { client, userId } = await createTestUser(`test-${ts}@test.local`);
+// ... tests ...
+await cleanupUser(userId);
+```
+
+`createTestUser` creates the auth user via the admin API (email already confirmed), then signs in with a fresh anon client and returns both the signed-in client and the user ID. Always clean up in `afterAll` — leaked users accumulate in local Supabase.
+
+#### Supabase availability guard
+
+Wrap every integration test suite with `describe.skipIf` so tests skip cleanly when local Supabase isn't running:
+
+```ts
+import { checkSupabase } from "../helpers/setup.js";
+
+const supabaseAvailable = await checkSupabase();
+
+describe.skipIf(!supabaseAvailable)("My RLS test", () => {
+  // ...
+});
+```
+
+`checkSupabase` pings the REST API and does a probe query. If unreachable, it logs "Local Supabase not running — run `npx supabase start`" and returns `false`. The module-level `await` is valid because Vitest runs test files in a Node ESM context.
+
+#### Test data seeding
+
+Use the admin client to insert seed data — never the user client, whose RLS policies may block inserts needed for setup. Follow the FK chain top-down: boards → board_members (auto-enrolled by trigger) → github_repos → github_pull_requests → github_reviews → github_review_comments → board_contributors.
+
+For cross-isolation tests, use `seedTwoBoards()` from `tests/helpers/seed.ts` which builds two full board environments in one call and returns a `cleanup()` function.
+
+Always delete in `afterAll` and always cascade from the top (`boards` DELETE cascades all child rows); then delete users last. Pattern:
+
+```ts
+beforeAll(async () => { fixture = await seedTwoBoards(); });
+afterAll(async () => { await fixture.cleanup(); });
+```
+
+#### RLS denial assertion patterns
+
+RLS denials behave differently per operation — assert the correct shape:
+
+| Operation | RLS behavior | Assertion |
+|-----------|-------------|-----------|
+| SELECT | USING clause filters silently — denied reads return an empty array, no error | `expect(error).toBeNull(); expect(data).toEqual([]);` |
+| INSERT | WITH CHECK failure → PostgreSQL error code `42501` | `expect(error?.code).toBe("42501");` |
+| UPDATE | USING clause match returns 0 rows — silently a no-op | Read via admin before + after; `expect(after?.field).toBe(before?.field)` |
+| DELETE | USING clause match returns 0 rows — silently a no-op | Read via admin after; `expect(data).toHaveLength(N)` where N is expected surviving count |
+
+For UPDATE/DELETE, always verify via the admin client that the row was not modified/deleted — the operation itself returns no error, so only the database state tells the truth.
+
+#### Server output capture for sensitive data leak testing
+
+To assert that a value never appears in server log output, start the Astro dev server programmatically and capture its stdout/stderr:
+
+```ts
+import { startAstroServer } from "../helpers/astro-server.js";
+
+let serverHandle: Awaited<ReturnType<typeof startAstroServer>>;
+
+beforeAll(async () => {
+  serverHandle = await startAstroServer(4322); // use a non-default port
+}, 30_000);
+
+afterAll(async () => {
+  await serverHandle.stop();
+});
+
+it("server output does not contain the secret", async () => {
+  // trigger the code path that would log the secret
+  const lines = serverHandle.output();
+  expect(lines.some((l) => l.includes(SECRET))).toBe(false);
+});
+```
+
+`startAstroServer` spawns `npx astro dev --port <port>`, waits for the ready signal, and captures all subsequent stdout/stderr into an array. `output()` returns that array at call time.
+
+#### Astro dev server lifecycle for HTTP tests
+
+Keep the server alive for the entire test suite — start it in `beforeAll`, stop it in `afterAll`. Never restart per test; startup takes 3–5 s. Use `createAuthenticatedFetch` to make requests with a valid Supabase session cookie:
+
+```ts
+import { createAuthenticatedFetch } from "../helpers/auth-fetch.js";
+
+const authFetch = createAuthenticatedFetch(userClient, `http://localhost:4322`);
+const res = await authFetch("/api/github/sync", {
+  method: "POST",
+  headers: { "Content-Type": "application/json" },
+  body: JSON.stringify({ boardId }),
+});
+```
+
+`createAuthenticatedFetch` extracts the session from the signed-in Supabase client, encodes it in the `sb-{ref}-auth-token` cookie format that `@supabase/ssr` expects (including chunking for large sessions), and injects it into every request's `Cookie` header.
 
 ### 6.2 Adding a component test (React island)
 

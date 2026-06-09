@@ -387,21 +387,21 @@ Document the integration test patterns established in Phases 1–3 into the test
 
 #### Automated
 
-- [x] 3.1 Sync error response body does not contain test PAT or encryption key
-- [x] 3.2 Server stdout/stderr does not contain test PAT or encryption key
-- [x] 3.3 Pre-PAT-handling errors return exact hardcoded messages
-- [x] 3.4 All tests pass: npm test
+- [x] 3.1 Sync error response body does not contain test PAT or encryption key — 32ecd17
+- [x] 3.2 Server stdout/stderr does not contain test PAT or encryption key — 32ecd17
+- [x] 3.3 Pre-PAT-handling errors return exact hardcoded messages — 32ecd17
+- [x] 3.4 All tests pass: npm test — 32ecd17
 
 #### Manual
 
-- [x] 3.5 Review actual sync endpoint error messages for leakage
+- [x] 3.5 Review actual sync endpoint error messages for leakage — 32ecd17
 
 ### Phase 4: Cookbook + cleanup
 
 #### Automated
 
-- [ ] 4.1 All test suites still pass after doc changes
+- [x] 4.1 All test suites still pass after doc changes
 
 #### Manual
 
-- [ ] 4.2 §6.1 cookbook is followable by unfamiliar developer
+- [x] 4.2 §6.1 cookbook is followable by unfamiliar developer
