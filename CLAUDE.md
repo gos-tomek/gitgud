@@ -14,6 +14,7 @@ This file provides guidance to AI Agent when working with code in this repositor
 - `npm run dev` — start dev server (Cloudflare workerd runtime)
 - `npm run build` — production build (SSR via `@astrojs/cloudflare`)
 - `npm run preview` — preview production build
+- `npm test` — run integration test suite (requires local Supabase — see Testing below)
 - `npm run lint` — ESLint with type-checked rules
 - `npm run lint:fix` — auto-fix lint issues
 - `npm run format` — Prettier (includes prettier-plugin-astro + prettier-plugin-tailwindcss)
@@ -65,6 +66,14 @@ Full server-side rendering (`output: "server"` in astro.config.mjs). All routes 
 ## CI
 
 GitHub Actions workflow (`.github/workflows/ci.yml`) runs lint + build on every push and PR to master. Requires `SUPABASE_URL` and `SUPABASE_KEY` repository secrets for the build step.
+
+## Testing
+
+- Test runner: Vitest 4.x. Tests live in `tests/integration/`.
+- Integration tests run against a real local Supabase instance — start it with `npx supabase start` before running `npm test`. Tests skip automatically with a clear message if Supabase is unreachable.
+- Helpers in `tests/helpers/`: `supabase.ts` (admin client + user factory), `setup.ts` (availability guard), `seed.ts` (two-board fixture), `astro-server.ts` (dev server lifecycle), `auth-fetch.ts` (cookie-based authenticated fetch).
+- For patterns — two-client pattern, RLS denial assertion shapes, server output capture — see `context/foundation/test-plan.md §6.1`.
+- For risk strategy and rollout phases, see `context/foundation/test-plan.md §2–§3`.
 
 <!-- BEGIN @przeprogramowani/10x-cli -->
 
