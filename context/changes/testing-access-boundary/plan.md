@@ -90,6 +90,7 @@ Install Vitest, create configuration and test helpers, add npm scripts, update E
 **Intent**: Provide an admin client (service-role key, bypasses RLS) for setup/teardown and a test user factory for creating ephemeral authenticated clients.
 
 **Contract**: Exports:
+
 - `adminClient` — `createClient(SUPABASE_URL, SERVICE_ROLE_KEY)` from `@supabase/supabase-js`
 - `createTestUser(email: string) → Promise<{ client: SupabaseClient, userId: string }>` — creates user via `adminClient.auth.admin.createUser({ email, password, email_confirm: true })`, signs in via a fresh anon client, returns both
 - `cleanupUser(userId: string)` — deletes user via admin
@@ -152,6 +153,7 @@ Prove that RLS policies correctly deny cross-board access across all 7 board-sco
 **Intent**: Provide a reusable fixture that creates two isolated board environments with full data chains, enabling cross-board denial assertions.
 
 **Contract**: Exports `seedTwoBoards() → Promise<TwoBoardFixture>` where the fixture contains:
+
 - `ownerA: { client, userId, boardId }` and `ownerB: { client, userId, boardId }`
 - Seeded data IDs for Board A: `repoId`, `prId`, `reviewId`, `commentId`, `contributorId`
 - `cleanup()` function that deletes boards (CASCADE) then users
@@ -216,6 +218,7 @@ Prove that the raw PAT string never appears in sync endpoint error responses or 
 **Intent**: Start the Astro dev server programmatically for HTTP integration tests and capture its stdout/stderr for log leak assertions.
 
 **Contract**: Exports:
+
 - `startAstroServer(port: number) → Promise<{ stop: () => Promise<void>, output: () => string[] }>` — spawns `npx astro dev --port <port>`, waits for the ready signal in stdout (e.g., "Local" or the URL), captures all stdout/stderr lines, returns a handle with `stop()` and `output()` (returns accumulated server output)
 - Use a non-default port (e.g., 4321) to avoid conflicts with a running dev server
 
@@ -275,6 +278,7 @@ Document the integration test patterns established in Phases 1–3 into the test
 **Intent**: Document the integration test patterns so future developers can write new tests following established conventions without re-reading the full plan.
 
 **Contract**: Replace the "TBD" placeholder in §6.1 with a concise cookbook covering:
+
 - Two-client pattern (admin for setup/teardown, user for assertions)
 - Test user factory usage
 - Test data seeding pattern
@@ -357,23 +361,23 @@ Document the integration test patterns established in Phases 1–3 into the test
 
 #### Automated
 
-- [x] 1.1 npm test runs and smoke test passes
-- [x] 1.2 npm run lint passes with test files
-- [x] 1.3 TypeScript compilation passes with test files
+- [x] 1.1 npm test runs and smoke test passes — 1f002a6
+- [x] 1.2 npm run lint passes with test files — 1f002a6
+- [x] 1.3 TypeScript compilation passes with test files — 1f002a6
 
 #### Manual
 
-- [ ] 1.4 Supabase stopped → tests skip with clear message
+- [x] 1.4 Supabase stopped → tests skip with clear message
 
 ### Phase 2: Cross-board isolation tests
 
 #### Automated
 
-- [ ] 2.1 Cross-board SELECT queries return empty arrays for all 7 tables
-- [ ] 2.2 Cross-board INSERT attempts return error code 42501
-- [ ] 2.3 Cross-board UPDATE/DELETE attempts affect 0 rows (verified via admin)
-- [ ] 2.4 Service functions return null/empty for non-members
-- [ ] 2.5 All tests pass: npm test
+- [x] 2.1 Cross-board SELECT queries return empty arrays for all 7 tables
+- [x] 2.2 Cross-board INSERT attempts return error code 42501
+- [x] 2.3 Cross-board UPDATE/DELETE attempts affect 0 rows (verified via admin)
+- [x] 2.4 Service functions return null/empty for non-members
+- [x] 2.5 All tests pass: npm test
 
 #### Manual
 
