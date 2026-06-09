@@ -381,7 +381,7 @@ Document the integration test patterns established in Phases 1–3 into the test
 
 #### Manual
 
-- [ ] 2.6 Review test output confirms all 7 tables and write operations covered
+- [x] 2.6 Review test output confirms all 7 tables and write operations covered
 
 ### Phase 3: PAT non-leakage tests
 
@@ -400,8 +400,8 @@ Document the integration test patterns established in Phases 1–3 into the test
 
 #### Automated
 
-- [x] 4.1 All test suites still pass after doc changes
+- [x] 4.1 All test suites still pass after doc changes — d0e4e84
 
 #### Manual
 
-- [x] 4.2 §6.1 cookbook is followable by unfamiliar developer
+- [x] 4.2 §6.1 cookbook is followable by unfamiliar developer — d0e4e84
