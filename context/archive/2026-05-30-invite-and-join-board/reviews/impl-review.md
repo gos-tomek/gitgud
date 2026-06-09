@@ -1,4 +1,5 @@
 <!-- IMPL-REVIEW-REPORT -->
+
 # Implementation Review: Invite and Join Board
 
 - **Plan**: context/changes/invite-and-join-board/plan.md
@@ -9,14 +10,14 @@
 
 ## Verdicts
 
-| Dimension | Verdict |
-|-----------|---------|
-| Plan Adherence | WARNING |
-| Scope Discipline | PASS |
-| Safety & Quality | WARNING |
-| Architecture | PASS |
-| Pattern Consistency | PASS |
-| Success Criteria | PASS |
+| Dimension           | Verdict |
+| ------------------- | ------- |
+| Plan Adherence      | WARNING |
+| Scope Discipline    | PASS    |
+| Safety & Quality    | WARNING |
+| Architecture        | PASS    |
+| Pattern Consistency | PASS    |
+| Success Criteria    | PASS    |
 
 ## Findings
 

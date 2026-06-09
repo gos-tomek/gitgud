@@ -1,6 +1,6 @@
 # Frame Brief: Invite and Join Board (Confirmed)
 
-> Framing step before /10x-plan. This document captures what is *actually*
+> Framing step before /10x-plan. This document captures what is _actually_
 > at issue, separated from what was initially assumed.
 
 ## Reported Observation
@@ -33,21 +33,21 @@ scope change.
 
 ### Dimension Map
 
-| # | Dimension | What would go wrong / what the framing assumes |
-|---|-----------|------------------------------------------------|
-| 1 | OAuth needed for contributor picker? | Assumes OAuth is required to list collaborators |
-| 2 | OAuth eliminates invitation system? | Assumes invitations still exist without OAuth |
-| 3 | Downstream slices need OAuth? | Assumes S-04/S-05 need OAuth infrastructure early |
-| 4 | OAuth registration complexity | What it actually costs to add OAuth to S-03 |
+| #   | Dimension                            | What would go wrong / what the framing assumes    |
+| --- | ------------------------------------ | ------------------------------------------------- |
+| 1   | OAuth needed for contributor picker? | Assumes OAuth is required to list collaborators   |
+| 2   | OAuth eliminates invitation system?  | Assumes invitations still exist without OAuth     |
+| 3   | Downstream slices need OAuth?        | Assumes S-04/S-05 need OAuth infrastructure early |
+| 4   | OAuth registration complexity        | What it actually costs to add OAuth to S-03       |
 
 ### Hypothesis Investigation
 
-| Hypothesis | Evidence | Verdict |
-| --- | --- | --- |
-| OAuth needed for picker | EM's PAT already has `repo` + `read:org` scopes — exactly what `listCollaborators` requires. All existing GitHub API routes (`validate-pat.ts`, `repos.ts`, `validate-repo.ts`) use the same PAT pattern. | **NONE** — OAuth adds nothing to the picker |
-| OAuth eliminates invitations | Previous frame (2026-06-02) already eliminated invitations by switching to "pick from GitHub collaborators." OAuth is orthogonal. | **NONE** — invitations were already gone |
-| Downstream need for OAuth | S-04 is EM-only viewing (no IC login). S-05 needs IC login but PRD says "No OAuth in MVP" — email+password is MVP auth. No slice before post-MVP needs OAuth. | **NONE** — no consumer exists |
-| Registration complexity | ~7 files to create/modify: `config.toml`, 2 new API routes, 2 UI component changes, env vars, GitHub OAuth app registration. Real engineering cost with no S-03 consumer. | **STRONG** — cost without benefit in this slice |
+| Hypothesis                   | Evidence                                                                                                                                                                                                  | Verdict                                         |
+| ---------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------- |
+| OAuth needed for picker      | EM's PAT already has `repo` + `read:org` scopes — exactly what `listCollaborators` requires. All existing GitHub API routes (`validate-pat.ts`, `repos.ts`, `validate-repo.ts`) use the same PAT pattern. | **NONE** — OAuth adds nothing to the picker     |
+| OAuth eliminates invitations | Previous frame (2026-06-02) already eliminated invitations by switching to "pick from GitHub collaborators." OAuth is orthogonal.                                                                         | **NONE** — invitations were already gone        |
+| Downstream need for OAuth    | S-04 is EM-only viewing (no IC login). S-05 needs IC login but PRD says "No OAuth in MVP" — email+password is MVP auth. No slice before post-MVP needs OAuth.                                             | **NONE** — no consumer exists                   |
+| Registration complexity      | ~7 files to create/modify: `config.toml`, 2 new API routes, 2 UI component changes, env vars, GitHub OAuth app registration. Real engineering cost with no S-03 consumer.                                 | **STRONG** — cost without benefit in this slice |
 
 ### Narrowing Signals
 
@@ -59,6 +59,7 @@ scope change.
 
 **The reframe attempt did not hold.** GitHub OAuth at registration is a valid
 future feature but does not belong in S-03:
+
 - The contributor picker works with the existing PAT — no OAuth needed.
 - Invitations were already eliminated by the original reframe.
 - No downstream slice consumes OAuth until post-MVP.
@@ -81,7 +82,7 @@ Supabase accounts, no OAuth, no email matching.
 S-03 deliverables (unchanged from original frame):
 
 1. **New contributor table** — `board_contributors` keyed on `(board_id,
-   github_id)` with `github_login` and `avatar_url`. No FK to `auth.users`.
+github_id)` with `github_login` and `avatar_url`. No FK to `auth.users`.
    Follows the same identity pattern as `github_pull_requests`.
 2. **Collaborators API endpoint** — new `/api/github/collaborators` route that
    calls `octokit.rest.repos.listCollaborators()` for each selected repo and
@@ -92,6 +93,7 @@ S-03 deliverables (unchanged from original frame):
    (`boards/[id].astro`), replacing the placeholder with an actual member list.
 
 What the plan should NOT include (deferred):
+
 - GitHub OAuth configuration or `linkIdentity` flow (separate change — account linking)
 - IC self-service accounts or login (S-05)
 - Post-creation roster management (S-09)

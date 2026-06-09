@@ -1,4 +1,5 @@
 <!-- PLAN-REVIEW-REPORT -->
+
 # Plan Review: GitHub Ingestion Access Implementation Plan
 
 - **Plan**: `context/changes/github-ingestion-access/plan.md`
@@ -9,13 +10,13 @@
 
 ## Verdicts
 
-| Dimension | Verdict |
-|-----------|---------|
-| End-State Alignment | PASS |
-| Lean Execution | PASS |
+| Dimension             | Verdict |
+| --------------------- | ------- |
+| End-State Alignment   | PASS    |
+| Lean Execution        | PASS    |
 | Architectural Fitness | WARNING |
-| Blind Spots | WARNING |
-| Plan Completeness | WARNING |
+| Blind Spots           | WARNING |
+| Plan Completeness     | WARNING |
 
 ## Grounding
 

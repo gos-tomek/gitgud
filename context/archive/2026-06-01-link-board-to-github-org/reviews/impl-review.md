@@ -1,4 +1,5 @@
 <!-- IMPL-REVIEW-REPORT -->
+
 # Implementation Review: Link Board to GitHub Org
 
 - **Plan**: context/changes/link-board-to-github-org/plan.md
@@ -9,14 +10,14 @@
 
 ## Verdicts
 
-| Dimension | Verdict |
-|-----------|---------|
-| Plan Adherence | PASS |
-| Scope Discipline | WARNING |
-| Safety & Quality | FAIL |
-| Architecture | PASS |
+| Dimension           | Verdict |
+| ------------------- | ------- |
+| Plan Adherence      | PASS    |
+| Scope Discipline    | WARNING |
+| Safety & Quality    | FAIL    |
+| Architecture        | PASS    |
 | Pattern Consistency | WARNING |
-| Success Criteria | PASS |
+| Success Criteria    | PASS    |
 
 ## Findings
 
@@ -43,7 +44,7 @@
 - **Detail**: When a `github_pat_` prefix is detected, `handlePatChange` sets a warning status and returns without calling validate-pat. The Next button requires `status === "valid"`, so the user is permanently stuck on step 1.
 - **Fix A ⭐ Recommended**: Show the warning, then still validate
 - **Fix B**: Keep the block, but improve the UX
-- **Decision**: FIXED via Fix B — changed status to "error" with explicit message "Fine-grained tokens are not supported. Please use a classic PAT (starts with ghp_)." so the user clearly understands the hard block.
+- **Decision**: FIXED via Fix B — changed status to "error" with explicit message "Fine-grained tokens are not supported. Please use a classic PAT (starts with ghp\_)." so the user clearly understands the hard block.
 
 ### F3 — Board creation silently succeeds when PAT/repo storage fails
 

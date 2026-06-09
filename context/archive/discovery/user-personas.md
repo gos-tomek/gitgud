@@ -13,14 +13,14 @@
 
 ### Demographics & Context
 
-| Attribute | Value |
-|-----------|-------|
-| Role | Engineering Manager |
-| Experience | 8 years as engineer, 3 years as EM |
-| Reports | 9 direct reports (up from 7 last year) |
-| Company type | Mid-size product company, 200–500 engineers |
-| Work mode | Hybrid — in office 2–3 days/week |
-| Tools used daily | GitHub, Jira, Slack, Google Docs, Lattice |
+| Attribute        | Value                                       |
+| ---------------- | ------------------------------------------- |
+| Role             | Engineering Manager                         |
+| Experience       | 8 years as engineer, 3 years as EM          |
+| Reports          | 9 direct reports (up from 7 last year)      |
+| Company type     | Mid-size product company, 200–500 engineers |
+| Work mode        | Hybrid — in office 2–3 days/week            |
+| Tools used daily | GitHub, Jira, Slack, Google Docs, Lattice   |
 
 ### Background
 
@@ -69,14 +69,14 @@ Marta is the **primary buyer and daily user**. She would evaluate the tool based
 
 ### Demographics & Context
 
-| Attribute | Value |
-|-----------|-------|
-| Role | Senior Software Engineer |
-| Experience | 6 years |
-| Team size | 8 people (including EM) |
-| Company type | Same as Marta's — mid-size product company |
-| Work mode | Mostly remote (in office 1 day/week) |
-| Tools used daily | VS Code, GitHub, Jira, Slack |
+| Attribute        | Value                                      |
+| ---------------- | ------------------------------------------ |
+| Role             | Senior Software Engineer                   |
+| Experience       | 6 years                                    |
+| Team size        | 8 people (including EM)                    |
+| Company type     | Same as Marta's — mid-size product company |
+| Work mode        | Mostly remote (in office 1 day/week)       |
+| Tools used daily | VS Code, GitHub, Jira, Slack               |
 
 ### Background
 
@@ -125,14 +125,14 @@ Marek is the **primary beneficiary but not the buyer.** He won't purchase the to
 
 ### Demographics & Context
 
-| Attribute | Value |
-|-----------|-------|
-| Role | Junior Software Engineer |
-| Experience | 1.5 years |
-| Team size | 8 people (same team as Marek) |
-| Company type | Same mid-size product company |
-| Work mode | Hybrid |
-| Tools used daily | VS Code, GitHub, Jira, Slack |
+| Attribute        | Value                         |
+| ---------------- | ----------------------------- |
+| Role             | Junior Software Engineer      |
+| Experience       | 1.5 years                     |
+| Team size        | 8 people (same team as Marek) |
+| Company type     | Same mid-size product company |
+| Work mode        | Hybrid                        |
+| Tools used daily | VS Code, GitHub, Jira, Slack  |
 
 ### Background
 
@@ -174,13 +174,13 @@ Ania is a **secondary user and indirect beneficiary.** She's unlikely to interac
 
 ### Demographics & Context
 
-| Attribute | Value |
-|-----------|-------|
-| Role | VP of Engineering |
-| Experience | 15 years in tech, 7 in leadership |
-| Org size | 4 teams, 35 engineers, 4 EMs reporting to him |
-| Company type | Same mid-size product company |
-| Work mode | In office 3–4 days/week |
+| Attribute    | Value                                         |
+| ------------ | --------------------------------------------- |
+| Role         | VP of Engineering                             |
+| Experience   | 15 years in tech, 7 in leadership             |
+| Org size     | 4 teams, 35 engineers, 4 EMs reporting to him |
+| Company type | Same mid-size product company                 |
+| Work mode    | In office 3–4 days/week                       |
 
 ### Background
 
@@ -223,12 +223,12 @@ Krzysztof is the **budget holder and organizational champion** (or blocker). He 
 
 ## Persona Priority Matrix
 
-| Persona | Role in Adoption | Frequency of Use | Research Confidence | Interview Priority |
-|---------|-----------------|-------------------|--------------------|--------------------|
-| **Marta** (EM) | Buyer + Daily User | Daily/Weekly | High — strong data coverage | **#1** — validate workflow and time estimates |
-| **Marek** (Senior IC) | Beneficiary + Trust Gatekeeper | Weekly/Per-cycle | Medium — "silent contributor" pattern needs validation | **#2** — validate visibility pain and AI trust reaction |
-| **Ania** (Junior IC) | Indirect Beneficiary | Rare (via manager) | Low — mostly inferred | **#3** — validate comparison anxiety and feedback quality |
-| **Krzysztof** (VP) | Budget Holder | Monthly/Quarterly | Low — mostly inferred | **#4** — validate buying criteria and culture concerns |
+| Persona               | Role in Adoption               | Frequency of Use   | Research Confidence                                    | Interview Priority                                        |
+| --------------------- | ------------------------------ | ------------------ | ------------------------------------------------------ | --------------------------------------------------------- |
+| **Marta** (EM)        | Buyer + Daily User             | Daily/Weekly       | High — strong data coverage                            | **#1** — validate workflow and time estimates             |
+| **Marek** (Senior IC) | Beneficiary + Trust Gatekeeper | Weekly/Per-cycle   | Medium — "silent contributor" pattern needs validation | **#2** — validate visibility pain and AI trust reaction   |
+| **Ania** (Junior IC)  | Indirect Beneficiary           | Rare (via manager) | Low — mostly inferred                                  | **#3** — validate comparison anxiety and feedback quality |
+| **Krzysztof** (VP)    | Budget Holder                  | Monthly/Quarterly  | Low — mostly inferred                                  | **#4** — validate buying criteria and culture concerns    |
 
 ---
 

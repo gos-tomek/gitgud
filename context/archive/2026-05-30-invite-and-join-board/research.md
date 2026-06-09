@@ -33,15 +33,15 @@ How to link GitHub users with email accounts? Is it possible to get email from G
 
 ### 1. GitHub API Email Endpoints — Complete Inventory
 
-| Endpoint | Whose Email | Private Emails? | Required Auth/Scope | Reliability |
-|----------|-------------|-----------------|---------------------|-------------|
-| `GET /user/emails` | Authenticated user only | **Yes**, all emails | `user:email` scope | **HIGH** — canonical approach |
-| `GET /user` | Authenticated user only | No, public only | Any auth | LOW — usually null |
-| `GET /users/{username}` | Any user | No, public only | None | LOW — majority null |
-| `GET /repos/{owner}/{repo}/collaborators` | Repo collaborators | No, public only | Repo admin | LOW — usually null |
-| `GET /repos/{owner}/{repo}/commits` | Commit authors | Leaks historical emails | Repo read | MEDIUM — noreply trend |
-| GraphQL `user.email` | Any user | No, public only | Any auth | LOW — same as REST |
-| GraphQL `organizationVerifiedDomainEmails` | Org members | Yes, verified domain | Enterprise Cloud + org admin | HIGH — very restricted |
+| Endpoint                                   | Whose Email             | Private Emails?         | Required Auth/Scope          | Reliability                   |
+| ------------------------------------------ | ----------------------- | ----------------------- | ---------------------------- | ----------------------------- |
+| `GET /user/emails`                         | Authenticated user only | **Yes**, all emails     | `user:email` scope           | **HIGH** — canonical approach |
+| `GET /user`                                | Authenticated user only | No, public only         | Any auth                     | LOW — usually null            |
+| `GET /users/{username}`                    | Any user                | No, public only         | None                         | LOW — majority null           |
+| `GET /repos/{owner}/{repo}/collaborators`  | Repo collaborators      | No, public only         | Repo admin                   | LOW — usually null            |
+| `GET /repos/{owner}/{repo}/commits`        | Commit authors          | Leaks historical emails | Repo read                    | MEDIUM — noreply trend        |
+| GraphQL `user.email`                       | Any user                | No, public only         | Any auth                     | LOW — same as REST            |
+| GraphQL `organizationVerifiedDomainEmails` | Org members             | Yes, verified domain    | Enterprise Cloud + org admin | HIGH — very restricted        |
 
 **Key findings:**
 
@@ -61,55 +61,56 @@ How to link GitHub users with email accounts? Is it possible to get email from G
 
 #### Strategy A: GitHub OAuth as Primary Auth (RECOMMENDED for new users)
 
-| Aspect | Assessment |
-|--------|------------|
-| **How it works** | User clicks "Sign in with GitHub" → Supabase creates user with GitHub identity |
-| **Matching** | Trivial: `auth.identities.provider_id` = GitHub numeric ID matches `board_contributors.github_id` |
-| **Reliability** | **HIGHEST** — zero ambiguity, automatic |
-| **UX friction** | **LOWEST** — single click, natural for developer audience |
-| **Complexity** | LOW-MEDIUM — configure provider, add button, handle callback |
+| Aspect             | Assessment                                                                                                       |
+| ------------------ | ---------------------------------------------------------------------------------------------------------------- |
+| **How it works**   | User clicks "Sign in with GitHub" → Supabase creates user with GitHub identity                                   |
+| **Matching**       | Trivial: `auth.identities.provider_id` = GitHub numeric ID matches `board_contributors.github_id`                |
+| **Reliability**    | **HIGHEST** — zero ambiguity, automatic                                                                          |
+| **UX friction**    | **LOWEST** — single click, natural for developer audience                                                        |
+| **Complexity**     | LOW-MEDIUM — configure provider, add button, handle callback                                                     |
 | **Data available** | `sub`/`provider_id` (GitHub numeric ID), `preferred_username` (login), `avatar_url`, `name`, `email` (if public) |
 
 Supabase stores GitHub identity in:
+
 - `auth.identities` → `provider = 'github'`, `provider_id = <GitHub numeric ID as string>`
 - `auth.users.raw_user_meta_data` → `{ sub, preferred_username, user_name, name, avatar_url }`
 
 #### Strategy B: OAuth Identity Linking (for existing email/password users)
 
-| Aspect | Assessment |
-|--------|------------|
+| Aspect           | Assessment                                                               |
+| ---------------- | ------------------------------------------------------------------------ |
 | **How it works** | Existing user calls `supabase.auth.linkIdentity({ provider: 'github' })` |
-| **Matching** | Same as Strategy A after linking completes |
-| **Reliability** | **HIGH** — once linked, deterministic |
-| **UX friction** | **MEDIUM** — requires explicit "Link GitHub" action |
-| **Complexity** | MEDIUM — needs "Enable Manual Linking" in Supabase, callback handling |
+| **Matching**     | Same as Strategy A after linking completes                               |
+| **Reliability**  | **HIGH** — once linked, deterministic                                    |
+| **UX friction**  | **MEDIUM** — requires explicit "Link GitHub" action                      |
+| **Complexity**   | MEDIUM — needs "Enable Manual Linking" in Supabase, callback handling    |
 | **Prerequisite** | `GOTRUE_SECURITY_MANUAL_LINKING_ENABLED: true` in Supabase Auth settings |
 
 #### Strategy C: Email-Based Matching (NOT RECOMMENDED)
 
-| Aspect | Assessment |
-|--------|------------|
-| **How it works** | Match app signup email to GitHub user's known email |
-| **Reliability** | **LOW** — fundamentally broken |
-| **Failure modes** | Private emails (majority), multiple emails, mismatched domains, silent failures |
-| **Verdict** | Not viable as primary. Could be a secondary hint ("We think you might be @octocat — confirm?") |
+| Aspect            | Assessment                                                                                     |
+| ----------------- | ---------------------------------------------------------------------------------------------- |
+| **How it works**  | Match app signup email to GitHub user's known email                                            |
+| **Reliability**   | **LOW** — fundamentally broken                                                                 |
+| **Failure modes** | Private emails (majority), multiple emails, mismatched domains, silent failures                |
+| **Verdict**       | Not viable as primary. Could be a secondary hint ("We think you might be @octocat — confirm?") |
 
 #### Strategy D: Manual Invitation Codes
 
-| Aspect | Assessment |
-|--------|------------|
+| Aspect           | Assessment                                                                    |
+| ---------------- | ----------------------------------------------------------------------------- |
 | **How it works** | EM generates per-contributor invite links; IC clicks link and creates account |
-| **Reliability** | **HIGH** — deterministic |
-| **UX friction** | **HIGH** — EM distributes links out-of-band, doesn't scale |
-| **Security** | Tokens in URLs can leak via referrer headers |
+| **Reliability**  | **HIGH** — deterministic                                                      |
+| **UX friction**  | **HIGH** — EM distributes links out-of-band, doesn't scale                    |
+| **Security**     | Tokens in URLs can leak via referrer headers                                  |
 
 #### Strategy E: Webhook Automation (enhances A/B)
 
-| Aspect | Assessment |
-|--------|------------|
-| **How it works** | Supabase Auth Hook triggers on signup; auto-matches GitHub ID to board_contributors |
-| **Best use** | Glue on top of Strategy A/B — not standalone |
-| **Implementation** | Database trigger or Edge Function on `auth.identities` INSERT |
+| Aspect             | Assessment                                                                          |
+| ------------------ | ----------------------------------------------------------------------------------- |
+| **How it works**   | Supabase Auth Hook triggers on signup; auto-matches GitHub ID to board_contributors |
+| **Best use**       | Glue on top of Strategy A/B — not standalone                                        |
+| **Implementation** | Database trigger or Edge Function on `auth.identities` INSERT                       |
 
 ### 4. Real-World Patterns in Developer Tools
 
@@ -121,14 +122,14 @@ Supabase stores GitHub identity in:
 
 #### What exists for GitHub identity:
 
-| Table | GitHub Columns | Pattern |
-|-------|---------------|---------|
-| `github_pull_requests` | `author_login` (text), `author_github_id` (bigint) | Login + numeric ID |
-| `github_reviews` | `reviewer_login` (text), `reviewer_github_id` (bigint) | Login + numeric ID |
+| Table                    | GitHub Columns                                           | Pattern            |
+| ------------------------ | -------------------------------------------------------- | ------------------ |
+| `github_pull_requests`   | `author_login` (text), `author_github_id` (bigint)       | Login + numeric ID |
+| `github_reviews`         | `reviewer_login` (text), `reviewer_github_id` (bigint)   | Login + numeric ID |
 | `github_review_comments` | `commenter_login` (text), `commenter_github_id` (bigint) | Login + numeric ID |
-| `github_repos` | `connected_by` (uuid → auth.users) | App user UUID only |
-| `boards` | `owner_user_id` (uuid → auth.users) | App user UUID only |
-| `board_members` | `user_id` (uuid → auth.users) | App user UUID only |
+| `github_repos`           | `connected_by` (uuid → auth.users)                       | App user UUID only |
+| `boards`                 | `owner_user_id` (uuid → auth.users)                      | App user UUID only |
+| `board_members`          | `user_id` (uuid → auth.users)                            | App user UUID only |
 
 #### Critical gaps:
 
@@ -166,6 +167,7 @@ The `*_login` + `*_github_id` pattern in ingestion tables is already GitHub-iden
    - What Supabase stores as `provider_id` after GitHub OAuth
 
 3. **The matching SQL** after GitHub OAuth is enabled would be:
+
    ```sql
    UPDATE board_contributors
    SET user_id = NEW.user_id
@@ -195,6 +197,7 @@ Store GitHub collaborators as `board_contributors` keyed on `(board_id, github_i
 ### S-05 (when ICs need to log in) — Add GitHub OAuth
 
 1. **Configure GitHub OAuth provider** in `supabase/config.toml`:
+
    ```toml
    [auth.external.github]
    enabled = true

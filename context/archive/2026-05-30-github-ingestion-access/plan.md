@@ -25,6 +25,7 @@ The EM provides a fine-grained GitHub Personal Access Token when linking repos t
 ## Desired End State
 
 After this plan:
+
 1. The `boards` table has an encrypted PAT column; a SECURITY DEFINER function decrypts it for server-side use.
 2. A `github_repos` table links specific repositories to a board (1:many).
 3. GitHub data tables (`github_pull_requests`, `github_reviews`, `github_review_comments`) store fetched data with RLS.
@@ -123,6 +124,7 @@ RLS for all new tables: REVOKE anon; authenticated can SELECT rows where the rep
 **RLS helper**: Add a SECURITY DEFINER function `get_board_id_for_pr(p_pr_id bigint) RETURNS uuid` (same migration, follows `is_board_member`/`is_board_owner` pattern). Returns the board ID for a given PR, bypassing RLS on intermediate tables. REVOKE from public/anon; GRANT EXECUTE to authenticated.
 
 **Policy shapes** (keep policies one-liner — no inline subqueries):
+
 - `github_repos` SELECT: `USING (public.is_board_member(board_id))`
 - `github_pull_requests` SELECT: `USING (EXISTS (SELECT 1 FROM github_repos gr WHERE gr.id = repo_id AND public.is_board_member(gr.board_id)))`
 - `github_reviews` SELECT: `USING (public.is_board_member(public.get_board_id_for_pr(pull_request_id)))`

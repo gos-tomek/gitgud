@@ -2,7 +2,7 @@
 
 ## Overview
 
-Deliver the *create a board* flow for GitGud: a signed-in user creates a board, is explicitly shown they become its **Supervisor (EM)** at creation time (PRD FR-016), and can own more than one (FR-017). The slice is almost entirely application-layer — its prerequisite **F-01 (access-control-and-membership) already shipped and deployed the full data layer** (prod 2026-05-29). The only schema work is one additive unique-index migration for per-owner board-name uniqueness.
+Deliver the _create a board_ flow for GitGud: a signed-in user creates a board, is explicitly shown they become its **Supervisor (EM)** at creation time (PRD FR-016), and can own more than one (FR-017). The slice is almost entirely application-layer — its prerequisite **F-01 (access-control-and-membership) already shipped and deployed the full data layer** (prod 2026-05-29). The only schema work is one additive unique-index migration for per-owner board-name uniqueness.
 
 ## Current State Analysis
 

@@ -1,4 +1,5 @@
 <!-- IMPL-REVIEW-REPORT -->
+
 # Implementation Review: GitHub Ingestion Access
 
 - **Plan**: context/changes/github-ingestion-access/plan.md
@@ -9,14 +10,14 @@
 
 ## Verdicts
 
-| Dimension | Verdict |
-|-----------|---------|
-| Plan Adherence | PASS |
-| Scope Discipline | PASS |
-| Safety & Quality | WARNING |
-| Architecture | PASS |
+| Dimension           | Verdict |
+| ------------------- | ------- |
+| Plan Adherence      | PASS    |
+| Scope Discipline    | PASS    |
+| Safety & Quality    | WARNING |
+| Architecture        | PASS    |
 | Pattern Consistency | WARNING |
-| Success Criteria | FAIL |
+| Success Criteria    | FAIL    |
 
 ## Findings
 

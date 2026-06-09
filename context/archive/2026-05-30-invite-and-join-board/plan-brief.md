@@ -18,18 +18,19 @@ An EM creating a board goes through a 3-step wizard: name+PAT → repos → pick
 
 ## Key Decisions Made
 
-| Decision | Choice | Why (1 sentence) | Source |
-| --- | --- | --- | --- |
-| Contributor identity model | GitHub ID + login, no auth.users FK | ICs are GitHub identities the EM selects; accounts come later via F-04 | Frame |
-| Deduplication across repos | Union by github_id, show once | Matches the DB model (unique on board_id + github_id) — simplest UX | Plan |
-| Picker default selection | None pre-selected, EM selects | Explicit opt-in prevents accidentally including bots or external contributors | Plan |
-| Contributors required? | Yes, at least 1 | Every board has ICs from day one — avoids empty-state edge case | Plan |
-| Board detail display | List with avatar + login + badge | More detail per contributor; easy to extend with "linked" status for F-04 | Plan |
-| OAuth in S-03 scope? | No — PAT covers everything | The EM's PAT already has `repo` + `read:org` scopes needed for `listCollaborators` | Frame |
+| Decision                   | Choice                              | Why (1 sentence)                                                                   | Source |
+| -------------------------- | ----------------------------------- | ---------------------------------------------------------------------------------- | ------ |
+| Contributor identity model | GitHub ID + login, no auth.users FK | ICs are GitHub identities the EM selects; accounts come later via F-04             | Frame  |
+| Deduplication across repos | Union by github_id, show once       | Matches the DB model (unique on board_id + github_id) — simplest UX                | Plan   |
+| Picker default selection   | None pre-selected, EM selects       | Explicit opt-in prevents accidentally including bots or external contributors      | Plan   |
+| Contributors required?     | Yes, at least 1                     | Every board has ICs from day one — avoids empty-state edge case                    | Plan   |
+| Board detail display       | List with avatar + login + badge    | More detail per contributor; easy to extend with "linked" status for F-04          | Plan   |
+| OAuth in S-03 scope?       | No — PAT covers everything          | The EM's PAT already has `repo` + `read:org` scopes needed for `listCollaborators` | Frame  |
 
 ## Scope
 
 **In scope:**
+
 - `board_contributors` table with RLS (github_id + login pattern, nullable user_id)
 - `/api/github/collaborators` endpoint (fetch + deduplicate across repos)
 - Wizard step 3 (contributor picker with filter, min 1 required)
@@ -37,6 +38,7 @@ An EM creating a board goes through a 3-step wizard: name+PAT → repos → pick
 - Update board creation API to accept and store contributors
 
 **Out of scope:**
+
 - GitHub OAuth / account linking (F-04)
 - IC self-service accounts or login (S-05)
 - Post-creation roster management (S-09)
@@ -49,12 +51,12 @@ New `board_contributors` table keyed on `(board_id, github_id)` following the ex
 
 ## Phases at a Glance
 
-| Phase | What it delivers | Key risk |
-| --- | --- | --- |
-| 1. Database schema | `board_contributors` table + RLS policies | Low — follows established patterns |
-| 2. Collaborators API + service | Endpoint + CRUD functions | Rate limits if board has many repos (mitigated by hard cap) |
-| 3. Wizard step 3 | Contributor picker in CreateBoardForm | React Compiler compatibility with new state; step navigation complexity |
-| 4. Board detail update | Contributor list on board page | Low — template-only change |
+| Phase                          | What it delivers                          | Key risk                                                                |
+| ------------------------------ | ----------------------------------------- | ----------------------------------------------------------------------- |
+| 1. Database schema             | `board_contributors` table + RLS policies | Low — follows established patterns                                      |
+| 2. Collaborators API + service | Endpoint + CRUD functions                 | Rate limits if board has many repos (mitigated by hard cap)             |
+| 3. Wizard step 3               | Contributor picker in CreateBoardForm     | React Compiler compatibility with new state; step navigation complexity |
+| 4. Board detail update         | Contributor list on board page            | Low — template-only change                                              |
 
 **Prerequisites:** S-01 (board create), F-01 (access control), S-02 (GitHub org link) — all done.
 **Estimated effort:** ~2-3 sessions across 4 phases.

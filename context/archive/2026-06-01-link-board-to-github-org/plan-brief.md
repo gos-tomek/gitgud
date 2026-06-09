@@ -18,28 +18,30 @@ A logged-in user completes a 2-screen wizard: screen 1 collects board name + PAT
 
 ## Key Decisions Made
 
-| Decision | Choice | Why (1 sentence) | Source |
-| --- | --- | --- | --- |
-| PAT type | Classic only (MVP) | Fine-grained PATs can't span multiple orgs and block outside collaborators | Research |
-| Screen count | 2 screens, not 3 | Industry norm is 2 (connect → pick repos); 3 adds friction with no benefit | Frame |
-| Repo selection | API picker + manual entry | Picker covers user's repos; manual entry allows any accessible public repo | Plan |
-| Repo filtering | Client-side on fetched results | Simple, instant search after load; acceptable for one-time setup with <500 repos | Plan |
-| GitHub identity storage | Don't store (MVP) | Octokit doesn't need it; display comes from validate-pat response during creation | Plan |
-| API structure | 3 separate endpoints | validate-pat, repos, validate-repo — clean separation, each independently testable | Plan |
-| Form architecture | fetch() + useState | Native POST can't do async mid-flow; aligns with lessons.md rule on useFormStatus | Research |
-| Back navigation | Preserve all state | No lost work; re-validate PAT only if token changes | Plan |
-| First sync | Out of scope | PAT + repos stored; sync trigger is separate work | Plan |
-| Schema migration | None needed | All tables and RPCs already exist from F-02 | Research |
+| Decision                | Choice                         | Why (1 sentence)                                                                   | Source   |
+| ----------------------- | ------------------------------ | ---------------------------------------------------------------------------------- | -------- |
+| PAT type                | Classic only (MVP)             | Fine-grained PATs can't span multiple orgs and block outside collaborators         | Research |
+| Screen count            | 2 screens, not 3               | Industry norm is 2 (connect → pick repos); 3 adds friction with no benefit         | Frame    |
+| Repo selection          | API picker + manual entry      | Picker covers user's repos; manual entry allows any accessible public repo         | Plan     |
+| Repo filtering          | Client-side on fetched results | Simple, instant search after load; acceptable for one-time setup with <500 repos   | Plan     |
+| GitHub identity storage | Don't store (MVP)              | Octokit doesn't need it; display comes from validate-pat response during creation  | Plan     |
+| API structure           | 3 separate endpoints           | validate-pat, repos, validate-repo — clean separation, each independently testable | Plan     |
+| Form architecture       | fetch() + useState             | Native POST can't do async mid-flow; aligns with lessons.md rule on useFormStatus  | Research |
+| Back navigation         | Preserve all state             | No lost work; re-validate PAT only if token changes                                | Plan     |
+| First sync              | Out of scope                   | PAT + repos stored; sync trigger is separate work                                  | Plan     |
+| Schema migration        | None needed                    | All tables and RPCs already exist from F-02                                        | Research |
 
 ## Scope
 
 **In scope:**
+
 - 3 new API routes (validate-pat, repos, validate-repo)
 - Refactor POST /api/boards from FormData to JSON
 - 2-screen creation form (name+PAT → repo picker+manual add)
 - Board detail page: replace S-02 placeholder with linked repos
 
 **Out of scope:**
+
 - IC/contributor selection (S-04)
 - Sync trigger during/after creation
 - Fine-grained PAT support
@@ -52,13 +54,13 @@ The form uses `fetch()` for all API communication (no native POST). Screen 1 val
 
 ## Phases at a Glance
 
-| Phase | What it delivers | Key risk |
-| --- | --- | --- |
-| 1. GitHub API Routes | 3 new endpoints independently testable via API | Temporary Octokit pattern — must export `makeOctokit` |
+| Phase                         | What it delivers                                             | Key risk                                                     |
+| ----------------------------- | ------------------------------------------------------------ | ------------------------------------------------------------ |
+| 1. GitHub API Routes          | 3 new endpoints independently testable via API               | Temporary Octokit pattern — must export `makeOctokit`        |
 | 2. Form Architecture Refactor | Multi-step skeleton with fetch(), working name-only creation | Native POST → fetch migration; error handling pattern change |
-| 3. Screen 1: Name + PAT | PAT input with inline async validation, "@username" display | Debounce/UX timing for validation feedback |
-| 4. Screen 2: Repo Picker | Searchable picker + manual entry, full creation flow | Pagination latency for users with many repos |
-| 5. Board Detail: Linked Repos | S-02 placeholder replaced with real repo list | Legacy boards (pre-change) need graceful fallback |
+| 3. Screen 1: Name + PAT       | PAT input with inline async validation, "@username" display  | Debounce/UX timing for validation feedback                   |
+| 4. Screen 2: Repo Picker      | Searchable picker + manual entry, full creation flow         | Pagination latency for users with many repos                 |
+| 5. Board Detail: Linked Repos | S-02 placeholder replaced with real repo list                | Legacy boards (pre-change) need graceful fallback            |
 
 **Prerequisites:** Valid GitHub classic PAT for manual testing; running local Supabase instance
 **Estimated effort:** ~3–4 implementation sessions across 5 phases

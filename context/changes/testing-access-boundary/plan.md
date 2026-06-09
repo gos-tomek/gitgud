@@ -373,11 +373,11 @@ Document the integration test patterns established in Phases 1–3 into the test
 
 #### Automated
 
-- [x] 2.1 Cross-board SELECT queries return empty arrays for all 7 tables
-- [x] 2.2 Cross-board INSERT attempts return error code 42501
-- [x] 2.3 Cross-board UPDATE/DELETE attempts affect 0 rows (verified via admin)
-- [x] 2.4 Service functions return null/empty for non-members
-- [x] 2.5 All tests pass: npm test
+- [x] 2.1 Cross-board SELECT queries return empty arrays for all 7 tables — 585df1a
+- [x] 2.2 Cross-board INSERT attempts return error code 42501 — 585df1a
+- [x] 2.3 Cross-board UPDATE/DELETE attempts affect 0 rows (verified via admin) — 585df1a
+- [x] 2.4 Service functions return null/empty for non-members — 585df1a
+- [x] 2.5 All tests pass: npm test — 585df1a
 
 #### Manual
 

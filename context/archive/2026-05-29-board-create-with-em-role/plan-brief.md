@@ -16,14 +16,14 @@ A user opens `/boards/new`, sees a clear "you'll be the Supervisor (EM)" note, c
 
 ## Key Decisions Made
 
-| Decision | Choice | Why (1 sentence) | Source |
-| --- | --- | --- | --- |
-| UI surface | Dedicated `/boards/new` page | Mirrors the existing full-page auth-form pattern; no new shadcn components. | Plan |
-| Explicit EM role (FR-016) | Inline label before submit + Supervisor badge on detail page | Sets the expectation at decision time and reconfirms after — satisfies "explicit, not silent". | Plan |
-| Post-create destination | Redirect to `/boards/[id]` | A real landing page; built as a minimal stub here. | Plan |
-| Name rules | Non-empty + max-length (zod) **and** unique per owner (new index) | Matches DB CHECK and FR-017 (multiple boards), prevents ambiguous duplicates. | Plan |
-| Form mechanics | Native form POST → redirect-with-`?error=` | Matches the existing auth routes; no fetch/react-hook-form. | Plan |
-| Validation | zod in the API route | `CLAUDE.md` mandates zod for API routes. | Plan |
+| Decision                  | Choice                                                            | Why (1 sentence)                                                                               | Source |
+| ------------------------- | ----------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- | ------ |
+| UI surface                | Dedicated `/boards/new` page                                      | Mirrors the existing full-page auth-form pattern; no new shadcn components.                    | Plan   |
+| Explicit EM role (FR-016) | Inline label before submit + Supervisor badge on detail page      | Sets the expectation at decision time and reconfirms after — satisfies "explicit, not silent". | Plan   |
+| Post-create destination   | Redirect to `/boards/[id]`                                        | A real landing page; built as a minimal stub here.                                             | Plan   |
+| Name rules                | Non-empty + max-length (zod) **and** unique per owner (new index) | Matches DB CHECK and FR-017 (multiple boards), prevents ambiguous duplicates.                  | Plan   |
+| Form mechanics            | Native form POST → redirect-with-`?error=`                        | Matches the existing auth routes; no fetch/react-hook-form.                                    | Plan   |
+| Validation                | zod in the API route                                              | `CLAUDE.md` mandates zod for API routes.                                                       | Plan   |
 
 ## Scope
 
@@ -37,10 +37,10 @@ Backend then frontend. Create = single INSERT into `boards` (owner = auth user);
 
 ## Phases at a Glance
 
-| Phase | What it delivers | Key risk |
-| --- | --- | --- |
-| 1. Backend | Unique-name migration, `createBoard`, `POST /api/boards` with zod | Mapping the Postgres `23505` unique-violation to a clean user error |
-| 2. Frontend | `/boards/new` + island, `/boards/[id]` stub, dashboard wiring, route protection | Detail page must handle RLS `null` (non-member) gracefully |
+| Phase       | What it delivers                                                                | Key risk                                                            |
+| ----------- | ------------------------------------------------------------------------------- | ------------------------------------------------------------------- |
+| 1. Backend  | Unique-name migration, `createBoard`, `POST /api/boards` with zod               | Mapping the Postgres `23505` unique-violation to a clean user error |
+| 2. Frontend | `/boards/new` + island, `/boards/[id]` stub, dashboard wiring, route protection | Detail page must handle RLS `null` (non-member) gracefully          |
 
 **Prerequisites:** F-01 (done/deployed); local Supabase for migration testing.
 **Estimated effort:** ~1 session across 2 phases.

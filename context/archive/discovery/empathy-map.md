@@ -79,6 +79,7 @@
 5. **Scalability.** A tool that works for 6 reports should still work for 12, allowing the EM to grow without quality collapse. `[INFERRED]`
 
 ---
+
 ---
 
 ## Empathy Map 2: Individual Contributor (IC)
@@ -159,6 +160,7 @@
 5. **Transparency.** If both the IC and the EM see the same data, there's a shared foundation for honest conversation. `[DATA]` — from product conversation: "Transparency jest dla mnie cenne, jeśli każdy ma dostęp do narzędzia to widzimy wszyscy to samo"
 
 ---
+
 ---
 
 ## Cross-Map Observations

@@ -1,4 +1,5 @@
 <!-- PLAN-REVIEW-REPORT -->
+
 # Plan Review: Invite and Join Board
 
 - **Plan**: context/changes/invite-and-join-board/plan.md
@@ -9,13 +10,13 @@
 
 ## Verdicts
 
-| Dimension | Verdict |
-|-----------|---------|
-| End-State Alignment | WARNING |
-| Lean Execution | PASS |
-| Architectural Fitness | PASS |
-| Blind Spots | WARNING |
-| Plan Completeness | FAIL |
+| Dimension             | Verdict |
+| --------------------- | ------- |
+| End-State Alignment   | WARNING |
+| Lean Execution        | PASS    |
+| Architectural Fitness | PASS    |
+| Blind Spots           | WARNING |
+| Plan Completeness     | FAIL    |
 
 ## Grounding
 

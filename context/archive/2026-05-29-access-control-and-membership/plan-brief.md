@@ -16,20 +16,21 @@ Two new tables with full per-operation RLS. The board owner (`boards.owner_user_
 
 ## Key Decisions Made
 
-| Decision                          | Choice                                                                 | Why (1 sentence)                                                                                              | Source |
-| --------------------------------- | ---------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------- | ------ |
-| Deliverable scope                 | Schema + RLS + role-lookup helper + small verification surface         | Tight foundation; S-01 keeps the board-creation UX as its own deliverable.                                    | Plan   |
-| `profiles` table now?             | No — FK directly to `auth.users(id)`                                   | Smallest schema delta; S-04 introduces profiles when it actually needs display names / metrics.               | Plan   |
-| EM count per board                | Exactly one (the creator)                                              | Matches the PRD reading (FR-016) and simplifies ownership semantics.                                          | Plan   |
-| Role representation               | Not stored — derived from `auth.uid() = boards.owner_user_id`          | Eliminates an enum + a column; FR-016 ("creator = EM") becomes a database invariant via RLS `WITH CHECK`.     | Plan   |
-| Owner row in `board_members`      | Yes — owner is also a member                                           | Makes "list my boards" and "is X a member?" each a single-table query; uniform RLS shape.                     | Plan   |
-| Cascades                          | `ON DELETE CASCADE` on all FKs; no soft delete                         | Standard Supabase pattern; no audit-trail requirement at MVP.                                                 | Plan   |
-| Role lookup propagation           | On-demand via helper in pages/routes                                   | Pages that don't need boards pay nothing; middleware stays minimal.                                           | Plan   |
-| Verification approach             | `supabase/seed.sql` + dashboard role badges + SQL Editor walk-through  | No throwaway endpoints; exercises the real policies; reproducible from the plan doc.                          | Plan   |
+| Decision                     | Choice                                                                | Why (1 sentence)                                                                                          | Source |
+| ---------------------------- | --------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------- | ------ |
+| Deliverable scope            | Schema + RLS + role-lookup helper + small verification surface        | Tight foundation; S-01 keeps the board-creation UX as its own deliverable.                                | Plan   |
+| `profiles` table now?        | No — FK directly to `auth.users(id)`                                  | Smallest schema delta; S-04 introduces profiles when it actually needs display names / metrics.           | Plan   |
+| EM count per board           | Exactly one (the creator)                                             | Matches the PRD reading (FR-016) and simplifies ownership semantics.                                      | Plan   |
+| Role representation          | Not stored — derived from `auth.uid() = boards.owner_user_id`         | Eliminates an enum + a column; FR-016 ("creator = EM") becomes a database invariant via RLS `WITH CHECK`. | Plan   |
+| Owner row in `board_members` | Yes — owner is also a member                                          | Makes "list my boards" and "is X a member?" each a single-table query; uniform RLS shape.                 | Plan   |
+| Cascades                     | `ON DELETE CASCADE` on all FKs; no soft delete                        | Standard Supabase pattern; no audit-trail requirement at MVP.                                             | Plan   |
+| Role lookup propagation      | On-demand via helper in pages/routes                                  | Pages that don't need boards pay nothing; middleware stays minimal.                                       | Plan   |
+| Verification approach        | `supabase/seed.sql` + dashboard role badges + SQL Editor walk-through | No throwaway endpoints; exercises the real policies; reproducible from the plan doc.                      | Plan   |
 
 ## Scope
 
 **In scope:**
+
 - One migration creating `boards` and `board_members` with FKs, indexes, RLS enabled, and 7 policies (boards × 4, board_members × 3 — UPDATE intentionally omitted).
 - `src/types.ts` populated with `BoardRole`, `Board`, `UserBoard`.
 - `src/lib/services/boards.ts` exporting `getUserBoards` and `getBoardWithRole`.
@@ -37,6 +38,7 @@ Two new tables with full per-operation RLS. The board owner (`boards.owner_user_
 - Small "Your boards" list on `/dashboard` with role badges.
 
 **Out of scope:**
+
 - Board-creation UI or API (S-01).
 - Invitations (S-03).
 - GitHub linking (F-02 / S-02).
@@ -70,10 +72,10 @@ The app reads through `src/lib/services/boards.ts`, which builds on the existing
 
 ## Phases at a Glance
 
-| Phase                            | What it delivers                                                                  | Key risk                                                              |
-| -------------------------------- | --------------------------------------------------------------------------------- | --------------------------------------------------------------------- |
-| 1. Schema, RLS & app helpers     | Migration, RLS policies, types, board service helper                              | RLS recursion on `board_members` SELECT — must not self-reference.    |
-| 2. Verification surface          | `supabase/seed.sql`, dashboard "Your boards" list, SQL Editor walk-through        | Seed-time `INSERT INTO auth.users` patterns can be Supabase-version-sensitive. |
+| Phase                        | What it delivers                                                           | Key risk                                                                       |
+| ---------------------------- | -------------------------------------------------------------------------- | ------------------------------------------------------------------------------ |
+| 1. Schema, RLS & app helpers | Migration, RLS policies, types, board service helper                       | RLS recursion on `board_members` SELECT — must not self-reference.             |
+| 2. Verification surface      | `supabase/seed.sql`, dashboard "Your boards" list, SQL Editor walk-through | Seed-time `INSERT INTO auth.users` patterns can be Supabase-version-sensitive. |
 
 **Prerequisites:** existing Supabase auth wiring (already in place). Local Docker for `npx supabase start` if reviewing locally.
 

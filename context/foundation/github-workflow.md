@@ -16,34 +16,34 @@ This document describes the conventions for creating and maintaining GitHub issu
 
 Every issue on the board has four custom fields. All must be filled when creating or editing an issue.
 
-| Field | Type | Field ID | Purpose |
-|---|---|---|---|
-| **Change ID** | Text | `PVTF_lAHOERqfPM4BY-xNzhUAtLo` | Short roadmap identifier, e.g. `F-01`, `S-03` |
-| **Roadmap ID** | Text | `PVTF_lAHOERqfPM4BY-xNzhUAtMg` | Kebab-case slug from roadmap, e.g. `access-control-and-membership` |
-| **Status** | Single-select | `PVTSSF_lAHOERqfPM4BY-xNzhUAs5E` | See Status Values below |
-| **Stream** | Single-select | `PVTSSF_lAHOERqfPM4BY-xNzhUAtNY` | See Stream Values below |
+| Field          | Type          | Field ID                         | Purpose                                                            |
+| -------------- | ------------- | -------------------------------- | ------------------------------------------------------------------ |
+| **Change ID**  | Text          | `PVTF_lAHOERqfPM4BY-xNzhUAtLo`   | Short roadmap identifier, e.g. `F-01`, `S-03`                      |
+| **Roadmap ID** | Text          | `PVTF_lAHOERqfPM4BY-xNzhUAtMg`   | Kebab-case slug from roadmap, e.g. `access-control-and-membership` |
+| **Status**     | Single-select | `PVTSSF_lAHOERqfPM4BY-xNzhUAs5E` | See Status Values below                                            |
+| **Stream**     | Single-select | `PVTSSF_lAHOERqfPM4BY-xNzhUAtNY` | See Stream Values below                                            |
 
 ### Status Values
 
-| Value | Meaning |
-|---|---|
-| `proposed` | In backlog, not yet started |
-| `ready` | Prerequisites met, can be picked up |
-| `blocked` | Waiting on a dependency or external decision |
-| `in-progress` | Actively being worked on |
-| `in-review` | PR open, awaiting review |
-| `done` | Deployed to production (option id `fe521554`) — set automatically by `deploy.yml` on successful deploy |
-| `rejected` | Descoped or cancelled |
+| Value         | Meaning                                                                                                |
+| ------------- | ------------------------------------------------------------------------------------------------------ |
+| `proposed`    | In backlog, not yet started                                                                            |
+| `ready`       | Prerequisites met, can be picked up                                                                    |
+| `blocked`     | Waiting on a dependency or external decision                                                           |
+| `in-progress` | Actively being worked on                                                                               |
+| `in-review`   | PR open, awaiting review                                                                               |
+| `done`        | Deployed to production (option id `fe521554`) — set automatically by `deploy.yml` on successful deploy |
+| `rejected`    | Descoped or cancelled                                                                                  |
 
 Default for new issues: **`proposed`**. Set to `ready` once all prerequisites in `roadmap.md` are done.
 
 ### Stream Values
 
-| Value | Meaning |
-|---|---|
-| `A: Access & Membership` | Auth, roles, board membership flows |
+| Value                      | Meaning                                                |
+| -------------------------- | ------------------------------------------------------ |
+| `A: Access & Membership`   | Auth, roles, board membership flows                    |
 | `B: GitHub Data & Profile` | GitHub OAuth, org data ingestion, contributor profiles |
-| `C: Classification` | AI classification, enriched metrics |
+| `C: Classification`        | AI classification, enriched metrics                    |
 
 ---
 
@@ -61,16 +61,20 @@ Example: `[F-01] Access Control and Membership`
 
 ```markdown
 ## Summary
+
 One-paragraph description of what this change delivers and why.
 
 ## User Stories
+
 - US-NN: <title>
 
 ## Dependencies
+
 - [ ] #N (ID: change-id)
 - [ ] #M (ID: change-id)
 
 ---
+
 > **Roadmap ID:** `change-slug`  
 > **Stream:** A / B / C  
 > **Prerequisites:** F-01, S-02 (or "None")
@@ -90,6 +94,7 @@ One-paragraph description of what this change delivers and why.
 Use `gh api graphql` to set field values programmatically.
 
 **Text field (Change ID or Roadmap ID):**
+
 ```bash
 gh api graphql -f query='
 mutation {
@@ -103,6 +108,7 @@ mutation {
 ```
 
 **Single-select field (Status or Stream):**
+
 ```bash
 # First, get the option ID for the value you want:
 gh api graphql -f query='
@@ -134,6 +140,7 @@ mutation {
 ```
 
 **Get item IDs for all board items:**
+
 ```bash
 gh api graphql -f query='
 query {

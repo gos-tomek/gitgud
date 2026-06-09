@@ -15,7 +15,7 @@
 ## Always use consola via @/lib/logger for all logging
 
 - **Context**: Any src/ file that emits log output
-- **Problem**: Scattered console.* calls trigger lint warnings and can't be centrally controlled — lint suppression pragmas accumulate and there's no single swap point when a structured logger is needed.
+- **Problem**: Scattered console.\* calls trigger lint warnings and can't be centrally controlled — lint suppression pragmas accumulate and there's no single swap point when a structured logger is needed.
 - **Rule**: Always use consola via `@/lib/logger` for logging. Never use `console.*` directly in application code.
 - **Applies to**: implement, impl-review
 

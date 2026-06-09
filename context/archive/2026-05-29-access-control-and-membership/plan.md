@@ -57,7 +57,7 @@ Splitting is deliberate: Phase 1 is the load-bearing foundation; Phase 2 is the 
 ## Critical Implementation Details
 
 - **Role is not a column.** If the implementer is tempted to add `board_members.role TEXT` or a `board_role` enum "for clarity", stop. Role is a derived value (`auth.uid() = boards.owner_user_id`), and adding storage creates two sources of truth that can drift.
-- **RLS recursion — break the `boards`↔`board_members` cycle with SECURITY DEFINER helpers.** Postgres applies RLS to any table referenced inside a policy expression. If `boards.SELECT` subqueries `board_members` *and* `board_members.SELECT` subqueries `boards`, a SELECT on either table re-enters the other's policy and trips Postgres's recursion guard (`infinite recursion detected in policy for relation ...`). This is broader than self-reference. The fix: do membership/ownership lookups through `SECURITY DEFINER` functions (`public.is_board_member`, `public.is_board_owner`) that run as their owner and bypass RLS on the tables they read, so no policy re-entry occurs. Both functions must pin `set search_path = public` to avoid the definer-function search-path hijack footgun. These functions also establish the helper-function convention later slices reuse.
+- **RLS recursion — break the `boards`↔`board_members` cycle with SECURITY DEFINER helpers.** Postgres applies RLS to any table referenced inside a policy expression. If `boards.SELECT` subqueries `board_members` _and_ `board_members.SELECT` subqueries `boards`, a SELECT on either table re-enters the other's policy and trips Postgres's recursion guard (`infinite recursion detected in policy for relation ...`). This is broader than self-reference. The fix: do membership/ownership lookups through `SECURITY DEFINER` functions (`public.is_board_member`, `public.is_board_owner`) that run as their owner and bypass RLS on the tables they read, so no policy re-entry occurs. Both functions must pin `set search_path = public` to avoid the definer-function search-path hijack footgun. These functions also establish the helper-function convention later slices reuse.
 - **Service-role is forbidden in app code.** All helpers accept the request-scoped Supabase client built from cookies in `src/lib/supabase.ts`, so policies fire against the user's identity.
 - **Migration filename uses UTC stamp.** Pattern `YYYYMMDDHHmmss_short_description.sql`. This change adds exactly one migration.
 - **Both tables `REVOKE ALL ... FROM anon` explicitly.** Anonymous requests must never see board data even by accident.
@@ -162,7 +162,7 @@ Both helpers are pure functions (no shared state, no I/O outside the passed clie
 
 #### Manual Verification:
 
-- *Deferred to Phase 2 — the full UI verification surface lives there.*
+- _Deferred to Phase 2 — the full UI verification surface lives there._
 
 **Implementation Note**: Phase 1 has no user-visible delta. The manual gate is Phase 2.
 

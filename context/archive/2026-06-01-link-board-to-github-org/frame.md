@@ -1,6 +1,6 @@
 # Frame Brief: Board Creation with GitHub Integration
 
-> Framing step before /10x-plan. This document captures what is *actually*
+> Framing step before /10x-plan. This document captures what is _actually_
 > at issue, separated from what was initially assumed.
 
 ## Reported Observation
@@ -24,12 +24,12 @@ The observation could originate at any of these dimensions:
 
 ## Hypothesis Investigation
 
-| Hypothesis | Evidence | Verdict |
-| --- | --- | --- |
-| **UX: 3-screen wizard is right** | No existing wizard in codebase; all forms use single-page POST-redirect (`CreateBoardForm.tsx`, `SignUpForm.tsx`, `SignInForm.tsx`); only Button component from shadcn/ui installed — would need Stepper/Tabs/Dialog infrastructure. Cross-system: Vercel/Netlify/CodeClimate use 2-step flows (connect → pick repos), not 3. | **WEAK** — feasible but adds friction vs. fewer screens; 3 screens is one more than industry norm |
-| **Dependency chain: bundle into one atomic flow** | Schema separates operations: `boards` table (name+owner), `set_board_github_pat()` RPC (separate call), `github_repos` (separate table via FK). `createBoard()` service only handles name (`src/lib/services/boards.ts:33-47`). Chain is hard: PAT must validate before repos can be fetched. | **STRONG** — dependencies are real and sequential, but data layer supports both bundled and separated flows |
-| **PAT trust: upfront collection is fine** | User confirmed: board without GitHub = broken onboarding, users arrive ready to configure. Trust barrier is mitigated by intent — users expect to provide credentials. Encryption infrastructure already exists (`github_pat_encrypted bytea`, pgcrypto, `GITHUB_TOKEN_ENCRYPTION_KEY`). | **STRONG** for early PAT — user intent aligns with upfront collection |
-| **Repo selection: manual URL entry** | `GET /user/repos` returns all accessible repos with pagination (max 100/page). Latency ~50-150ms per page from Cloudflare Workers. An API-driven picker is both feasible and superior to manual URL entry. Required scope: `repo` (classic PAT). | **STRONG** against manual URLs — picker is clearly better UX |
+| Hypothesis                                        | Evidence                                                                                                                                                                                                                                                                                                                      | Verdict                                                                                                     |
+| ------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
+| **UX: 3-screen wizard is right**                  | No existing wizard in codebase; all forms use single-page POST-redirect (`CreateBoardForm.tsx`, `SignUpForm.tsx`, `SignInForm.tsx`); only Button component from shadcn/ui installed — would need Stepper/Tabs/Dialog infrastructure. Cross-system: Vercel/Netlify/CodeClimate use 2-step flows (connect → pick repos), not 3. | **WEAK** — feasible but adds friction vs. fewer screens; 3 screens is one more than industry norm           |
+| **Dependency chain: bundle into one atomic flow** | Schema separates operations: `boards` table (name+owner), `set_board_github_pat()` RPC (separate call), `github_repos` (separate table via FK). `createBoard()` service only handles name (`src/lib/services/boards.ts:33-47`). Chain is hard: PAT must validate before repos can be fetched.                                 | **STRONG** — dependencies are real and sequential, but data layer supports both bundled and separated flows |
+| **PAT trust: upfront collection is fine**         | User confirmed: board without GitHub = broken onboarding, users arrive ready to configure. Trust barrier is mitigated by intent — users expect to provide credentials. Encryption infrastructure already exists (`github_pat_encrypted bytea`, pgcrypto, `GITHUB_TOKEN_ENCRYPTION_KEY`).                                      | **STRONG** for early PAT — user intent aligns with upfront collection                                       |
+| **Repo selection: manual URL entry**              | `GET /user/repos` returns all accessible repos with pagination (max 100/page). Latency ~50-150ms per page from Cloudflare Workers. An API-driven picker is both feasible and superior to manual URL entry. Required scope: `repo` (classic PAT).                                                                              | **STRONG** against manual URLs — picker is clearly better UX                                                |
 
 ## Narrowing Signals
 

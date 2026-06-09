@@ -5,7 +5,8 @@ git_commit: d2618b9f25b57c791f794e8bf6fa187660765050
 branch: testing-access-boundary
 repository: GitGud
 topic: "Phase 1 Bootstrap — Risks #1/#2 access boundary + test runner setup: RLS policy tree, PAT leak vectors, Vitest + Supabase integration test patterns"
-tags: [research, codebase, pat, security, github, logging, encryption, rls, idor, access-control, vitest, testing, supabase]
+tags:
+  [research, codebase, pat, security, github, logging, encryption, rls, idor, access-control, vitest, testing, supabase]
 status: complete
 last_updated: "2026-06-09"
 last_updated_by: Claude
@@ -54,17 +55,18 @@ The PAT is stored in `boards.github_pat_encrypted` (bytea) using PostgreSQL `pgc
 
 During board creation, the raw PAT is sent from the client in POST bodies to five API routes:
 
-| Route | File | PAT in request | Response includes PAT? | Error handling |
-|-------|------|----------------|----------------------|----------------|
-| `POST /api/github/validate-pat` | `src/pages/api/github/validate-pat.ts` | Yes (body) | No — returns `{ login, id, avatarUrl }` | Hardcoded: `"Token is invalid or expired"` / `"Failed to validate token"` |
-| `POST /api/github/repos` | `src/pages/api/github/repos.ts` | Yes (body) | No — returns repo list | Hardcoded: `"Failed to fetch repositories"` |
-| `POST /api/github/collaborators` | `src/pages/api/github/collaborators.ts` | Yes (body) | No — returns collaborator list | Hardcoded: `"Failed to fetch collaborators"` |
-| `POST /api/github/validate-repo` | `src/pages/api/github/validate-repo.ts` | Yes (body) | No — returns `{ valid: true }` | Hardcoded: `"Failed to validate repository"` |
-| `POST /api/boards` | `src/pages/api/boards/index.ts` | Yes (body) | No — returns `{ id, slug }` | Hardcoded: `"Failed to store GitHub token"` / `"Something went wrong"` |
+| Route                            | File                                    | PAT in request | Response includes PAT?                  | Error handling                                                            |
+| -------------------------------- | --------------------------------------- | -------------- | --------------------------------------- | ------------------------------------------------------------------------- |
+| `POST /api/github/validate-pat`  | `src/pages/api/github/validate-pat.ts`  | Yes (body)     | No — returns `{ login, id, avatarUrl }` | Hardcoded: `"Token is invalid or expired"` / `"Failed to validate token"` |
+| `POST /api/github/repos`         | `src/pages/api/github/repos.ts`         | Yes (body)     | No — returns repo list                  | Hardcoded: `"Failed to fetch repositories"`                               |
+| `POST /api/github/collaborators` | `src/pages/api/github/collaborators.ts` | Yes (body)     | No — returns collaborator list          | Hardcoded: `"Failed to fetch collaborators"`                              |
+| `POST /api/github/validate-repo` | `src/pages/api/github/validate-repo.ts` | Yes (body)     | No — returns `{ valid: true }`          | Hardcoded: `"Failed to validate repository"`                              |
+| `POST /api/boards`               | `src/pages/api/boards/index.ts`         | Yes (body)     | No — returns `{ id, slug }`             | Hardcoded: `"Failed to store GitHub token"` / `"Something went wrong"`    |
 
 All five routes use hardcoded error strings in responses — **safe for response body exposure**.
 
 Board creation stores the PAT via RPC at `src/pages/api/boards/index.ts:62–66`:
+
 ```
 supabase.rpc("set_board_github_pat", {
   p_board_id: boardId,
@@ -111,6 +113,7 @@ This catch wraps the entire `syncBoardGitHubData()` call. If a non-Octokit error
 ```
 
 The `SyncResult` (including `errors: string[]`) is serialized and returned at `sync.ts:57`:
+
 ```typescript
 const result = await syncBoardGitHubData(supabase, boardId);
 return json(result);
@@ -121,20 +124,21 @@ Per-PR errors — from Octokit calls, Supabase upserts, or unexpected throws —
 ### Leak Vector #3: Logger Has Zero Sanitization + Six Catch Blocks Log Raw Errors
 
 **File**: `src/lib/logger.ts:1`
+
 ```typescript
 export { consola as logger } from "consola";
 ```
 
 The logger is a bare re-export of `consola` with **no custom reporters, no redaction filters, no sensitive-value scrubbing**. Six catch blocks in PAT-handling code log the full error object:
 
-| Location | Context |
-|----------|---------|
-| `src/pages/api/github/validate-pat.ts:63` | `logger.error("[validate-pat]", err)` — raw PAT in closure scope (`parsed.data.pat` at line 44) |
-| `src/pages/api/github/repos.ts:71` | `logger.error("[repos]", err)` — raw PAT in closure scope (line 44) |
-| `src/pages/api/github/validate-repo.ts:66` | `logger.error("[validate-repo]", err)` — raw PAT in closure scope (line 46) |
-| `src/pages/api/github/collaborators.ts:106` | `logger.error("[collaborators]", err)` — raw PAT in closure scope (line 54) |
-| `src/pages/api/boards/index.ts:109` | `logger.error("[boards]", err)` — PAT used at line 64 |
-| `src/pages/api/github/sync.ts:59` | `logger.error("[github-sync]", err)` — PAT decrypted inside called function |
+| Location                                    | Context                                                                                         |
+| ------------------------------------------- | ----------------------------------------------------------------------------------------------- |
+| `src/pages/api/github/validate-pat.ts:63`   | `logger.error("[validate-pat]", err)` — raw PAT in closure scope (`parsed.data.pat` at line 44) |
+| `src/pages/api/github/repos.ts:71`          | `logger.error("[repos]", err)` — raw PAT in closure scope (line 44)                             |
+| `src/pages/api/github/validate-repo.ts:66`  | `logger.error("[validate-repo]", err)` — raw PAT in closure scope (line 46)                     |
+| `src/pages/api/github/collaborators.ts:106` | `logger.error("[collaborators]", err)` — raw PAT in closure scope (line 54)                     |
+| `src/pages/api/boards/index.ts:109`         | `logger.error("[boards]", err)` — PAT used at line 64                                           |
+| `src/pages/api/github/sync.ts:59`           | `logger.error("[github-sync]", err)` — PAT decrypted inside called function                     |
 
 **Current state**: consola's default reporter prints only `err.message` + `err.stack` for Error objects — it does NOT enumerate arbitrary properties like `.request` (which on Octokit errors contains partially-redacted headers). So the PAT does not currently leak through these log calls.
 
@@ -143,6 +147,7 @@ The logger is a bare re-export of `consola` with **no custom reporters, no redac
 ### Leak Vector #4: Cloudflare Workers Observability Persists All Log Output
 
 **File**: `wrangler.jsonc:12–14`
+
 ```jsonc
 "observability": {
   "enabled": true,
@@ -201,11 +206,13 @@ The `GitHubAuthError` wraps the original Octokit error message. In pre-storage r
 **Encryption-at-rest ≠ safe-in-transit**: The test-plan's "must challenge" is correct. The PAT is encrypted in the database but decrypted into memory on every sync request and during the entire board creation wizard flow. The transient exposure surface is broader than the storage surface.
 
 **Defense-in-depth gap**: The architecture has one layer of defense (pgcrypto encryption at rest) but lacks a second layer for transient exposure. No sanitization in the logger, no explicit scrubbing of error messages before they reach the client, and no redaction middleware. The safety currently depends on:
+
 - Hardcoded error strings in pre-storage routes (intentional, robust)
 - Octokit's RequestError not including the token in `.message` (third-party implementation detail, fragile)
 - consola's default reporter not serializing `.request` property on errors (library behavior, fragile)
 
 **Two distinct test surfaces**:
+
 1. **API response bodies** — testable by calling routes and inspecting JSON. Vectors #1 and #2 are in the sync endpoint only; pre-storage routes are safe.
 2. **Log output** — testable by capturing console output during route execution. Vector #3 requires intentional error injection. Vector #4 is a deployment concern, not a code concern.
 
@@ -220,6 +227,7 @@ The `GitHubAuthError` wraps the original Octokit error message. In pre-storage r
 ## Related Research
 
 No prior research artifacts exist for this change. Related archived plans:
+
 - `context/archive/2026-05-30-github-ingestion-access/plan.md` — PAT encryption design
 - `context/archive/2026-06-01-link-board-to-github-org/plan.md` — PAT collection + storage flow
 
@@ -237,12 +245,12 @@ Per the test-plan's Risk Response Guidance, what would prove protection:
 
 The oracle is not "does the code look safe" — it is **observable behavior**: call every route that handles PATs (including error paths), and assert the PAT string does not appear in the response body or captured log output. Specifically:
 
-| Assertion | Oracle source | Route(s) |
-|-----------|--------------|----------|
-| Happy-path response body never contains PAT | PRD: PAT is an input credential, not a display value | All 6 routes |
-| Error response body never contains PAT | test-plan Risk #2 guidance: "error response" | All 6 routes (especially sync.ts) |
-| Captured log output never contains PAT | test-plan Risk #2 guidance: "application log" | All 6 routes (trigger errors, capture console) |
-| Supabase RPC error on decrypt does not leak PAT/key | Domain knowledge: PL/pgSQL errors can include params | `sync.ts`, `boards/index.ts` |
+| Assertion                                           | Oracle source                                        | Route(s)                                       |
+| --------------------------------------------------- | ---------------------------------------------------- | ---------------------------------------------- |
+| Happy-path response body never contains PAT         | PRD: PAT is an input credential, not a display value | All 6 routes                                   |
+| Error response body never contains PAT              | test-plan Risk #2 guidance: "error response"         | All 6 routes (especially sync.ts)              |
+| Captured log output never contains PAT              | test-plan Risk #2 guidance: "application log"        | All 6 routes (trigger errors, capture console) |
+| Supabase RPC error on decrypt does not leak PAT/key | Domain knowledge: PL/pgSQL errors can include params | `sync.ts`, `boards/index.ts`                   |
 
 ---
 
@@ -268,37 +276,37 @@ The cross-board isolation model is **sound but single-layer**. All 7 board-scope
 
 7 tables, all with RLS enabled:
 
-| Table | board_id link | RLS | REVOKE anon | REVOKE authenticated | SELECT policy | Write policies |
-|-------|--------------|-----|-------------|---------------------|---------------|----------------|
-| `boards` | IS the board (PK) | Yes | Yes | **No** | `is_board_member(id)` OR `owner_user_id = auth.uid()` | owner only |
-| `board_members` | direct FK | Yes | Yes | **No** | `user_id = auth.uid()` OR `is_board_owner(board_id)` | owner inserts; owner or self deletes; no UPDATE |
-| `github_repos` | direct FK | Yes | Yes | **No** | `is_board_member(board_id)` | owner only |
-| `github_pull_requests` | indirect (via repo_id) | Yes | Yes | **No** | subquery → `is_board_member(gr.board_id)` | subquery → owner only |
-| `github_reviews` | indirect (2 hops) | Yes | Yes | **No** | `is_board_member(get_board_id_for_pr(...))` | owner only |
-| `github_review_comments` | indirect (2 hops) | Yes | Yes | **No** | `is_board_member(get_board_id_for_pr(...))` | owner only |
-| `board_contributors` | direct FK | Yes | Yes | **No** | `is_board_member(board_id)` | owner inserts/deletes; no UPDATE |
+| Table                    | board_id link          | RLS | REVOKE anon | REVOKE authenticated | SELECT policy                                         | Write policies                                  |
+| ------------------------ | ---------------------- | --- | ----------- | -------------------- | ----------------------------------------------------- | ----------------------------------------------- |
+| `boards`                 | IS the board (PK)      | Yes | Yes         | **No**               | `is_board_member(id)` OR `owner_user_id = auth.uid()` | owner only                                      |
+| `board_members`          | direct FK              | Yes | Yes         | **No**               | `user_id = auth.uid()` OR `is_board_owner(board_id)`  | owner inserts; owner or self deletes; no UPDATE |
+| `github_repos`           | direct FK              | Yes | Yes         | **No**               | `is_board_member(board_id)`                           | owner only                                      |
+| `github_pull_requests`   | indirect (via repo_id) | Yes | Yes         | **No**               | subquery → `is_board_member(gr.board_id)`             | subquery → owner only                           |
+| `github_reviews`         | indirect (2 hops)      | Yes | Yes         | **No**               | `is_board_member(get_board_id_for_pr(...))`           | owner only                                      |
+| `github_review_comments` | indirect (2 hops)      | Yes | Yes         | **No**               | `is_board_member(get_board_id_for_pr(...))`           | owner only                                      |
+| `board_contributors`     | direct FK              | Yes | Yes         | **No**               | `is_board_member(board_id)`                           | owner inserts/deletes; no UPDATE                |
 
 #### Detailed Policies Per Table
 
 **`boards`** — `supabase/migrations/20260529120000_access_control_and_membership.sql`
 
-| Policy | Op | USING | WITH CHECK | Line |
-|--------|----|-------|------------|------|
-| `boards_select` | SELECT | `public.is_board_member(id)` | — | 68–70 |
-| `boards_select_owner` | SELECT | `owner_user_id = auth.uid()` | — | `20260529140000_boards_unique_name_per_owner.sql:11–12` |
-| `boards_insert` | INSERT | — | `owner_user_id = auth.uid()` | 72–74 |
-| `boards_update` | UPDATE | `owner_user_id = auth.uid()` | `owner_user_id = auth.uid()` | 76–79 |
-| `boards_delete` | DELETE | `owner_user_id = auth.uid()` | — | 81–83 |
+| Policy                | Op     | USING                        | WITH CHECK                   | Line                                                    |
+| --------------------- | ------ | ---------------------------- | ---------------------------- | ------------------------------------------------------- |
+| `boards_select`       | SELECT | `public.is_board_member(id)` | —                            | 68–70                                                   |
+| `boards_select_owner` | SELECT | `owner_user_id = auth.uid()` | —                            | `20260529140000_boards_unique_name_per_owner.sql:11–12` |
+| `boards_insert`       | INSERT | —                            | `owner_user_id = auth.uid()` | 72–74                                                   |
+| `boards_update`       | UPDATE | `owner_user_id = auth.uid()` | `owner_user_id = auth.uid()` | 76–79                                                   |
+| `boards_delete`       | DELETE | `owner_user_id = auth.uid()` | —                            | 81–83                                                   |
 
 Note: `boards_select` + `boards_select_owner` OR-merge (PostgreSQL permissive policy semantics). The `boards_select_owner` policy exists because the AFTER INSERT trigger that adds the owner to `board_members` fires after INSERT...RETURNING needs to read back the row.
 
 **`board_members`** — same migration
 
-| Policy | Op | USING | WITH CHECK | Line |
-|--------|----|-------|------------|------|
-| `board_members_select` | SELECT | `user_id = auth.uid() OR public.is_board_owner(board_id)` | — | 87–89 |
-| `board_members_insert` | INSERT | — | `public.is_board_owner(board_id)` | 91–92 |
-| `board_members_delete` | DELETE | `user_id = auth.uid() OR public.is_board_owner(board_id)` | — | 97–99 |
+| Policy                 | Op     | USING                                                     | WITH CHECK                        | Line  |
+| ---------------------- | ------ | --------------------------------------------------------- | --------------------------------- | ----- |
+| `board_members_select` | SELECT | `user_id = auth.uid() OR public.is_board_owner(board_id)` | —                                 | 87–89 |
+| `board_members_insert` | INSERT | —                                                         | `public.is_board_owner(board_id)` | 91–92 |
+| `board_members_delete` | DELETE | `user_id = auth.uid() OR public.is_board_owner(board_id)` | —                                 | 97–99 |
 
 No UPDATE policy — comment at line 95: "membership rows are immutable after insert."
 
@@ -306,47 +314,47 @@ Design note: a regular member can only see their OWN membership row. Only the bo
 
 **`github_repos`** — `supabase/migrations/20260531100000_github_ingestion_access.sql`
 
-| Policy | Op | USING | WITH CHECK | Line |
-|--------|----|-------|------------|------|
-| `github_repos_select` | SELECT | `public.is_board_member(board_id)` | — | 154–156 |
-| `github_repos_insert` | INSERT | — | `public.is_board_owner(board_id)` | 158–160 |
-| `github_repos_update` | UPDATE | `public.is_board_owner(board_id)` | `public.is_board_owner(board_id)` | 162–165 |
-| `github_repos_delete` | DELETE | `public.is_board_owner(board_id)` | — | 167–169 |
+| Policy                | Op     | USING                              | WITH CHECK                        | Line    |
+| --------------------- | ------ | ---------------------------------- | --------------------------------- | ------- |
+| `github_repos_select` | SELECT | `public.is_board_member(board_id)` | —                                 | 154–156 |
+| `github_repos_insert` | INSERT | —                                  | `public.is_board_owner(board_id)` | 158–160 |
+| `github_repos_update` | UPDATE | `public.is_board_owner(board_id)`  | `public.is_board_owner(board_id)` | 162–165 |
+| `github_repos_delete` | DELETE | `public.is_board_owner(board_id)`  | —                                 | 167–169 |
 
 **`github_pull_requests`** — same migration
 
-| Policy | Op | USING/WITH CHECK | Line |
-|--------|----|-----------------|------|
+| Policy                        | Op     | USING/WITH CHECK                                                                                              | Line    |
+| ----------------------------- | ------ | ------------------------------------------------------------------------------------------------------------- | ------- |
 | `github_pull_requests_select` | SELECT | `EXISTS (SELECT 1 FROM public.github_repos gr WHERE gr.id = repo_id AND public.is_board_member(gr.board_id))` | 173–175 |
-| `github_pull_requests_insert` | INSERT | same subquery → `is_board_owner` | 177–179 |
-| `github_pull_requests_update` | UPDATE | same subquery → `is_board_owner` (both USING + WITH CHECK) | 181–184 |
-| `github_pull_requests_delete` | DELETE | same subquery → `is_board_owner` | 186–188 |
+| `github_pull_requests_insert` | INSERT | same subquery → `is_board_owner`                                                                              | 177–179 |
+| `github_pull_requests_update` | UPDATE | same subquery → `is_board_owner` (both USING + WITH CHECK)                                                    | 181–184 |
+| `github_pull_requests_delete` | DELETE | same subquery → `is_board_owner`                                                                              | 186–188 |
 
 **`github_reviews`** — same migration, uses `get_board_id_for_pr()` helper
 
-| Policy | Op | Expression | Line |
-|--------|----|-----------|------|
+| Policy                  | Op     | Expression                                              | Line    |
+| ----------------------- | ------ | ------------------------------------------------------- | ------- |
 | `github_reviews_select` | SELECT | `is_board_member(get_board_id_for_pr(pull_request_id))` | 192–194 |
-| `github_reviews_insert` | INSERT | `is_board_owner(get_board_id_for_pr(pull_request_id))` | 196–198 |
-| `github_reviews_update` | UPDATE | same (both USING + WITH CHECK) | 200–203 |
-| `github_reviews_delete` | DELETE | `is_board_owner(...)` | 205–207 |
+| `github_reviews_insert` | INSERT | `is_board_owner(get_board_id_for_pr(pull_request_id))`  | 196–198 |
+| `github_reviews_update` | UPDATE | same (both USING + WITH CHECK)                          | 200–203 |
+| `github_reviews_delete` | DELETE | `is_board_owner(...)`                                   | 205–207 |
 
 **`github_review_comments`** — same migration, same pattern as `github_reviews`
 
-| Policy | Op | Expression | Line |
-|--------|----|-----------|------|
+| Policy                          | Op     | Expression                                              | Line    |
+| ------------------------------- | ------ | ------------------------------------------------------- | ------- |
 | `github_review_comments_select` | SELECT | `is_board_member(get_board_id_for_pr(pull_request_id))` | 211–213 |
-| `github_review_comments_insert` | INSERT | `is_board_owner(get_board_id_for_pr(pull_request_id))` | 215–217 |
-| `github_review_comments_update` | UPDATE | same (both) | 219–222 |
-| `github_review_comments_delete` | DELETE | `is_board_owner(...)` | 224–226 |
+| `github_review_comments_insert` | INSERT | `is_board_owner(get_board_id_for_pr(pull_request_id))`  | 215–217 |
+| `github_review_comments_update` | UPDATE | same (both)                                             | 219–222 |
+| `github_review_comments_delete` | DELETE | `is_board_owner(...)`                                   | 224–226 |
 
 **`board_contributors`** — `supabase/migrations/20260602120000_board_contributors.sql`
 
-| Policy | Op | USING | WITH CHECK | Line |
-|--------|----|-------|------------|------|
-| `board_contributors_select` | SELECT | `public.is_board_member(board_id)` | — | 22–24 |
-| `board_contributors_insert` | INSERT | — | `public.is_board_owner(board_id)` | 26–28 |
-| `board_contributors_delete` | DELETE | `public.is_board_owner(board_id)` | — | 30–32 |
+| Policy                      | Op     | USING                              | WITH CHECK                        | Line  |
+| --------------------------- | ------ | ---------------------------------- | --------------------------------- | ----- |
+| `board_contributors_select` | SELECT | `public.is_board_member(board_id)` | —                                 | 22–24 |
+| `board_contributors_insert` | INSERT | —                                  | `public.is_board_owner(board_id)` | 26–28 |
+| `board_contributors_delete` | DELETE | `public.is_board_owner(board_id)`  | —                                 | 30–32 |
 
 No UPDATE policy (undocumented, unlike `board_members`). `user_id` nullable column reserved for F-04 account linking — when that ships, an UPDATE policy or DELETE+INSERT pattern will be needed.
 
@@ -354,14 +362,14 @@ No UPDATE policy (undocumented, unlike `board_members`). `user_id` nullable colu
 
 All 6 SECURITY DEFINER functions, fully audited:
 
-| Function | File:Lines | search_path | Auth check | Purpose |
-|----------|-----------|-------------|------------|---------|
-| `is_board_member(uuid)` | `access_control.sql:37–48` | `public` | `auth.uid()` in WHERE | RLS helper: checks board_members for current user |
-| `is_board_owner(uuid)` | `access_control.sql:50–61` | `public` | `auth.uid()` in WHERE | RLS helper: checks boards.owner_user_id |
-| `add_owner_as_board_member()` | `board_triggers.sql:28–41` | `public` | None (trigger context) | Auto-enrolls board owner into board_members |
-| `get_board_id_for_pr(bigint)` | `github_ingestion.sql:92–103` | `public` | None (delegates to calling policy) | Resolves board_id from PR → repo chain |
-| `set_board_github_pat(uuid,text,text)` | `github_ingestion.sql:111–125` | `public, extensions` | `is_board_owner()` + RAISE | Encrypts and stores PAT |
-| `get_board_github_pat(uuid,text)` | `github_ingestion.sql:127–145` | `public, extensions` | `is_board_owner()` + RAISE | Decrypts and returns PAT |
+| Function                               | File:Lines                     | search_path          | Auth check                         | Purpose                                           |
+| -------------------------------------- | ------------------------------ | -------------------- | ---------------------------------- | ------------------------------------------------- |
+| `is_board_member(uuid)`                | `access_control.sql:37–48`     | `public`             | `auth.uid()` in WHERE              | RLS helper: checks board_members for current user |
+| `is_board_owner(uuid)`                 | `access_control.sql:50–61`     | `public`             | `auth.uid()` in WHERE              | RLS helper: checks boards.owner_user_id           |
+| `add_owner_as_board_member()`          | `board_triggers.sql:28–41`     | `public`             | None (trigger context)             | Auto-enrolls board owner into board_members       |
+| `get_board_id_for_pr(bigint)`          | `github_ingestion.sql:92–103`  | `public`             | None (delegates to calling policy) | Resolves board_id from PR → repo chain            |
+| `set_board_github_pat(uuid,text,text)` | `github_ingestion.sql:111–125` | `public, extensions` | `is_board_owner()` + RAISE         | Encrypts and stores PAT                           |
+| `get_board_github_pat(uuid,text)`      | `github_ingestion.sql:127–145` | `public, extensions` | `is_board_owner()` + RAISE         | Decrypts and returns PAT                          |
 
 1 SECURITY INVOKER function: `set_updated_at()` (`board_triggers.sql:5–14`) — timestamp trigger, no data access.
 
@@ -382,40 +390,42 @@ All SECURITY DEFINER functions pin `search_path` — no search_path injection ri
 
 **Middleware** (`src/middleware.ts`): Authentication only — redirects unauthenticated users from protected routes. No board-level authorization.
 
-| Route | board_id source | App-layer access check | RLS check | IDOR risk |
-|-------|----------------|----------------------|-----------|-----------|
-| `POST /api/boards` | Generated (INSERT) | N/A — creates new board | INSERT policy: `owner_user_id = auth.uid()` | None |
-| `POST /api/boards/check-name` | N/A (by name) | Explicit `.eq("owner_user_id", user.id)` | SELECT policy | None |
-| `POST /api/github/sync` | **Request body** | `getBoardWithRole` → null check + `role !== "supervisor"` | SELECT membership + owner-only writes | Low — double-gated |
-| `POST /api/github/validate-pat` | N/A | N/A | N/A (no board data) | None |
-| `POST /api/github/repos` | N/A | N/A | N/A (no board data) | None |
-| `POST /api/github/collaborators` | N/A | N/A | N/A (no board data) | None |
-| `POST /api/github/validate-repo` | N/A | N/A | N/A (no board data) | None |
-| `GET /boards/[id]` | **URL param** | `getBoardWithRole` → null → redirect | SELECT membership | Depends on RLS |
-| `GET /dashboard` | N/A | `getUserBoards(supabase, user.id)` | Explicit userId filter + RLS | None — double-filtered |
+| Route                            | board_id source    | App-layer access check                                    | RLS check                                   | IDOR risk              |
+| -------------------------------- | ------------------ | --------------------------------------------------------- | ------------------------------------------- | ---------------------- |
+| `POST /api/boards`               | Generated (INSERT) | N/A — creates new board                                   | INSERT policy: `owner_user_id = auth.uid()` | None                   |
+| `POST /api/boards/check-name`    | N/A (by name)      | Explicit `.eq("owner_user_id", user.id)`                  | SELECT policy                               | None                   |
+| `POST /api/github/sync`          | **Request body**   | `getBoardWithRole` → null check + `role !== "supervisor"` | SELECT membership + owner-only writes       | Low — double-gated     |
+| `POST /api/github/validate-pat`  | N/A                | N/A                                                       | N/A (no board data)                         | None                   |
+| `POST /api/github/repos`         | N/A                | N/A                                                       | N/A (no board data)                         | None                   |
+| `POST /api/github/collaborators` | N/A                | N/A                                                       | N/A (no board data)                         | None                   |
+| `POST /api/github/validate-repo` | N/A                | N/A                                                       | N/A (no board data)                         | None                   |
+| `GET /boards/[id]`               | **URL param**      | `getBoardWithRole` → null → redirect                      | SELECT membership                           | Depends on RLS         |
+| `GET /dashboard`                 | N/A                | `getUserBoards(supabase, user.id)`                        | Explicit userId filter + RLS                | None — double-filtered |
 
 ### Service Layer Access Patterns
 
-| Function | File:Lines | board_id filtering | userId filtering | Defense layers |
-|----------|-----------|-------------------|-----------------|----------------|
-| `createBoard` | `boards.ts:33–47` | N/A (INSERT) | RLS: `owner_user_id = auth.uid()` | 1 (RLS) |
-| `getUserBoards` | `boards.ts:49–59` | RLS: `is_board_member` | **Explicit**: `.eq("board_members.user_id", userId)` | **2 (explicit + RLS)** |
-| `getBoardWithRole` | `boards.ts:61–76` | `.eq("id", boardId)` | **None** — userId only used for role computation | **1 (RLS only)** |
-| `getBoardRepos` | `boards.ts:78–95` | `.eq("board_id", boardId)` | **None** | **1 (RLS only)** |
-| `getBoardContributors` | `boards.ts:97–114` | `.eq("board_id", boardId)` | **None** | **1 (RLS only)** |
-| `addBoardContributors` | `boards.ts:116–140` | INSERT with boardId | **None** | **1 (RLS only)** |
-| `syncBoardGitHubData` | `github-sync.ts:90+` | `.eq("board_id", boardId)` | **None** | **1 (RLS only)** — caller does supervisor check |
+| Function               | File:Lines           | board_id filtering         | userId filtering                                     | Defense layers                                  |
+| ---------------------- | -------------------- | -------------------------- | ---------------------------------------------------- | ----------------------------------------------- |
+| `createBoard`          | `boards.ts:33–47`    | N/A (INSERT)               | RLS: `owner_user_id = auth.uid()`                    | 1 (RLS)                                         |
+| `getUserBoards`        | `boards.ts:49–59`    | RLS: `is_board_member`     | **Explicit**: `.eq("board_members.user_id", userId)` | **2 (explicit + RLS)**                          |
+| `getBoardWithRole`     | `boards.ts:61–76`    | `.eq("id", boardId)`       | **None** — userId only used for role computation     | **1 (RLS only)**                                |
+| `getBoardRepos`        | `boards.ts:78–95`    | `.eq("board_id", boardId)` | **None**                                             | **1 (RLS only)**                                |
+| `getBoardContributors` | `boards.ts:97–114`   | `.eq("board_id", boardId)` | **None**                                             | **1 (RLS only)**                                |
+| `addBoardContributors` | `boards.ts:116–140`  | INSERT with boardId        | **None**                                             | **1 (RLS only)**                                |
+| `syncBoardGitHubData`  | `github-sync.ts:90+` | `.eq("board_id", boardId)` | **None**                                             | **1 (RLS only)** — caller does supervisor check |
 
 ### Findings
 
 #### FINDING 1 (Critical — Convention Violation): No `REVOKE ALL FROM authenticated` on Any Table
 
 Every migration only revokes from `anon`:
+
 ```sql
 REVOKE ALL ON public.boards FROM anon;
 ```
 
 But **none** include the lessons.md convention:
+
 ```sql
 REVOKE ALL ON public.<table> FROM anon, authenticated;
 ```
@@ -474,15 +484,15 @@ Per the test-plan's Risk Response Guidance:
 
 The oracle is **cross-user behavior against a real database**: create two boards with two different owners, and verify that neither can access the other's data through any operation.
 
-| Assertion | Oracle source | Tables |
-|-----------|--------------|--------|
-| Non-member cannot SELECT board rows | PRD Access Control: board membership gates visibility | `boards`, `board_members` |
-| Non-member cannot SELECT board's repos, PRs, reviews, comments, contributors | test-plan Risk #1: "reads repos, contributors, or profile data belonging to Board B" | All 6 board-scoped tables |
-| Non-owner cannot INSERT/UPDATE/DELETE board data | RLS policy design: writes restricted to owner | All 7 tables |
-| Non-member gets empty result (not an error) from service functions | Supabase RLS behavior: filtered rows return empty, not 403 | `getBoardWithRole`, `getBoardRepos`, `getBoardContributors` |
-| Cross-board access denied through indirect joins (PR → repo → board) | Policy design: `get_board_id_for_pr()` resolves board_id for deeply nested tables | `github_reviews`, `github_review_comments` |
-| `get_board_id_for_pr(non_existent_id)` denies access | Edge case: NULL board_id should never grant access | `github_reviews`, `github_review_comments` |
-| Missing `REVOKE ALL FROM authenticated` does not create a bypass | lessons.md convention vs actual migration state | All 7 tables |
+| Assertion                                                                    | Oracle source                                                                        | Tables                                                      |
+| ---------------------------------------------------------------------------- | ------------------------------------------------------------------------------------ | ----------------------------------------------------------- |
+| Non-member cannot SELECT board rows                                          | PRD Access Control: board membership gates visibility                                | `boards`, `board_members`                                   |
+| Non-member cannot SELECT board's repos, PRs, reviews, comments, contributors | test-plan Risk #1: "reads repos, contributors, or profile data belonging to Board B" | All 6 board-scoped tables                                   |
+| Non-owner cannot INSERT/UPDATE/DELETE board data                             | RLS policy design: writes restricted to owner                                        | All 7 tables                                                |
+| Non-member gets empty result (not an error) from service functions           | Supabase RLS behavior: filtered rows return empty, not 403                           | `getBoardWithRole`, `getBoardRepos`, `getBoardContributors` |
+| Cross-board access denied through indirect joins (PR → repo → board)         | Policy design: `get_board_id_for_pr()` resolves board_id for deeply nested tables    | `github_reviews`, `github_review_comments`                  |
+| `get_board_id_for_pr(non_existent_id)` denies access                         | Edge case: NULL board_id should never grant access                                   | `github_reviews`, `github_review_comments`                  |
+| Missing `REVOKE ALL FROM authenticated` does not create a bypass             | lessons.md convention vs actual migration state                                      | All 7 tables                                                |
 
 ---
 
@@ -500,10 +510,10 @@ Vitest 4.x is the right choice — it explicitly supports Vite 7 and Node 22. Th
 
 ### Vitest Version & Installation
 
-| Vitest | Vite range | Node range | Status |
-|--------|-----------|-----------|--------|
-| 4.1.8 (latest stable) | `^6.0.0 \|\| ^7.0.0 \|\| ^8.0.0` | `>=20.0.0` | **Recommended** |
-| 3.2.6 (latest 3.x) | `^5.0.0 \|\| ^6.0.0 \|\| ^7.0.0-0` | `>=18.0.0` | Compatible but not current |
+| Vitest                | Vite range                         | Node range | Status                     |
+| --------------------- | ---------------------------------- | ---------- | -------------------------- |
+| 4.1.8 (latest stable) | `^6.0.0 \|\| ^7.0.0 \|\| ^8.0.0`   | `>=20.0.0` | **Recommended**            |
+| 3.2.6 (latest 3.x)    | `^5.0.0 \|\| ^6.0.0 \|\| ^7.0.0-0` | `>=18.0.0` | Compatible but not current |
 
 This project: Vite 7.3.2 (overridden), Node 22.14.0. **Install: `npm install -D vitest`** (gets 4.1.8).
 
@@ -513,12 +523,12 @@ Note: Context7 docs for Vitest main branch reference "Vitest 5.0 requires Vite >
 
 Only 4 files import from `astro:env/server`:
 
-| File | Env vars | Imported by (runtime) |
-|------|----------|----------------------|
-| `src/lib/supabase.ts:3` | `SUPABASE_URL`, `SUPABASE_KEY` | middleware, all API routes, all .astro pages |
-| `src/lib/config-status.ts:1` | `SUPABASE_URL`, `SUPABASE_KEY` | `Layout.astro` only |
-| `src/lib/github.ts:4` | `GITHUB_TOKEN_ENCRYPTION_KEY` | github API routes, `github-sync.ts` |
-| `src/pages/api/boards/index.ts:5` | `GITHUB_TOKEN_ENCRYPTION_KEY` | (endpoint, not imported) |
+| File                              | Env vars                       | Imported by (runtime)                        |
+| --------------------------------- | ------------------------------ | -------------------------------------------- |
+| `src/lib/supabase.ts:3`           | `SUPABASE_URL`, `SUPABASE_KEY` | middleware, all API routes, all .astro pages |
+| `src/lib/config-status.ts:1`      | `SUPABASE_URL`, `SUPABASE_KEY` | `Layout.astro` only                          |
+| `src/lib/github.ts:4`             | `GITHUB_TOKEN_ENCRYPTION_KEY`  | github API routes, `github-sync.ts`          |
+| `src/pages/api/boards/index.ts:5` | `GITHUB_TOKEN_ENCRYPTION_KEY`  | (endpoint, not imported)                     |
 
 **Critical insight**: The service modules under `src/lib/services/` (`boards.ts`, `github-sync.ts`) do **not** import from `astro:env/server`. They accept a `SupabaseClient` as a parameter (type-only import from `supabase.ts`). This means integration tests of RLS behavior can construct Supabase clients directly, sidestepping the virtual module entirely.
 
@@ -546,6 +556,7 @@ export default getViteConfig({
 **Why `environment: "node"`**: Astro 6 breaking change — components can no longer be rendered in `jsdom`/`happy-dom`. Also, the integration tests call Supabase over HTTP, which works natively in Node 22.
 
 **Path aliases**: `getViteConfig()` picks up `@/*` → `./src/*` from the Astro config pipeline. If it doesn't resolve correctly, add explicit alias:
+
 ```typescript
 resolve: {
   alias: {
@@ -553,15 +564,16 @@ resolve: {
   },
 },
 ```
+
 Never use bare relative strings — Vitest resolves them relative to the test file, not the config.
 
 **Alternative approaches to `astro:env`** (if `getViteConfig` causes issues):
 
-| Approach | Pros | Cons |
-|----------|------|------|
-| `vi.mock("astro:env/server", ...)` | Per-test control | Needs resolveId plugin; must repeat in every file |
-| `resolve.alias` → shim module | Simple, fast | Must maintain shim when env vars change |
-| Refactor to single `env.ts` | Single mock point | Unnecessary indirection for 4 import sites |
+| Approach                           | Pros              | Cons                                              |
+| ---------------------------------- | ----------------- | ------------------------------------------------- |
+| `vi.mock("astro:env/server", ...)` | Per-test control  | Needs resolveId plugin; must repeat in every file |
+| `resolve.alias` → shim module      | Simple, fast      | Must maintain shim when env vars change           |
+| Refactor to single `env.ts`        | Single mock point | Unnecessary indirection for 4 import sites        |
 
 ### Cloudflare Workers Considerations
 
@@ -575,10 +587,10 @@ No Cloudflare-specific APIs used in `src/`. Confirmed by searching for `crypto.s
 
 #### Two-Client Pattern
 
-| Client | Key | RLS | Use |
-|--------|-----|-----|-----|
-| Admin (service-role) | `SUPABASE_SERVICE_ROLE_KEY` | **Bypassed** | Setup/teardown: create users, seed data, cleanup |
-| User (anon + auth) | `SUPABASE_ANON_KEY` + `signInWithPassword` | **Enforced** | Test assertions: verify what the user can/cannot see |
+| Client               | Key                                        | RLS          | Use                                                  |
+| -------------------- | ------------------------------------------ | ------------ | ---------------------------------------------------- |
+| Admin (service-role) | `SUPABASE_SERVICE_ROLE_KEY`                | **Bypassed** | Setup/teardown: create users, seed data, cleanup     |
+| User (anon + auth)   | `SUPABASE_ANON_KEY` + `signInWithPassword` | **Enforced** | Test assertions: verify what the user can/cannot see |
 
 ```typescript
 import { createClient } from "@supabase/supabase-js";
@@ -599,7 +611,7 @@ Use `createClient` from `@supabase/supabase-js` directly — **not** `createServ
 const { data, error } = await adminClient.auth.admin.createUser({
   email: "owner-a@test.local",
   password: "test-password-123",
-  email_confirm: true,  // critical: skip email verification
+  email_confirm: true, // critical: skip email verification
 });
 ```
 
@@ -607,12 +619,12 @@ const { data, error } = await adminClient.auth.admin.createUser({
 
 #### RLS Denial Behavior (critical for assertions)
 
-| Operation | RLS denial | How to assert |
-|-----------|-----------|---------------|
-| **SELECT** | Returns empty `[]`, no error | `expect(data).toEqual([])` |
-| **INSERT** (WITH CHECK fails) | Error code `42501` | `expect(error?.code).toBe("42501")` |
-| **UPDATE** (USING fails) | Silently updates 0 rows | Verify row unchanged via admin |
-| **DELETE** (USING fails) | Silently deletes 0 rows | Verify row still exists via admin |
+| Operation                     | RLS denial                   | How to assert                       |
+| ----------------------------- | ---------------------------- | ----------------------------------- |
+| **SELECT**                    | Returns empty `[]`, no error | `expect(data).toEqual([])`          |
+| **INSERT** (WITH CHECK fails) | Error code `42501`           | `expect(error?.code).toBe("42501")` |
+| **UPDATE** (USING fails)      | Silently updates 0 rows      | Verify row unchanged via admin      |
+| **DELETE** (USING fails)      | Silently deletes 0 rows      | Verify row still exists via admin   |
 
 This is fundamental: **SELECT/UPDATE/DELETE denials are silent**. Only INSERT violations produce an explicit error. Tests must use the admin client to verify state after silent denials.
 
@@ -657,7 +669,9 @@ export const adminClient = createClient(SUPABASE_URL, SERVICE_ROLE_KEY);
 
 export async function createTestUser(email: string, password = "test-password-123") {
   const { data, error } = await adminClient.auth.admin.createUser({
-    email, password, email_confirm: true,
+    email,
+    password,
+    email_confirm: true,
   });
   if (error) throw new Error(`Failed to create ${email}: ${error.message}`);
   const client = createClient(SUPABASE_URL, ANON_KEY);

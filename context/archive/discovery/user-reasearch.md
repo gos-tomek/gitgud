@@ -22,12 +22,12 @@ This report synthesizes findings from three sources: the Feedback Architecture s
 
 Research from practitioner blogs and management platforms describes a four-stage preparation process for 1:1 meetings:
 
-| Stage | What the EM Does | Tools Involved |
-|-------|-------------------|----------------|
-| Historical Review | Revisit previous 1:1 notes, action items, career goals | Lattice, Fellow, Teamflect, Google Docs |
-| Technical Output Audit | Check PR cycle times, merge frequency, code review participation | GitHub, GitLab, DevDynamics |
-| Project Alignment | Cross-reference technical output with business priorities | Jira, Linear |
-| Agenda Synthesis | Identify coaching points and prepare open-ended questions | Notion, Google Docs |
+| Stage                  | What the EM Does                                                 | Tools Involved                          |
+| ---------------------- | ---------------------------------------------------------------- | --------------------------------------- |
+| Historical Review      | Revisit previous 1:1 notes, action items, career goals           | Lattice, Fellow, Teamflect, Google Docs |
+| Technical Output Audit | Check PR cycle times, merge frequency, code review participation | GitHub, GitLab, DevDynamics             |
+| Project Alignment      | Cross-reference technical output with business priorities        | Jira, Linear                            |
+| Agenda Synthesis       | Identify coaching points and prepare open-ended questions        | Notion, Google Docs                     |
 
 **Source:** DevDynamics blog [1-G], Lattice [2-G], Reddit r/EngineeringManagers [3-G]
 
@@ -35,17 +35,17 @@ Research from practitioner blogs and management platforms describes a four-stage
 
 ### 2.2 Time Estimates
 
-| Metric | Value | Confidence | Source |
-|--------|-------|------------|--------|
-| Minimum data review per 1:1 | 10–15 minutes | Medium — practitioner recommendation, not measured | [1-G] |
-| Average 1:1 duration | 42 minutes | Medium — single source | [1-G] |
-| EM time in meetings (total) | 45% of working time | High — multiple sources confirm | [2-FA] |
-| EM time on communication (Slack, email) | 26% | High | [2-FA] |
-| EM time on direct engineer support | 11% | High | [2-FA] |
-| Time spent searching for information (all knowledge workers) | 3.6 hours/day | High — Microsoft telemetry | [10-FA] |
-| "Preparation Tax" — total hours per review cycle (EM, per report) | ~5 hours | Medium — Reddit self-reports | [10-G] |
-| "Preparation Tax" — total hours per review cycle (IC, self-eval) | ~3 hours | Medium — Reddit self-reports | [10-G] |
-| Total productivity loss per cycle (100-dev org) | ~700 hours | Low — extrapolation from above | [10-G] |
+| Metric                                                            | Value               | Confidence                                         | Source  |
+| ----------------------------------------------------------------- | ------------------- | -------------------------------------------------- | ------- |
+| Minimum data review per 1:1                                       | 10–15 minutes       | Medium — practitioner recommendation, not measured | [1-G]   |
+| Average 1:1 duration                                              | 42 minutes          | Medium — single source                             | [1-G]   |
+| EM time in meetings (total)                                       | 45% of working time | High — multiple sources confirm                    | [2-FA]  |
+| EM time on communication (Slack, email)                           | 26%                 | High                                               | [2-FA]  |
+| EM time on direct engineer support                                | 11%                 | High                                               | [2-FA]  |
+| Time spent searching for information (all knowledge workers)      | 3.6 hours/day       | High — Microsoft telemetry                         | [10-FA] |
+| "Preparation Tax" — total hours per review cycle (EM, per report) | ~5 hours            | Medium — Reddit self-reports                       | [10-G]  |
+| "Preparation Tax" — total hours per review cycle (IC, self-eval)  | ~3 hours            | Medium — Reddit self-reports                       | [10-G]  |
+| Total productivity loss per cycle (100-dev org)                   | ~700 hours          | Low — extrapolation from above                     | [10-G]  |
 
 **Assumption flagged in source material:** The Feedback Architecture document estimates "5–7 hours" of EM prep time as a market average but explicitly notes this is an assumption — no single universal study confirms it. The Gemini report's Reddit-sourced "5 hours per report" and "3 hours per IC self-eval" are directionally consistent but come from self-selected forum respondents, not controlled studies.
 
@@ -53,12 +53,12 @@ Research from practitioner blogs and management platforms describes a four-stage
 
 ### 2.3 What Happens When Managers Skip Preparation
 
-| Impact | Prepared Outcome | Unprepared Outcome | Source |
-|--------|------------------|--------------------|--------|
-| Employee engagement | 45–70% | ~15% | [5-G] |
-| Issue detection timeline | 4–6 weeks | 10–14 weeks (or annual review) | [7-G] |
-| Burnout risk | Significantly lower | 71% higher reporting | [6-G] |
-| Perceived fairness | High (data-backed) | Low (recency/attribution bias) | [8-G] |
+| Impact                   | Prepared Outcome    | Unprepared Outcome             | Source |
+| ------------------------ | ------------------- | ------------------------------ | ------ |
+| Employee engagement      | 45–70%              | ~15%                           | [5-G]  |
+| Issue detection timeline | 4–6 weeks           | 10–14 weeks (or annual review) | [7-G]  |
+| Burnout risk             | Significantly lower | 71% higher reporting           | [6-G]  |
+| Perceived fairness       | High (data-backed)  | Low (recency/attribution bias) | [8-G]  |
 
 The engagement gap is striking: a 3x multiplier between prepared and unprepared managers. The "Performance Detection Lag" — issues going unnoticed for months instead of weeks — has cascading consequences: by the time a problem surfaces at the annual review, remediation costs are estimated at 10x what early intervention would have required.
 
@@ -72,11 +72,11 @@ The engagement gap is striking: a 3x multiplier between prepared and unprepared 
 
 The data consistently shows a structural bias in engineering organizations toward visible, countable work at the expense of high-value but hard-to-measure contributions.
 
-| Factor | "Loud" (Easy to Count) | "Silent" (Requires Context) |
-|--------|------------------------|-----------------------------|
-| Activity type | New features, ticket count | Mentoring, refactoring, unblocking |
+| Factor        | "Loud" (Easy to Count)       | "Silent" (Requires Context)             |
+| ------------- | ---------------------------- | --------------------------------------- |
+| Activity type | New features, ticket count   | Mentoring, refactoring, unblocking      |
 | Communication | Public Slack channels, demos | Private consultations, deep code review |
-| System impact | Delivery velocity | Stability, technical debt reduction |
+| System impact | Delivery velocity            | Stability, technical debt reduction     |
 
 **Source:** Feedback Architecture [1-FA], [2-FA], [3-FA]
 
@@ -97,12 +97,12 @@ Engineers face their own version of the feedback gap when preparing for reviews:
 
 The "brag document" practice (popularized by Julia Evans) has become widely recommended but has structural limitations:
 
-| Strength | Limitation |
-|----------|-----------|
-| Combats recency bias when maintained consistently | Maintenance fatigue — most engineers stop updating after a few weeks |
-| Helps managers advocate for promotions | Quantification bias — "snack tasks" and glue work are hard to log |
-| Weekly practice prevents blank-page panic | Reviewer dependency — if the manager doesn't value code health, documented improvements "don't shine" |
-| — | No adoption rate data exists — popularity is inferred from blog engagement, not measured |
+| Strength                                          | Limitation                                                                                            |
+| ------------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
+| Combats recency bias when maintained consistently | Maintenance fatigue — most engineers stop updating after a few weeks                                  |
+| Helps managers advocate for promotions            | Quantification bias — "snack tasks" and glue work are hard to log                                     |
+| Weekly practice prevents blank-page panic         | Reviewer dependency — if the manager doesn't value code health, documented improvements "don't shine" |
+| —                                                 | No adoption rate data exists — popularity is inferred from blog engagement, not measured              |
 
 **Source:** [11-G], [19-G], [3-G]
 
@@ -116,25 +116,25 @@ The "brag document" practice (popularized by Julia Evans) has become widely reco
 
 ### 4.1 Developer Sentiment Toward AI and Metrics (2025)
 
-| Indicator | Value | Source |
-|-----------|-------|--------|
-| Use AI tools daily | 51% | [12-FA] |
-| Positive sentiment toward AI (down from 70%+) | 60% | [12-FA] |
-| Trust AI accuracy | 29% (down from 40% prior years) | [13-FA] |
-| Believe AI debugging is more time-consuming | 45.2% | [11-FA] |
-| Describe themselves as "dissatisfied" or "complacent" at work | ~75% | [13-FA] |
-| Frustrated with AI tools that are "almost good but not quite" | 66% | [11-FA] |
+| Indicator                                                     | Value                           | Source  |
+| ------------------------------------------------------------- | ------------------------------- | ------- |
+| Use AI tools daily                                            | 51%                             | [12-FA] |
+| Positive sentiment toward AI (down from 70%+)                 | 60%                             | [12-FA] |
+| Trust AI accuracy                                             | 29% (down from 40% prior years) | [13-FA] |
+| Believe AI debugging is more time-consuming                   | 45.2%                           | [11-FA] |
+| Describe themselves as "dissatisfied" or "complacent" at work | ~75%                            | [13-FA] |
+| Frustrated with AI tools that are "almost good but not quite" | 66%                             | [11-FA] |
 
 The trust crisis is not about AI rejection — 84% of developers use AI tools. The problem is that existing tools optimize for mechanical accuracy (style, syntax, security) while missing the contextual, human dimensions that matter most: architectural judgment, mentoring quality, and business impact.
 
 ### 4.2 AI in Code Review — Promise and Limits
 
-| Dimension | AI Feedback | Human Feedback | Source |
-|-----------|-------------|----------------|--------|
-| Primary focus | Logical correctness, security, style | Architecture, readability, business intent | [22-FA] |
-| Risk | Nitpicking, hallucinations | Bias, time constraints, inconsistency | [11-FA] |
-| Mentoring value | 24/7 availability, fast loop | Context-sharing, empathy | [23-FA] |
-| Trust level | 29–30% | High (if relationship is healthy) | [4-FA] |
+| Dimension       | AI Feedback                          | Human Feedback                             | Source  |
+| --------------- | ------------------------------------ | ------------------------------------------ | ------- |
+| Primary focus   | Logical correctness, security, style | Architecture, readability, business intent | [22-FA] |
+| Risk            | Nitpicking, hallucinations           | Bias, time constraints, inconsistency      | [11-FA] |
+| Mentoring value | 24/7 availability, fast loop         | Context-sharing, empathy                   | [23-FA] |
+| Trust level     | 29–30%                               | High (if relationship is healthy)          | [4-FA]  |
 
 The TRACE framework (2025) found that LLMs trail human reviewers by 12–23% in understanding developer intent and preferences. However, AI code review tools like CodeRabbit receive 85% satisfaction ratings for handling "low-hanging fruit," freeing humans for higher-level mentoring.
 
@@ -156,13 +156,13 @@ The underlying trend is still valid: trust in automated metrics has collapsed to
 
 ### 5.1 Turnover Cost Model
 
-| Cost Component (Senior Developer, USA) | Estimated Cost (USD) | Source |
-|-----------------------------------------|---------------------|--------|
-| Recruitment & talent acquisition | $25,000 – $35,000 | [14-FA] |
-| Selection process & HR administration | $7,000 – $10,000 | [14-FA] |
-| Onboarding & peer-to-peer training | $5,000 – $15,000 | [16-FA] |
-| Productivity loss (ramp-up period) | $40,000 – $80,000 | [14-FA] |
-| **Total replacement cost** | **$150,000 – $200,000** | [14-FA] |
+| Cost Component (Senior Developer, USA) | Estimated Cost (USD)    | Source  |
+| -------------------------------------- | ----------------------- | ------- |
+| Recruitment & talent acquisition       | $25,000 – $35,000       | [14-FA] |
+| Selection process & HR administration  | $7,000 – $10,000        | [14-FA] |
+| Onboarding & peer-to-peer training     | $5,000 – $15,000        | [16-FA] |
+| Productivity loss (ramp-up period)     | $40,000 – $80,000       | [14-FA] |
+| **Total replacement cost**             | **$150,000 – $200,000** | [14-FA] |
 
 Voluntary turnover in tech sits at ~13.5% nationally (Mercer 2024), down from 17.3% during the 2023 "Great Resignation." In specific engineering roles, turnover reaches as high as 57.3%.
 
@@ -185,13 +185,13 @@ This was a key gap in our original research. The Gemini report found data that s
 
 ## 6. Failed Workarounds — Why Internal Solutions Don't Stick
 
-| Failure Mechanism | Description | Root Cause |
-|-------------------|-------------|------------|
-| Maintenance nightmare | APIs change, mapping logic breaks | No dedicated platform funding — internal tools are side projects | 
-| Lack of context | Ticket lists without "why it matters" | Focus on operational metrics, not strategic coaching insights |
-| Information overload | Self-serve dashboards overwhelm users | Managers prefer succinct summaries, not exploratory tools |
-| Knowledge silos | Only the creator understands the tool | High turnover in engineering management |
-| The export vicious cycle | Users export to Excel to manage data themselves | Dashboard UI doesn't match actual workflows |
+| Failure Mechanism        | Description                                     | Root Cause                                                       |
+| ------------------------ | ----------------------------------------------- | ---------------------------------------------------------------- |
+| Maintenance nightmare    | APIs change, mapping logic breaks               | No dedicated platform funding — internal tools are side projects |
+| Lack of context          | Ticket lists without "why it matters"           | Focus on operational metrics, not strategic coaching insights    |
+| Information overload     | Self-serve dashboards overwhelm users           | Managers prefer succinct summaries, not exploratory tools        |
+| Knowledge silos          | Only the creator understands the tool           | High turnover in engineering management                          |
+| The export vicious cycle | Users export to Excel to manage data themselves | Dashboard UI doesn't match actual workflows                      |
 
 **Source:** Reddit r/software [14-G], Hacker News [15-G], [16-G]
 
@@ -205,12 +205,12 @@ This was a key gap in our original research. The Gemini report found data that s
 
 ## 7. Span of Control — The Pressure Is Increasing
 
-| Metric | 2024 | 2025/2026 | Trend |
-|--------|------|-----------|-------|
-| Average span of control | 10.9 reports | 12.1 reports | +11% YoY |
-| Median span of control | ~5–6 reports | ~6 reports | Stable |
-| Burnout rate (12+ reports) | N/A | 42% | High risk |
-| Detection lag (12+ reports) | N/A | 6+ months | Critical failure |
+| Metric                      | 2024         | 2025/2026    | Trend            |
+| --------------------------- | ------------ | ------------ | ---------------- |
+| Average span of control     | 10.9 reports | 12.1 reports | +11% YoY         |
+| Median span of control      | ~5–6 reports | ~6 reports   | Stable           |
+| Burnout rate (12+ reports)  | N/A          | 42%          | High risk        |
+| Detection lag (12+ reports) | N/A          | 6+ months    | Critical failure |
 
 **Source:** Gallup [20-G], [7-G]
 
@@ -222,16 +222,16 @@ The average is pulled up by extreme cases (25+ reports), but the median remains 
 
 ## 8. Validation Log — Pre-Interview Status
 
-| Assumption | Status | Evidence Summary | Interview Action |
-|------------|--------|------------------|------------------|
-| **Preparation Tax:** EM spends >1h per dev per review cycle | Partially supported | 5h/report from Reddit self-reports; 3.6h/day searching for info (Microsoft); 10–15 min per 1:1 prep (DevDynamics). No universal study. | Get concrete recent numbers. Don't suggest a figure. |
-| **Visibility Vacuum:** "Quiet" work is consistently missed | Strongly supported | 65% of remote workers feel overlooked; structural bias toward "loud" metrics documented across multiple sources. | Ask for specific examples of missed contributions. |
-| **AI Trust Gap:** 29% trust level is accurate or lower | Confirmed | Stack Overflow 2025: 29% trust AI accuracy, down from 40%. 71% explicit distrust. | Probe emotional reaction: "How would you feel if AI summarized your PRs for your manager?" |
-| **Manual Archaeology:** Managers use >3 tools for prep | Supported | GitHub, Jira, Slack, email, Teams, Lattice/Fellow, Notion all referenced. Four-stage workflow requires minimum 3 tools. | Ask them to list tools they opened for their last 1:1. |
-| **Failed workarounds exist and are abandoned** | Supported (anecdotal) | Reddit/HN reports of dashboard shelfware, API breakage, export cycles. No hard abandonment rates. | "What have you tried before? Why did it fail?" |
-| **Feedback quality drives attrition** | Supported (indirect) | 78% cite stress + management unawareness; 3x engagement gap; DEI feedback disparity. Causal chain runs through "feedback quality" proxy. | "Have you lost someone you think you could have retained with better feedback infrastructure?" |
-| **Brag docs are a partial workaround** | Supported (qualitative) | Widely recommended, known limitations (maintenance fatigue, quantification bias). No adoption rate data. | Ask ICs if they use them; ask EMs if their reports use them. |
-| **Span of control is growing** | Confirmed | 10.9 → 12.1 average (Gallup). 42% burnout at 12+ reports. | "How many direct reports do you have? Has that number changed in the last year?" |
+| Assumption                                                  | Status                  | Evidence Summary                                                                                                                         | Interview Action                                                                               |
+| ----------------------------------------------------------- | ----------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
+| **Preparation Tax:** EM spends >1h per dev per review cycle | Partially supported     | 5h/report from Reddit self-reports; 3.6h/day searching for info (Microsoft); 10–15 min per 1:1 prep (DevDynamics). No universal study.   | Get concrete recent numbers. Don't suggest a figure.                                           |
+| **Visibility Vacuum:** "Quiet" work is consistently missed  | Strongly supported      | 65% of remote workers feel overlooked; structural bias toward "loud" metrics documented across multiple sources.                         | Ask for specific examples of missed contributions.                                             |
+| **AI Trust Gap:** 29% trust level is accurate or lower      | Confirmed               | Stack Overflow 2025: 29% trust AI accuracy, down from 40%. 71% explicit distrust.                                                        | Probe emotional reaction: "How would you feel if AI summarized your PRs for your manager?"     |
+| **Manual Archaeology:** Managers use >3 tools for prep      | Supported               | GitHub, Jira, Slack, email, Teams, Lattice/Fellow, Notion all referenced. Four-stage workflow requires minimum 3 tools.                  | Ask them to list tools they opened for their last 1:1.                                         |
+| **Failed workarounds exist and are abandoned**              | Supported (anecdotal)   | Reddit/HN reports of dashboard shelfware, API breakage, export cycles. No hard abandonment rates.                                        | "What have you tried before? Why did it fail?"                                                 |
+| **Feedback quality drives attrition**                       | Supported (indirect)    | 78% cite stress + management unawareness; 3x engagement gap; DEI feedback disparity. Causal chain runs through "feedback quality" proxy. | "Have you lost someone you think you could have retained with better feedback infrastructure?" |
+| **Brag docs are a partial workaround**                      | Supported (qualitative) | Widely recommended, known limitations (maintenance fatigue, quantification bias). No adoption rate data.                                 | Ask ICs if they use them; ask EMs if their reports use them.                                   |
+| **Span of control is growing**                              | Confirmed               | 10.9 → 12.1 average (Gallup). 42% burnout at 12+ reports.                                                                                | "How many direct reports do you have? Has that number changed in the last year?"               |
 
 ---
 
@@ -263,46 +263,48 @@ Sources are tagged with their origin document for traceability:
 - **[N-G]** — Gemini Research Report: Engineering Manager Tool Research (reference number N from that document's bibliography)
 
 ### Feedback Architecture Sources (FA)
-| Ref | Source |
-|-----|--------|
-| 1 | Vereda AI Blog — Manager Capacity |
-| 2 | Stackademic — What Your EM Actually Does All Day |
-| 3 | InfoQ — DORA 2025 Report |
-| 4 | DevOps.com — DORA 2025 Analysis |
-| 5 | EfficientlyConnected — DORA AI-Assisted Development |
-| 8 | Microsoft 2025 Work Trend Index |
-| 9 | Microsoft — Breaking Down the Infinite Workday |
-| 10 | Z2Data — Time Spent Searching for Data |
-| 11 | Stack Overflow Developer Survey 2025 |
-| 12 | Stack Overflow 2025 — AI Section |
-| 13 | Stack Overflow Blog — Developer Sentiment 2025 |
-| 14 | BetterWay Devs — Turnover Cost Calculation |
-| 16 | Forma — Real Cost of Turnover |
-| 20 | arXiv — Measuring AI Impact on Developer Productivity |
-| 21 | ResearchGate — Developer vs. LLM Biases in Code Evaluation |
-| 22 | DEV Community — Code Reviews Quality Control |
-| 23 | DevTools Academy — State of AI Code Review 2025 |
-| 26 | HR Cloud — Remote Employee Recognition Playbook |
+
+| Ref | Source                                                     |
+| --- | ---------------------------------------------------------- |
+| 1   | Vereda AI Blog — Manager Capacity                          |
+| 2   | Stackademic — What Your EM Actually Does All Day           |
+| 3   | InfoQ — DORA 2025 Report                                   |
+| 4   | DevOps.com — DORA 2025 Analysis                            |
+| 5   | EfficientlyConnected — DORA AI-Assisted Development        |
+| 8   | Microsoft 2025 Work Trend Index                            |
+| 9   | Microsoft — Breaking Down the Infinite Workday             |
+| 10  | Z2Data — Time Spent Searching for Data                     |
+| 11  | Stack Overflow Developer Survey 2025                       |
+| 12  | Stack Overflow 2025 — AI Section                           |
+| 13  | Stack Overflow Blog — Developer Sentiment 2025             |
+| 14  | BetterWay Devs — Turnover Cost Calculation                 |
+| 16  | Forma — Real Cost of Turnover                              |
+| 20  | arXiv — Measuring AI Impact on Developer Productivity      |
+| 21  | ResearchGate — Developer vs. LLM Biases in Code Evaluation |
+| 22  | DEV Community — Code Reviews Quality Control               |
+| 23  | DevTools Academy — State of AI Code Review 2025            |
+| 26  | HR Cloud — Remote Employee Recognition Playbook            |
 
 ### Gemini Research Report Sources (G)
-| Ref | Source |
-|-----|--------|
-| 1 | DevDynamics — Mastering 1:1 Meetings |
-| 2 | Lattice — Manager One-on-One Guide |
-| 3 | Reddit r/EngineeringManagers — Prep for 15+ Reports |
-| 5 | PerformYard — Benefits of 1-on-1 Meetings |
-| 6 | Atlassian — One-on-One Meetings |
-| 7 | Tianpan.co — Manager Spans 12.1 Reports |
-| 8 | RealAsFeedback — Poor Feedback Drives Attrition |
-| 9 | Rotman School — One-on-One Meetings |
-| 10 | Reddit r/EngineeringManagers — Time on Performance Reviews |
-| 11 | Medium (Stanimirovv) — Brag Documents |
-| 12 | Reddit r/cscareerquestions — Good Self-Evaluation |
-| 13 | Deel — Self-Evaluation Examples |
-| 14 | Reddit r/software — Internal Engineering Dashboards |
-| 15 | Hacker News — User-Facing Analytics Lessons |
-| 16 | Hacker News — Internal Tools as Startup Ideas |
-| 17 | Daily.dev — Developer Burnout Guide |
-| 18 | ResearchGate — Engineering Attrition Root Causes |
-| 19 | HackerOne — Why I Keep a Brag Document |
-| 20 | Gallup — Span of Control Optimal Team Size |
+
+| Ref | Source                                                     |
+| --- | ---------------------------------------------------------- |
+| 1   | DevDynamics — Mastering 1:1 Meetings                       |
+| 2   | Lattice — Manager One-on-One Guide                         |
+| 3   | Reddit r/EngineeringManagers — Prep for 15+ Reports        |
+| 5   | PerformYard — Benefits of 1-on-1 Meetings                  |
+| 6   | Atlassian — One-on-One Meetings                            |
+| 7   | Tianpan.co — Manager Spans 12.1 Reports                    |
+| 8   | RealAsFeedback — Poor Feedback Drives Attrition            |
+| 9   | Rotman School — One-on-One Meetings                        |
+| 10  | Reddit r/EngineeringManagers — Time on Performance Reviews |
+| 11  | Medium (Stanimirovv) — Brag Documents                      |
+| 12  | Reddit r/cscareerquestions — Good Self-Evaluation          |
+| 13  | Deel — Self-Evaluation Examples                            |
+| 14  | Reddit r/software — Internal Engineering Dashboards        |
+| 15  | Hacker News — User-Facing Analytics Lessons                |
+| 16  | Hacker News — Internal Tools as Startup Ideas              |
+| 17  | Daily.dev — Developer Burnout Guide                        |
+| 18  | ResearchGate — Engineering Attrition Root Causes           |
+| 19  | HackerOne — Why I Keep a Brag Document                     |
+| 20  | Gallup — Span of Control Optimal Team Size                 |

@@ -17,7 +17,7 @@ top_blocker: skills
 
 ## Vision recap
 
-Mentoring, code-review quality, and unblocking — the "glue work" that keeps engineering teams healthy — is invisible to tools that measure throughput (DORA, cycle time). GitGud surfaces the semantic layer instead: not how much code shipped, but who unblocked a peer, whose review comment shaped an architecture decision. The product **wedge** — the one trait that, if removed, makes GitGud indistinguishable from a generic activity counter — is that review comments are classified by *intent* (mentoring, architecture, bug-catch, nitpick, unblocking, question), shown transparently to the IC whose work they describe, never used to rank people against each other.
+Mentoring, code-review quality, and unblocking — the "glue work" that keeps engineering teams healthy — is invisible to tools that measure throughput (DORA, cycle time). GitGud surfaces the semantic layer instead: not how much code shipped, but who unblocked a peer, whose review comment shaped an architecture decision. The product **wedge** — the one trait that, if removed, makes GitGud indistinguishable from a generic activity counter — is that review comments are classified by _intent_ (mentoring, architecture, bug-catch, nitpick, unblocking, question), shown transparently to the IC whose work they describe, never used to rank people against each other.
 
 ## North star
 
@@ -27,34 +27,34 @@ Mentoring, code-review quality, and unblocking — the "glue work" that keeps en
 
 ## At a glance
 
-| ID    | Change ID                       | Outcome (user can …)                                              | Prerequisites      | PRD refs                                  | Status   |
-| ----- | ------------------------------- | ----------------------------------------------------------------- | ------------------ | ----------------------------------------- | -------- |
-| F-01  | access-control-and-membership   | (foundation) IC/EM roles, board + membership, RLS on present auth | —                  | Access Control, FR-014, FR-015, FR-016    | done     |
-| F-02  | github-ingestion-access         | (foundation) authenticated read of an org's PRs/reviews/comments  | —                  | FR-002, FR-009, FR-010, FR-011, US-01     | done     |
-| F-03  | classification-batch            | (foundation) daily durable batch classifies comments by intent    | F-01, F-02         | FR-012, Business Logic, NFR accuracy-floor | blocked  |
-| S-01  | board-create-with-em-role       | create a board and be explicitly assigned the EM role             | F-01               | FR-001, FR-016, FR-017                    | done     |
-| S-02  | link-board-to-github-org        | link a board to a GitHub org so its activity feeds the board      | S-01, F-02         | FR-002, US-01                             | done     |
-| F-04  | link-github-account             | (foundation) link GitGud account with GitHub via OAuth            | —                   | Access Control                            | proposed |
-| S-03  | invite-and-join-board           | invite ICs by email; IC joins via invite link                     | S-01, F-01, S-02   | FR-003, FR-004, FR-005, FR-014, FR-015    | done     |
-| S-04  | profile-raw-github-metrics      | view a contribution profile: PRs, reviews, comment counts         | F-02, S-02, S-03   | FR-006, FR-008, FR-009, FR-010, FR-011, NFR progressive-load, NFR data-parity | proposed |
-| S-05  | profile-classified-comments     | see own review comments broken down by semantic category          | F-03, F-04, S-04   | FR-012, Business Logic, NFR accuracy-floor, NFR data-parity | blocked  |
-| S-06  | em-switch-ic-dropdown           | switch between ICs on a board without a full page reload          | S-04               | FR-007, US-01                             | proposed |
-| S-07  | flag-classification-inaccurate  | flag a comment's assigned category as inaccurate                  | S-05               | FR-013                                    | blocked  |
-| S-08  | edit-board-connection           | update Board PAT and linked org; both forms re-validate accessible repos/ICs when PAT changes | S-01, S-02         | FR-018, FR-020                            | ready    |
-| S-09  | manage-ic-roster                | add or remove ICs from a Board after initial setup                | S-03               | FR-019                                    | proposed |
-| S-10  | delete-board                    | delete a Board and all associated membership and profile data     | S-01               | FR-021                                    | ready    |
-| S-11  | board-pat-expiry-freeze         | see the Board frozen and be prompted to update PAT when it expires or becomes invalid | S-08               | FR-022                                    | proposed |
+| ID   | Change ID                      | Outcome (user can …)                                                                          | Prerequisites    | PRD refs                                                                      | Status   |
+| ---- | ------------------------------ | --------------------------------------------------------------------------------------------- | ---------------- | ----------------------------------------------------------------------------- | -------- |
+| F-01 | access-control-and-membership  | (foundation) IC/EM roles, board + membership, RLS on present auth                             | —                | Access Control, FR-014, FR-015, FR-016                                        | done     |
+| F-02 | github-ingestion-access        | (foundation) authenticated read of an org's PRs/reviews/comments                              | —                | FR-002, FR-009, FR-010, FR-011, US-01                                         | done     |
+| F-03 | classification-batch           | (foundation) daily durable batch classifies comments by intent                                | F-01, F-02       | FR-012, Business Logic, NFR accuracy-floor                                    | blocked  |
+| S-01 | board-create-with-em-role      | create a board and be explicitly assigned the EM role                                         | F-01             | FR-001, FR-016, FR-017                                                        | done     |
+| S-02 | link-board-to-github-org       | link a board to a GitHub org so its activity feeds the board                                  | S-01, F-02       | FR-002, US-01                                                                 | done     |
+| F-04 | link-github-account            | (foundation) link GitGud account with GitHub via OAuth                                        | —                | Access Control                                                                | proposed |
+| S-03 | invite-and-join-board          | invite ICs by email; IC joins via invite link                                                 | S-01, F-01, S-02 | FR-003, FR-004, FR-005, FR-014, FR-015                                        | done     |
+| S-04 | profile-raw-github-metrics     | view a contribution profile: PRs, reviews, comment counts                                     | F-02, S-02, S-03 | FR-006, FR-008, FR-009, FR-010, FR-011, NFR progressive-load, NFR data-parity | proposed |
+| S-05 | profile-classified-comments    | see own review comments broken down by semantic category                                      | F-03, F-04, S-04 | FR-012, Business Logic, NFR accuracy-floor, NFR data-parity                   | blocked  |
+| S-06 | em-switch-ic-dropdown          | switch between ICs on a board without a full page reload                                      | S-04             | FR-007, US-01                                                                 | proposed |
+| S-07 | flag-classification-inaccurate | flag a comment's assigned category as inaccurate                                              | S-05             | FR-013                                                                        | blocked  |
+| S-08 | edit-board-connection          | update Board PAT and linked org; both forms re-validate accessible repos/ICs when PAT changes | S-01, S-02       | FR-018, FR-020                                                                | ready    |
+| S-09 | manage-ic-roster               | add or remove ICs from a Board after initial setup                                            | S-03             | FR-019                                                                        | proposed |
+| S-10 | delete-board                   | delete a Board and all associated membership and profile data                                 | S-01             | FR-021                                                                        | ready    |
+| S-11 | board-pat-expiry-freeze        | see the Board frozen and be prompted to update PAT when it expires or becomes invalid         | S-08             | FR-022                                                                        | proposed |
 
 ## Streams
 
 Navigation aid — groups items that share a Prerequisites chain. Canonical ordering still lives in the dependency graph below; this table is the proposed reading order across parallel tracks.
 
-| Stream | Theme                  | Chain                                        | Note                                                                                         |
-| ------ | ---------------------- | -------------------------------------------- | -------------------------------------------------------------------------------------------- |
-| A      | Access & membership    | `F-01` → `S-01` → `S-02` → `S-03` → `S-09`  | S-03 depends on S-02 — EM selects ICs from GitHub contributor list; S-09 extends the roster after initial setup. |
-| B      | GitHub data & profile  | `F-02` → `S-02` → `S-04` → `S-06`            | `S-04` joins Stream A at `S-03` (needs memberships). De-risks the #1 blocker first.          |
-| C      | Classification (wedge) | `F-03` → `S-05` → `S-07`                     | `F-03` needs `F-01`+`F-02`; `S-05` joins Stream B at `S-04` and needs `F-04` (GitHub OAuth). Blocked on Q1. |
-| D      | Board lifecycle        | `S-10` / `S-08` → `S-11`                     | S-10 (delete, from S-01) and S-08 (edit connection, from S-02) are both ready and can run in parallel; S-11 (PAT-expiry freeze) builds on S-08. |
+| Stream | Theme                  | Chain                                      | Note                                                                                                                                            |
+| ------ | ---------------------- | ------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------- |
+| A      | Access & membership    | `F-01` → `S-01` → `S-02` → `S-03` → `S-09` | S-03 depends on S-02 — EM selects ICs from GitHub contributor list; S-09 extends the roster after initial setup.                                |
+| B      | GitHub data & profile  | `F-02` → `S-02` → `S-04` → `S-06`          | `S-04` joins Stream A at `S-03` (needs memberships). De-risks the #1 blocker first.                                                             |
+| C      | Classification (wedge) | `F-03` → `S-05` → `S-07`                   | `F-03` needs `F-01`+`F-02`; `S-05` joins Stream B at `S-04` and needs `F-04` (GitHub OAuth). Blocked on Q1.                                     |
+| D      | Board lifecycle        | `S-10` / `S-08` → `S-11`                   | S-10 (delete, from S-01) and S-08 (edit connection, from S-02) are both ready and can run in parallel; S-11 (PAT-expiry freeze) builds on S-08. |
 
 ## Baseline
 
@@ -273,23 +273,23 @@ Foundations below assume these are present and do NOT re-scaffold them.
 
 ## Backlog Handoff
 
-| Roadmap ID | Change ID                       | Suggested issue title                                      | Ready for `/10x-plan` | Notes |
-| ---------- | ------------------------------- | ---------------------------------------------------------- | --------------------- | ----- |
-| F-01       | access-control-and-membership   | Access control: IC/EM roles, boards & membership with RLS  | done                  | Deployed 2026-05-29 |
-| F-02       | github-ingestion-access         | GitHub org ingestion access (read PRs/reviews/comments)    | done                  | Archived 2026-05-31 |
-| F-03       | classification-batch            | Daily classification batch (Cron + Workflow + hosted AI)   | no                    | Blocked on Q1 (accuracy validation) |
-| S-01       | board-create-with-em-role       | EM creates a board and is assigned the EM role             | done                  | Merged 2026-05-30 |
-| S-02       | link-board-to-github-org        | Link a board to a GitHub org                               | done                  | Archived 2026-06-01 |
-| F-04       | link-github-account             | Link GitGud account with GitHub via OAuth                  | yes                   | No prerequisites; can run in parallel with S-03. Research done in `invite-and-join-board/research.md` |
-| S-03       | invite-and-join-board           | Invite ICs by email; IC joins via invite link             | yes                   | Reinstated 2026-06-01; all prerequisites met (S-01, F-01, S-02 done) |
-| S-04       | profile-raw-github-metrics      | Contribution profile: PRs, reviews, comment counts         | no                    | Needs S-03 (F-02, S-02 now done) |
-| S-05       | profile-classified-comments     | Contribution profile: semantically classified comments     | no                    | North star; blocked on Q1 via F-03 |
-| S-06       | em-switch-ic-dropdown           | EM switches between ICs via dropdown (no full reload)      | no                    | Needs S-04 |
-| S-07       | flag-classification-inaccurate  | IC flags a classified comment as inaccurate                | no                    | Blocked on Q2 |
-| S-08       | edit-board-connection           | Update Board connection settings (PAT, linked org + PAT-change re-validation) | yes        | Run `/10x-plan edit-board-connection` |
-| S-09       | manage-ic-roster                | Manage Board IC roster: add and remove ICs after initial setup | no                  | Needs S-03 |
-| S-10       | delete-board                    | Delete a Board and all associated data                     | yes                   | Run `/10x-plan delete-board` |
-| S-11       | board-pat-expiry-freeze         | Freeze Board and prompt EM to update PAT on expiry         | no                    | Needs S-08 |
+| Roadmap ID | Change ID                      | Suggested issue title                                                         | Ready for `/10x-plan` | Notes                                                                                                 |
+| ---------- | ------------------------------ | ----------------------------------------------------------------------------- | --------------------- | ----------------------------------------------------------------------------------------------------- |
+| F-01       | access-control-and-membership  | Access control: IC/EM roles, boards & membership with RLS                     | done                  | Deployed 2026-05-29                                                                                   |
+| F-02       | github-ingestion-access        | GitHub org ingestion access (read PRs/reviews/comments)                       | done                  | Archived 2026-05-31                                                                                   |
+| F-03       | classification-batch           | Daily classification batch (Cron + Workflow + hosted AI)                      | no                    | Blocked on Q1 (accuracy validation)                                                                   |
+| S-01       | board-create-with-em-role      | EM creates a board and is assigned the EM role                                | done                  | Merged 2026-05-30                                                                                     |
+| S-02       | link-board-to-github-org       | Link a board to a GitHub org                                                  | done                  | Archived 2026-06-01                                                                                   |
+| F-04       | link-github-account            | Link GitGud account with GitHub via OAuth                                     | yes                   | No prerequisites; can run in parallel with S-03. Research done in `invite-and-join-board/research.md` |
+| S-03       | invite-and-join-board          | Invite ICs by email; IC joins via invite link                                 | yes                   | Reinstated 2026-06-01; all prerequisites met (S-01, F-01, S-02 done)                                  |
+| S-04       | profile-raw-github-metrics     | Contribution profile: PRs, reviews, comment counts                            | no                    | Needs S-03 (F-02, S-02 now done)                                                                      |
+| S-05       | profile-classified-comments    | Contribution profile: semantically classified comments                        | no                    | North star; blocked on Q1 via F-03                                                                    |
+| S-06       | em-switch-ic-dropdown          | EM switches between ICs via dropdown (no full reload)                         | no                    | Needs S-04                                                                                            |
+| S-07       | flag-classification-inaccurate | IC flags a classified comment as inaccurate                                   | no                    | Blocked on Q2                                                                                         |
+| S-08       | edit-board-connection          | Update Board connection settings (PAT, linked org + PAT-change re-validation) | yes                   | Run `/10x-plan edit-board-connection`                                                                 |
+| S-09       | manage-ic-roster               | Manage Board IC roster: add and remove ICs after initial setup                | no                    | Needs S-03                                                                                            |
+| S-10       | delete-board                   | Delete a Board and all associated data                                        | yes                   | Run `/10x-plan delete-board`                                                                          |
+| S-11       | board-pat-expiry-freeze        | Freeze Board and prompt EM to update PAT on expiry                            | no                    | Needs S-08                                                                                            |
 
 ## Open Roadmap Questions
 
@@ -311,10 +311,10 @@ Foundations below assume these are present and do NOT re-scaffold them.
 
 ## Done
 
-| ID   | Change ID                     | Deployed                  | Version ID                           |
-| ---- | ----------------------------- | ------------------------- | ------------------------------------ |
-| F-01 | access-control-and-membership | 2026-05-29 (prod)         | 375fb8d4-8d75-4aa0-91f3-7ec6ab4b11e9 |
-| S-01 | board-create-with-em-role     | 2026-05-30 (prod)         | 7d44d9ff07b5c31e4be36eaa06d4caf1f7366df9 |
-| F-02 | github-ingestion-access       | 2026-05-31 (archived)     | — |
-| S-02 | link-board-to-github-org      | 2026-06-01 (archived)     | — |
-| S-03 | invite-and-join-board         | 2026-06-02 (archived)     | — |
+| ID   | Change ID                     | Deployed              | Version ID                               |
+| ---- | ----------------------------- | --------------------- | ---------------------------------------- |
+| F-01 | access-control-and-membership | 2026-05-29 (prod)     | 375fb8d4-8d75-4aa0-91f3-7ec6ab4b11e9     |
+| S-01 | board-create-with-em-role     | 2026-05-30 (prod)     | 7d44d9ff07b5c31e4be36eaa06d4caf1f7366df9 |
+| F-02 | github-ingestion-access       | 2026-05-31 (archived) | —                                        |
+| S-02 | link-board-to-github-org      | 2026-06-01 (archived) | —                                        |
+| S-03 | invite-and-join-board         | 2026-06-02 (archived) | —                                        |

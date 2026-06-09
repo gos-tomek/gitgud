@@ -20,14 +20,14 @@ The project is already configured with the `@astrojs/cloudflare` adapter and `ou
 
 ### Scoring matrix (five agent-friendly criteria)
 
-| Platform | CLI-first | Managed/Serverless | Agent-readable docs | Stable deploy API | MCP / Integration | Raw score |
-|---|---|---|---|---|---|---|
-| **Cloudflare** | Pass | Pass | Pass | Pass | Pass | 5 / 5 |
-| **Netlify** | Pass | Pass | Pass | Pass | Pass | 5 / 5 |
-| **Railway** | Pass | Pass | Pass | Pass | Pass | 5 / 5 |
-| **Vercel** | Pass | Pass | Pass | Pass | Partial | 4.5 |
-| **Render** | Pass | Pass | Pass | Pass | Partial | 4.5 |
-| **Fly.io** | Pass | Partial | Pass | Pass | Partial | 4 |
+| Platform       | CLI-first | Managed/Serverless | Agent-readable docs | Stable deploy API | MCP / Integration | Raw score |
+| -------------- | --------- | ------------------ | ------------------- | ----------------- | ----------------- | --------- |
+| **Cloudflare** | Pass      | Pass               | Pass                | Pass              | Pass              | 5 / 5     |
+| **Netlify**    | Pass      | Pass               | Pass                | Pass              | Pass              | 5 / 5     |
+| **Railway**    | Pass      | Pass               | Pass                | Pass              | Pass              | 5 / 5     |
+| **Vercel**     | Pass      | Pass               | Pass                | Pass              | Partial           | 4.5       |
+| **Render**     | Pass      | Pass               | Pass                | Pass              | Partial           | 4.5       |
+| **Fly.io**     | Pass      | Partial            | Pass                | Pass              | Partial           | 4         |
 
 Notes per platform:
 
@@ -57,44 +57,44 @@ The persistent-process escape hatch that most directly matches the "run a sync o
 ### Devil's Advocate — Weaknesses
 
 1. **The daily sync does not fit the Workers request model.** Even on the paid plan (5-min CPU cap), syncing a real GitHub org (hundreds of PRs) plus per-comment AI calls exceeds it. You're pushed into **Cloudflare Workflows** — a second programming model (durable steps, idempotency, retries) to learn on top of Workers.
-2. **workerd is not Node.** `nodejs_compat` covers most cases, but the GitHub client (Octokit), pagination/retry libs, or stream-heavy code can break *only in production, never locally* — a classic time sink.
+2. **workerd is not Node.** `nodejs_compat` covers most cases, but the GitHub client (Octokit), pagination/retry libs, or stream-heavy code can break _only in production, never locally_ — a classic time sink.
 3. **KV-backed sessions are eventually consistent (~60s cross-region).** Cookie auth works, but you can get sporadic, hard-to-reproduce "logged out" reports that never surface in single-region local dev.
 4. **The "cloudflare-pages" label in `tech-stack.md` is now wrong.** The current `@astrojs/cloudflare` adapter deploys to **Workers** via `wrangler deploy`; `wrangler pages deploy` is legacy and unsupported by the adapter. Stale config or muscle-memory misfires on the first deploy.
 5. **The "simple daily sync" becomes the most architecturally involved part of the whole app** on this platform — the opposite of where a cost-minimizing solo dev wants to spend complexity budget.
 
 ### Pre-Mortem — How This Could Fail
 
-The web app shipped fine — SSR pages, Supabase auth, and shadcn all worked on Workers. The disaster was the sync. The pilot org had 1,200 PRs and 8,000 review comments; the daily job needed to page the GitHub API and then make thousands of Anthropic classification calls. The first naive version was a Worker behind a Cron Trigger — it hit the 5-minute CPU wall and died half-done, leaving partial data and no clean retry. The dev rewrote it as a Cloudflare Workflow, learning durable-execution semantics (steps, idempotency, `waitForEvent`) under deadline pressure — two weekends gone. Then intermittent workerd compatibility issues with Octokit pagination surfaced, reproducible only in production. KV-backed session eventual-consistency caused sporadic "logged out" reports impossible to reproduce locally. By month six the dev concluded the batch belonged on a boring always-on Node box where it could just run, and regretted optimizing the *web tier's* hosting when the *batch* was the actual hard part.
+The web app shipped fine — SSR pages, Supabase auth, and shadcn all worked on Workers. The disaster was the sync. The pilot org had 1,200 PRs and 8,000 review comments; the daily job needed to page the GitHub API and then make thousands of Anthropic classification calls. The first naive version was a Worker behind a Cron Trigger — it hit the 5-minute CPU wall and died half-done, leaving partial data and no clean retry. The dev rewrote it as a Cloudflare Workflow, learning durable-execution semantics (steps, idempotency, `waitForEvent`) under deadline pressure — two weekends gone. Then intermittent workerd compatibility issues with Octokit pagination surfaced, reproducible only in production. KV-backed session eventual-consistency caused sporadic "logged out" reports impossible to reproduce locally. By month six the dev concluded the batch belonged on a boring always-on Node box where it could just run, and regretted optimizing the _web tier's_ hosting when the _batch_ was the actual hard part.
 
 ### Unknown Unknowns
 
 - The `@astrojs/cloudflare` adapter **dropped Pages support**; `output: "server"` SSR now deploys to **Workers** via `wrangler deploy`, despite what `tech-stack.md` says.
-- The free plan's **10ms CPU/request** is a *hard failure*, not a slowdown: a page whose server-render exceeds 10ms of actual compute will error. Network waits (Supabase, GitHub, Anthropic) do **not** count, so the batch is safe — but heavy React 19 SSR pages might not be. The realistic floor may be the **$5/mo** plan for the web tier.
+- The free plan's **10ms CPU/request** is a _hard failure_, not a slowdown: a page whose server-render exceeds 10ms of actual compute will error. Network waits (Supabase, GitHub, Anthropic) do **not** count, so the batch is safe — but heavy React 19 SSR pages might not be. The realistic floor may be the **$5/mo** plan for the web tier.
 - The free plan's **100k requests/day** ceiling is shared across web traffic and every Workflow step instance; a large sync combined with traffic could throttle.
 - The KV session namespace is **auto-provisioned and eventually consistent** — auth can feel flaky in ways single-region local dev hides.
 - Worker **script-size limits** can bite a large React 19 + dependency bundle, forcing code-splitting.
-- **The real cost driver is AI token spend, not hosting.** Classifying thousands of comments per org sync dwarfs the $0–5/mo hosting bill on *any* platform and scales with comment volume — the platform choice barely moves the total.
+- **The real cost driver is AI token spend, not hosting.** Classifying thousands of comments per org sync dwarfs the $0–5/mo hosting bill on _any_ platform and scales with comment volume — the platform choice barely moves the total.
 
 ## Operational Story
 
 - **Preview deploys**: Connect the repo to **Workers Builds** for per-branch/PR preview deployments, or upload a non-production version with `wrangler versions upload` (returns a preview URL). Production publish is `wrangler deploy`. Preview URLs are public by default — gate them with **Cloudflare Access** if previews shouldn't be open.
 - **Secrets**: `SUPABASE_URL` and `SUPABASE_KEY` live in **Workers Secrets** (`wrangler secret put <NAME>`, encrypted at rest) for runtime, and as **GitHub Actions repository secrets** for the CI build step. Read in code via `astro:env/server`. Rotation = re-run `wrangler secret put`. Never commit them; `.dev.vars` (gitignored) holds them for local dev.
-- **Rollback**: `wrangler rollback [version-id]` reverts to a prior deployed version near-instantly. Caveat: this rolls back **only the Worker** — Supabase schema migrations do *not* roll back with it. The **expand/contract discipline** (additive changes ship freely; destructive `DROP`/`ALTER` must lag one release behind the code that stops using the column) is what keeps a Worker rollback safe. See `CLAUDE.md` Git workflow section.
+- **Rollback**: `wrangler rollback [version-id]` reverts to a prior deployed version near-instantly. Caveat: this rolls back **only the Worker** — Supabase schema migrations do _not_ roll back with it. The **expand/contract discipline** (additive changes ship freely; destructive `DROP`/`ALTER` must lag one release behind the code that stops using the column) is what keeps a Worker rollback safe. See `CLAUDE.md` Git workflow section.
 - **Approval**: Production publish (`wrangler deploy`) and Supabase `db push` are now **PR-gated auto-deploy** — the PR review is the human gate. `deploy.yml` runs both automatically on merge to `main`. Primary-secret rotation remains **human-only** (`wrangler secret put`). An agent may run builds, `wrangler tail` logs, and preview/version uploads unattended. See `context/changes/CI-CD/` for the full CI/CD design.
 - **Logs**: `wrangler tail` streams live runtime logs (web requests, Cron runs, Workflow steps). Workers Observability/Logs in the dashboard and the Workflows instances view give historical/structured access; the Cloudflare MCP server exposes these as structured tools when CLI parsing gets tedious.
 
 ## Risk Register
 
-| Risk | Source | Likelihood | Impact | Mitigation |
-|---|---|---|---|---|
-| Free-tier 10ms CPU/request cap errors a heavy SSR page (hard failure) | Devil's advocate / Unknown unknowns | M | M | Watch CPU via `wrangler tail`; keep heavy work out of the request path; upgrade to $5 paid (up to 5-min CPU) if a page hits the wall |
-| Daily batch exceeds the Workers request model; requires Workflows | Devil's advocate / Pre-mortem | H | M | Build the batch as a Cloudflare Workflow from day one — idempotent durable steps, retries; chunk GitHub pagination + per-comment classification into steps |
-| workerd ≠ Node compatibility edges (Octokit, streams) surface only in prod | Devil's advocate / Pre-mortem | M | M | Set `nodejs_compat`; test the GitHub client on workerd early; prefer fetch-based clients; let CI build catch regressions |
-| KV-backed session eventual consistency (~60s) causes flaky auth | Devil's advocate / Unknown unknowns | L | M | Accept eventual consistency for sessions; never store strong-consistency state in KV; test auth across regions |
-| `tech-stack.md` says "cloudflare-pages" but the adapter targets Workers → wrong first deploy command | Unknown unknowns / Research finding | M | L | Use `wrangler deploy`, not `wrangler pages deploy`; correct the `deployment_target` label in `tech-stack.md` |
-| Free 100k req/day ceiling throttles a large sync + traffic | Research finding | L | M | Monitor request volume; $5 paid removes the daily ceiling (10M/mo included) |
-| Worker script-size limit vs large React 19 bundle | Unknown unknowns | L | M | Code-split, keep dependencies lean, watch bundle size at build time |
-| AI classification token spend dwarfs hosting cost | Unknown unknowns / Research finding | H | H | Use a cheap classification model (e.g. Haiku); store results to avoid re-classifying; dedupe; set API spend alerts |
+| Risk                                                                                                 | Source                              | Likelihood | Impact | Mitigation                                                                                                                                                 |
+| ---------------------------------------------------------------------------------------------------- | ----------------------------------- | ---------- | ------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Free-tier 10ms CPU/request cap errors a heavy SSR page (hard failure)                                | Devil's advocate / Unknown unknowns | M          | M      | Watch CPU via `wrangler tail`; keep heavy work out of the request path; upgrade to $5 paid (up to 5-min CPU) if a page hits the wall                       |
+| Daily batch exceeds the Workers request model; requires Workflows                                    | Devil's advocate / Pre-mortem       | H          | M      | Build the batch as a Cloudflare Workflow from day one — idempotent durable steps, retries; chunk GitHub pagination + per-comment classification into steps |
+| workerd ≠ Node compatibility edges (Octokit, streams) surface only in prod                           | Devil's advocate / Pre-mortem       | M          | M      | Set `nodejs_compat`; test the GitHub client on workerd early; prefer fetch-based clients; let CI build catch regressions                                   |
+| KV-backed session eventual consistency (~60s) causes flaky auth                                      | Devil's advocate / Unknown unknowns | L          | M      | Accept eventual consistency for sessions; never store strong-consistency state in KV; test auth across regions                                             |
+| `tech-stack.md` says "cloudflare-pages" but the adapter targets Workers → wrong first deploy command | Unknown unknowns / Research finding | M          | L      | Use `wrangler deploy`, not `wrangler pages deploy`; correct the `deployment_target` label in `tech-stack.md`                                               |
+| Free 100k req/day ceiling throttles a large sync + traffic                                           | Research finding                    | L          | M      | Monitor request volume; $5 paid removes the daily ceiling (10M/mo included)                                                                                |
+| Worker script-size limit vs large React 19 bundle                                                    | Unknown unknowns                    | L          | M      | Code-split, keep dependencies lean, watch bundle size at build time                                                                                        |
+| AI classification token spend dwarfs hosting cost                                                    | Unknown unknowns / Research finding | H          | H      | Use a cheap classification model (e.g. Haiku); store results to avoid re-classifying; dedupe; set API spend alerts                                         |
 
 ## Getting Started
 
@@ -111,6 +111,7 @@ These commands are validated against the stack's pinned versions (`@astrojs/clou
 ## Out of Scope
 
 The following were not evaluated in this research:
+
 - Docker image configuration
 - CI/CD pipeline setup — now implemented in `context/changes/CI-CD/` (branch protection, automated deploy-on-merge, board update)
 - Production-scale architecture (multi-region, HA, DR)

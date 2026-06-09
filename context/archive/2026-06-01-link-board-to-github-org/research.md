@@ -23,6 +23,7 @@ last_updated_note: "Decision: add shadcn/ui components (Checkbox, Badge, Card, S
 ## Research Question
 
 Three pre-implementation questions from the frame brief:
+
 1. What does the existing GitHub infrastructure already do, and what's reusable vs new?
 2. What PAT type and scopes should we recommend to users?
 3. How does the collaborator push-access constraint affect the repo picker and IC selection?
@@ -41,17 +42,17 @@ Three pre-implementation questions from the frame brief:
 
 #### What's already built (F-02, fully shipped)
 
-| Component | File | What it does |
-| --- | --- | --- |
-| Octokit factory | `src/lib/github.ts` | `createGitHubClient(supabase, boardId)` — decrypts stored PAT via RPC, returns Octokit with retry plugin + rate-limit hooks |
-| Error classes | `src/lib/github.ts:11-32` | `GitHubTokenMissingError`, `GitHubRateLimitError`, `GitHubAuthError` |
-| Sync service | `src/lib/services/github-sync.ts` | `syncBoardGitHubData(supabase, boardId, since?)` — fetches PRs → reviews → comments for all linked repos, upserts to DB. Returns `SyncResult` with counts. |
-| Sync API route | `src/pages/api/github/sync.ts` | `POST /api/github/sync` — triggers sync for a board (requires board owner auth) |
-| PAT encryption | migration `:111-145` | `set_board_github_pat()` / `get_board_github_pat()` SECURITY DEFINER functions using pgcrypto |
-| Schema | migration `:5-72` | `boards.github_pat_encrypted bytea`, `github_repos`, `github_pull_requests`, `github_reviews`, `github_review_comments` tables with full RLS |
-| Types | `src/types.ts:12-60` | `GitHubRepo`, `GitHubPullRequest`, `GitHubReview`, `GitHubReviewComment` interfaces |
-| Env var | `astro.config.mjs` | `GITHUB_TOKEN_ENCRYPTION_KEY` server-side secret |
-| Dependencies | `package.json` | `@octokit/rest@^22.0.1`, `@octokit/plugin-retry@^8.1.0` |
+| Component       | File                              | What it does                                                                                                                                               |
+| --------------- | --------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Octokit factory | `src/lib/github.ts`               | `createGitHubClient(supabase, boardId)` — decrypts stored PAT via RPC, returns Octokit with retry plugin + rate-limit hooks                                |
+| Error classes   | `src/lib/github.ts:11-32`         | `GitHubTokenMissingError`, `GitHubRateLimitError`, `GitHubAuthError`                                                                                       |
+| Sync service    | `src/lib/services/github-sync.ts` | `syncBoardGitHubData(supabase, boardId, since?)` — fetches PRs → reviews → comments for all linked repos, upserts to DB. Returns `SyncResult` with counts. |
+| Sync API route  | `src/pages/api/github/sync.ts`    | `POST /api/github/sync` — triggers sync for a board (requires board owner auth)                                                                            |
+| PAT encryption  | migration `:111-145`              | `set_board_github_pat()` / `get_board_github_pat()` SECURITY DEFINER functions using pgcrypto                                                              |
+| Schema          | migration `:5-72`                 | `boards.github_pat_encrypted bytea`, `github_repos`, `github_pull_requests`, `github_reviews`, `github_review_comments` tables with full RLS               |
+| Types           | `src/types.ts:12-60`              | `GitHubRepo`, `GitHubPullRequest`, `GitHubReview`, `GitHubReviewComment` interfaces                                                                        |
+| Env var         | `astro.config.mjs`                | `GITHUB_TOKEN_ENCRYPTION_KEY` server-side secret                                                                                                           |
+| Dependencies    | `package.json`                    | `@octokit/rest@^22.0.1`, `@octokit/plugin-retry@^8.1.0`                                                                                                    |
 
 #### What the board creation flow reuses directly
 
@@ -64,18 +65,19 @@ Initial sync:    syncBoardGitHubData(supabase, boardId)
 
 #### What's new (must be built)
 
-| Component | Purpose |
-| --- | --- |
-| PAT validation endpoint | `GET /user` via Octokit to verify token works before storing |
-| Repo listing | `octokit.rest.repos.listForAuthenticatedUser()` — not yet called anywhere |
-| Repo picker UI | React component with search/filter, permission badges |
-| Multi-step form | Board name + PAT + repo selection in a progressive flow |
-| API route for PAT validation | Server-side endpoint that validates a PAT and returns user info + repos |
-| API route for repo listing | Server-side endpoint that returns paginated repos for a validated PAT |
+| Component                    | Purpose                                                                   |
+| ---------------------------- | ------------------------------------------------------------------------- |
+| PAT validation endpoint      | `GET /user` via Octokit to verify token works before storing              |
+| Repo listing                 | `octokit.rest.repos.listForAuthenticatedUser()` — not yet called anywhere |
+| Repo picker UI               | React component with search/filter, permission badges                     |
+| Multi-step form              | Board name + PAT + repo selection in a progressive flow                   |
+| API route for PAT validation | Server-side endpoint that validates a PAT and returns user info + repos   |
+| API route for repo listing   | Server-side endpoint that returns paginated repos for a validated PAT     |
 
 #### UI placeholders waiting for this change
 
 `src/pages/boards/[id].astro:40-47` has two placeholder stubs:
+
 - "Linked GitHub org" → "Coming soon (S-02)" — this change replaces it
 - "Contribution profiles" → "Coming soon (S-04)" — separate change
 
@@ -91,23 +93,23 @@ The archived plan (`context/archive/2026-05-30-github-ingestion-access/plan.md:7
 
 **Classic PAT:**
 
-| Endpoint | Scope | Notes |
-| --- | --- | --- |
-| `GET /user` (validate) | None needed | Works with any valid token |
-| `GET /user/repos` (list repos incl. private) | `repo` | No read-only alternative for private repos |
-| `GET /repos/{owner}/{repo}/collaborators` | `repo` + `read:org` | Also requires user-level push access |
-| `GET /repos/{owner}/{repo}/pulls` + reviews + comments | `repo` | Already used by sync service |
+| Endpoint                                               | Scope               | Notes                                      |
+| ------------------------------------------------------ | ------------------- | ------------------------------------------ |
+| `GET /user` (validate)                                 | None needed         | Works with any valid token                 |
+| `GET /user/repos` (list repos incl. private)           | `repo`              | No read-only alternative for private repos |
+| `GET /repos/{owner}/{repo}/collaborators`              | `repo` + `read:org` | Also requires user-level push access       |
+| `GET /repos/{owner}/{repo}/pulls` + reviews + comments | `repo`              | Already used by sync service               |
 
 **Minimum classic PAT scopes: `repo` + `read:org`**
 
 **Fine-grained PAT:**
 
-| Endpoint | Permission | Notes |
-| --- | --- | --- |
-| `GET /user` | None | Works with any valid fine-grained PAT |
-| `GET /user/repos` | None | Returns only repos in token scope |
-| `GET /repos/{owner}/{repo}/collaborators` | `Metadata: read` | Still requires user-level push access |
-| PRs + reviews + comments | `Pull requests: read` | Read-only, specific repos |
+| Endpoint                                  | Permission            | Notes                                 |
+| ----------------------------------------- | --------------------- | ------------------------------------- |
+| `GET /user`                               | None                  | Works with any valid fine-grained PAT |
+| `GET /user/repos`                         | None                  | Returns only repos in token scope     |
+| `GET /repos/{owner}/{repo}/collaborators` | `Metadata: read`      | Still requires user-level push access |
+| PRs + reviews + comments                  | `Pull requests: read` | Read-only, specific repos             |
 
 **Minimum fine-grained: `Pull requests: read` + `Metadata: read` (auto-granted)**
 
@@ -120,10 +122,12 @@ The archived plan (`context/archive/2026-05-30-github-ingestion-access/plan.md:7
 2. **Outside collaborators cannot use fine-grained PATs.** GitHub docs confirm: "Outside collaborators can only use personal access tokens (classic) to access organization repositories that they are a collaborator on." GitHub roadmap issue #601 targets Q3 2025 for GA fix — not yet shipped as of this research date. EMs who are outside collaborators on repos (common in consulting, contracting, multi-team setups) simply cannot use fine-grained PATs.
 
 **Additional friction for fine-grained:**
+
 - Mandatory expiration (org-configurable, default max 366 days) — when token expires, sync silently breaks. No infrastructure exists for expiry tracking or proactive warnings.
 - Org approval flow — tokens may be pending admin approval and only access public resources, creating confusing partial-access failures during onboarding.
 
 **Classic PAT tradeoffs:**
+
 - `repo` scope is over-permissive (read+write to ALL user repos). GitGud only reads. This is a known GitHub limitation with no read-only alternative for classic PATs.
 - No mandatory expiration — simpler operations, but user may forget to rotate.
 
@@ -138,13 +142,16 @@ Classic PATs start with `ghp_`, fine-grained start with `github_pat_`. Prefix-ba
 **Label:** "GitHub Personal Access Token"
 
 **Help text:**
+
 > Create a [Classic Personal Access Token](https://github.com/settings/tokens/new) with these scopes:
+>
 > - **repo** (Full control of private repositories)
 > - **read:org** (Read org membership)
 >
 > This token is used to read pull requests, reviews, and collaborators from your repos. GitGud never writes to your repositories.
 
 **Validation behavior:**
+
 - Token starts with `github_pat_` → warning: "Fine-grained tokens can't access repos across multiple organizations. Use a Classic token."
 - Token starts with `ghp_` → proceed to `GET /user` validation
 - `GET /user` returns 401 → "This token is invalid or expired."
@@ -184,6 +191,7 @@ Each repo in the `GET /user/repos` response includes a `permissions` object:
 **All repos are valid for the board's core purpose.** PR sync (`GET /repos/{owner}/{repo}/pulls`) only needs read access. The push-access constraint only affects collaborator listing, which is a separate feature (IC selection).
 
 **Recommendation: show all repos, badge read-only ones.**
+
 - Show all accessible repos from `GET /user/repos`
 - Check `permissions.push` per repo
 - Badge repos without push: "Read-only — collaborator listing unavailable"
@@ -192,6 +200,7 @@ Each repo in the `GET /user/repos` response includes a `permissions` object:
 #### Impact on IC selection (separate change)
 
 When the IC selection feature is built:
+
 - Use stored `permissions.push` to pre-filter which repos can show collaborators
 - Handle 403 gracefully — access can change after linking
 - Distinguish "no push access" (403) from "bad PAT" (401) in error handling
@@ -201,6 +210,7 @@ When the IC selection feature is built:
 #### Schema consideration
 
 `github_repos` table has no column for permission level. Two options:
+
 - **Option A:** Add `has_push_access boolean` — store at connect time, refresh periodically
 - **Option C (recommended for this change):** Don't store — check on-demand when IC selection is built. Keeps schema simple for the current scope.
 
@@ -251,19 +261,19 @@ When the IC selection feature is built:
 
 #### What's already in the stack and what it covers
 
-| 2-Screen Form Need | Already Available | Evidence |
-| --- | --- | --- |
-| Step state (screen 1 ↔ 2) | React 19 `useState` | `useState<1 \| 2>(1)` — trivial conditional rendering |
-| Cross-step data persistence | React 19 `useState` | Parent component owns all state; step children receive props |
-| Text inputs (name, PAT) | `FormField` component | `src/components/auth/FormField.tsx` — label, icon, error, hint, endContent |
-| Action buttons | `Button` (shadcn/ui) | `src/components/ui/button.tsx` — variants: default, outline, ghost, destructive |
-| Conditional styling | `cn()` utility | clsx + tailwind-merge (`src/lib/utils`) |
-| Client-side validation | Zod v4 | `package.json` — already installed, used server-side, works client-side too |
-| Async API calls (validate PAT, fetch repos) | Native `fetch()` | Astro SSR API routes handle POST; no form library needed |
-| Loading states | `useState` pattern | Established in `CreateBoardForm.tsx:15-25` |
-| Step indicator / progress dots | Tailwind 4 | Pure CSS — two circles + connecting line |
-| Repo list / checkbox selection | React 19 | `.map()` + state array — standard React |
-| Animations / transitions | Tailwind 4 | `transition-*`, `animate-*` utilities |
+| 2-Screen Form Need                          | Already Available     | Evidence                                                                        |
+| ------------------------------------------- | --------------------- | ------------------------------------------------------------------------------- |
+| Step state (screen 1 ↔ 2)                   | React 19 `useState`   | `useState<1 \| 2>(1)` — trivial conditional rendering                           |
+| Cross-step data persistence                 | React 19 `useState`   | Parent component owns all state; step children receive props                    |
+| Text inputs (name, PAT)                     | `FormField` component | `src/components/auth/FormField.tsx` — label, icon, error, hint, endContent      |
+| Action buttons                              | `Button` (shadcn/ui)  | `src/components/ui/button.tsx` — variants: default, outline, ghost, destructive |
+| Conditional styling                         | `cn()` utility        | clsx + tailwind-merge (`src/lib/utils`)                                         |
+| Client-side validation                      | Zod v4                | `package.json` — already installed, used server-side, works client-side too     |
+| Async API calls (validate PAT, fetch repos) | Native `fetch()`      | Astro SSR API routes handle POST; no form library needed                        |
+| Loading states                              | `useState` pattern    | Established in `CreateBoardForm.tsx:15-25`                                      |
+| Step indicator / progress dots              | Tailwind 4            | Pure CSS — two circles + connecting line                                        |
+| Repo list / checkbox selection              | React 19              | `.map()` + state array — standard React                                         |
+| Animations / transitions                    | Tailwind 4            | `transition-*`, `animate-*` utilities                                           |
 
 #### Why React Hook Form is NOT needed
 
@@ -278,6 +288,7 @@ The current `CreateBoardForm` uses `<form method="POST" action="/api/boards">` w
 3. The form must stay mounted across both steps to preserve state
 
 The form should use `fetch()` for all API calls:
+
 - Step 1 "Next" → `fetch("/api/github/validate-pat", { method: "POST" })` → validate, fetch repos
 - Step 2 "Create Board" → `fetch("/api/boards", { method: "POST" })` → create board + store PAT + link repos
 
@@ -287,13 +298,13 @@ This aligns with the lessons.md rule: manage submitting state with `useState` + 
 
 These are not npm dependencies — `npx shadcn@latest add` copies component files into `src/components/ui/`. shadcn/ui is already configured (`components.json` exists, new-york style, `rsc: false`, Tailwind CSS vars enabled).
 
-| Component | `npx shadcn@latest add` | Purpose in this form |
-| --- | --- | --- |
-| Card | `card` | Consistent step container styling |
-| Checkbox | `checkbox` | Repo multi-select in step 2 |
-| Badge | `badge` | "Read-only" permission labels on repos |
-| Skeleton | `skeleton` | Loading placeholder while repos fetch |
-| Input | `input` | Styled input (though FormField works already) |
+| Component | `npx shadcn@latest add` | Purpose in this form                          |
+| --------- | ----------------------- | --------------------------------------------- |
+| Card      | `card`                  | Consistent step container styling             |
+| Checkbox  | `checkbox`              | Repo multi-select in step 2                   |
+| Badge     | `badge`                 | "Read-only" permission labels on repos        |
+| Skeleton  | `skeleton`              | Loading placeholder while repos fetch         |
+| Input     | `input`                 | Styled input (though FormField works already) |
 
 None are blockers — the form can be built with existing `FormField` + `Button` + Tailwind alone. Adding them is a UX polish decision, not a technical requirement.
 
@@ -308,6 +319,7 @@ After evaluating both options, decided to **add shadcn/ui components** (Checkbox
 - **Plan update required**: `plan.md` line 47 ("What We're NOT Doing") currently says "New shadcn/ui components — build with existing FormField + Button + Tailwind" — this must be revised before Phase 2 implementation
 
 Components to add before Phase 2:
+
 ```bash
 npx shadcn@latest add checkbox badge card skeleton input
 ```

@@ -16,20 +16,21 @@ A direct push to `main` is rejected by a ruleset; changes only merge via PR afte
 
 ## Key Decisions Made
 
-| Decision | Choice | Why (1 sentence) | Source |
-| --- | --- | --- | --- |
-| Branch protection strictness | PR required + CI check + 0 approvals; force-push/delete blocked; admin bypass kept | Practical for a solo maintainer while making direct-to-`main` impossible. | User |
-| Deploy gate | Fully automatic on merge to `main` | The PR review is the human gate; intentionally supersedes `infrastructure.md`'s "human-only by hand" posture. | User |
-| Board update | Automatic from CI on successful deploy | Keeps the board truthful without manual steps; carries the version-ID machine-fact. | User |
-| DB migrations | Auto `supabase db push` before deploy; expand/contract rule enforced | Code never goes live against missing schema; PR review of the SQL is the gate; backward-compat keeps a Worker-only rollback safe. | User |
-| Roadmap updates | Keep manual via skills (`/10x-implement`, `/10x-archive`), not CI auto-commit | A CI commit back to `main` would re-trigger `deploy.yml` and entangle content with delivery. | Plan (Q2) |
-| Release tagging | Defer; CF version ID is the rollback handle | No external consumer yet; semver/changelog adds ceremony without payoff. | Plan (Q3) |
-| Workflow split | `ci.yml` = PR/branch gate; new `deploy.yml` = deploy on push to `main` | Separates validation from delivery; ruleset requires the named CI check. | Plan |
-| Project board auth | Separate `PROJECT_TOKEN` PAT (project scope) for board writes | Default Actions `GITHUB_TOKEN` cannot write a user-owned Projects v2 board. | Finding |
+| Decision                     | Choice                                                                             | Why (1 sentence)                                                                                                                  | Source    |
+| ---------------------------- | ---------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- | --------- |
+| Branch protection strictness | PR required + CI check + 0 approvals; force-push/delete blocked; admin bypass kept | Practical for a solo maintainer while making direct-to-`main` impossible.                                                         | User      |
+| Deploy gate                  | Fully automatic on merge to `main`                                                 | The PR review is the human gate; intentionally supersedes `infrastructure.md`'s "human-only by hand" posture.                     | User      |
+| Board update                 | Automatic from CI on successful deploy                                             | Keeps the board truthful without manual steps; carries the version-ID machine-fact.                                               | User      |
+| DB migrations                | Auto `supabase db push` before deploy; expand/contract rule enforced               | Code never goes live against missing schema; PR review of the SQL is the gate; backward-compat keeps a Worker-only rollback safe. | User      |
+| Roadmap updates              | Keep manual via skills (`/10x-implement`, `/10x-archive`), not CI auto-commit      | A CI commit back to `main` would re-trigger `deploy.yml` and entangle content with delivery.                                      | Plan (Q2) |
+| Release tagging              | Defer; CF version ID is the rollback handle                                        | No external consumer yet; semver/changelog adds ceremony without payoff.                                                          | Plan (Q3) |
+| Workflow split               | `ci.yml` = PR/branch gate; new `deploy.yml` = deploy on push to `main`             | Separates validation from delivery; ruleset requires the named CI check.                                                          | Plan      |
+| Project board auth           | Separate `PROJECT_TOKEN` PAT (project scope) for board writes                      | Default Actions `GITHUB_TOKEN` cannot write a user-owned Projects v2 board.                                                       | Finding   |
 
 ## Scope
 
 **In scope:**
+
 - `main` ruleset via `gh api` (PR + CI status check + block force-push/deletion).
 - `CLAUDE.md` "Git workflow" section (branch-per-change, PR-only, agent never deploys).
 - `ci.yml` retargeted to PR + non-`main` branch pushes with a stable check name; add `wrangler deploy --dry-run` as the pre-publish safety gate.
@@ -39,6 +40,7 @@ A direct push to `main` is rejected by a ruleset; changes only merge via PR afte
 - Append realized CI/CD automation to `context/changes/deployment/deployment-plan.md`.
 
 **Out of scope:**
+
 - PR preview deployments (Workers Builds / `wrangler versions upload`) — deferred to avoid exposing the authenticated app on a public URL.
 - GitHub Environment manual approval gate (deferred belt-and-suspenders option).
 - Release tagging / semver / changelog (Workstream 7 trigger only).
@@ -67,22 +69,22 @@ Two layers enforce "no direct `main`": the `CLAUDE.md` rule guides the agent (be
 
 ## Workstreams at a Glance
 
-| Workstream | What it delivers | Key risk |
-| --- | --- | --- |
-| 1. Branch protection | `main` ruleset (PR + CI + no force-push) | Status-check rule needs a check GitHub has seen once — push a PR through CI first. |
-| 2. Force branching (Q1) | `CLAUDE.md` rule + ruleset backstop (optional local pre-push guard) | Agent muscle-memory committing to `main`; mitigated by server-side reject. |
-| 3. CI/CD pipeline | `ci.yml` retarget + new `deploy.yml` | `wrangler-action` auth/secret wiring; concurrency on overlapping merges. |
-| 4. Credentials (human) | `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`, `PROJECT_TOKEN`, `SUPABASE_ACCESS_TOKEN`, `SUPABASE_DB_PASSWORD` | Scoped token hygiene; must exist before first merge. |
+| Workstream                  | What it delivers                                                                                                                                        | Key risk                                                                                                                                 |
+| --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| 1. Branch protection        | `main` ruleset (PR + CI + no force-push)                                                                                                                | Status-check rule needs a check GitHub has seen once — push a PR through CI first.                                                       |
+| 2. Force branching (Q1)     | `CLAUDE.md` rule + ruleset backstop (optional local pre-push guard)                                                                                     | Agent muscle-memory committing to `main`; mitigated by server-side reject.                                                               |
+| 3. CI/CD pipeline           | `ci.yml` retarget + new `deploy.yml`                                                                                                                    | `wrangler-action` auth/secret wiring; concurrency on overlapping merges.                                                                 |
+| 4. Credentials (human)      | `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`, `PROJECT_TOKEN`, `SUPABASE_ACCESS_TOKEN`, `SUPABASE_DB_PASSWORD`                                       | Scoped token hygiene; must exist before first merge.                                                                                     |
 | 5. Board update + doc fixes | Deploy-time board mutation; corrects `github-workflow.md` (`bodpl`→`gos-tomek`, `done` status), `infrastructure.md`, `tech-stack.md` to the new posture | `GITHUB_TOKEN` can't write Projects v2 — needs `PROJECT_TOKEN`; stale `bodpl` owner + missing `done` status would fail board automation. |
-| 6. Roadmap policy (Q2) | Defined transition points; archive-time stamp | None (policy, not code). |
-| 7. Tagging policy (Q3) | Deferred with documented trigger | None (policy, not code). |
+| 6. Roadmap policy (Q2)      | Defined transition points; archive-time stamp                                                                                                           | None (policy, not code).                                                                                                                 |
+| 7. Tagging policy (Q3)      | Deferred with documented trigger                                                                                                                        | None (policy, not code).                                                                                                                 |
 
 **Run order:** land Workstream 3 first so CI produces a selectable check name, push one PR through it, then apply the Workstream 1 ruleset referencing that check. Secrets (4) and `PROJECT_TOKEN` must exist before the first merge that exercises deploy + board update.
 
 ## Open Risks & Assumptions
 
 - **Approval-posture flip.** This intentionally moves production publish from "human-by-hand" (`infrastructure.md`) to PR-gated auto-deploy; `infrastructure.md` itself is updated to match (primary-secret rotation stays human-only). If a deliberate post-merge gate is wanted later, add a GitHub Environment `production` with a required reviewer in front of the deploy step.
-- **Runtime Worker secrets are not managed by CI.** `SUPABASE_URL`/`SUPABASE_KEY` on the Worker persist across `wrangler deploy` and are rotated by hand (`wrangler secret put`); CI only uses the *build* repo secrets. Don't assume a deploy re-provisions runtime secrets.
+- **Runtime Worker secrets are not managed by CI.** `SUPABASE_URL`/`SUPABASE_KEY` on the Worker persist across `wrangler deploy` and are rotated by hand (`wrangler secret put`); CI only uses the _build_ repo secrets. Don't assume a deploy re-provisions runtime secrets.
 - **Stale `github-workflow.md`.** Owner references (`bodpl`) are wrong and will fail; the doc also omits the existing `done` status option (`fe521554`). Both fixed in Workstream 5.
 - **Projects v2 token scope.** The default Actions token cannot write a user-owned board; the board step requires a separate PAT (`PROJECT_TOKEN`) — easy to miss and fails silently.
 - **Non-atomic deploy + asymmetric rollback.** `db push` runs before `wrangler deploy`, but `wrangler rollback` reverts only the Worker, not the DB. Migrations must be backward-compatible (expand/contract; drops lag one release) or a code rollback breaks. Two migrations already exist in `supabase/migrations/` — confirm their hosted-project state before the first automated `db push`.

@@ -68,12 +68,12 @@ src/
 
 ## Auth Routes
 
-| Route | Description |
-|---|---|
-| `/auth/signin` | Email/password sign-in |
-| `/auth/signup` | Email/password sign-up |
-| `/auth/confirm-email` | Post-signup confirmation page |
-| `/dashboard` | Protected — redirects to `/auth/signin` if unauthenticated |
+| Route                 | Description                                                |
+| --------------------- | ---------------------------------------------------------- |
+| `/auth/signin`        | Email/password sign-in                                     |
+| `/auth/signup`        | Email/password sign-up                                     |
+| `/auth/confirm-email` | Post-signup confirmation page                              |
+| `/dashboard`          | Protected — redirects to `/auth/signin` if unauthenticated |
 
 Route protection is in `src/middleware.ts`. Add paths to `PROTECTED_ROUTES` to require auth.
 
@@ -84,10 +84,12 @@ Changes to `main` are delivery-gated — direct pushes are rejected by branch pr
 **Branch workflow:** `change/<id>` branch → PR → CI gate → merge → auto-deploy.
 
 **CI (`ci.yml`)** runs on every PR to `main` and on non-`main` branch pushes:
+
 - lint + build
 - `wrangler deploy --dry-run` — validates config and bundle without publishing
 
 **Deploy (`deploy.yml`)** runs automatically on merge to `main`:
+
 1. Production build
 2. `supabase db push` — applies pending migrations (idempotent, runs before deploy)
 3. `wrangler deploy` — publishes to Cloudflare Workers

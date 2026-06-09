@@ -18,7 +18,7 @@ already excludes `.env`, `.dev.vars`, `.wrangler/`, `dist/`.
 
 **Out of scope (deferred, per decision):** the GitHub-sync + AI-classification batch is
 entirely greenfield (no Octokit, no Anthropic SDK, no DB migrations, empty `src/types.ts`,
-no Workflow/Cron). It is documented below under *Deferred work & edge cases* with the
+no Workflow/Cron). It is documented below under _Deferred work & edge cases_ with the
 specific Cloudflare gotchas it will hit, but **not built or scaffolded here**.
 
 **CI/CD decision:** automate later. First deploy is manual `npx wrangler deploy`. The
@@ -50,7 +50,7 @@ first, then hand the plan back for execution.
 ### C. CI/CD secrets
 
 - [ ] **Make the existing CI build pass:** add `SUPABASE_URL` and `SUPABASE_KEY` as **GitHub repository secrets** (repo → Settings → Secrets and variables → Actions). `.github/workflows/ci.yml`'s build step reads them. The anon key is public-safe; use the production values.
-- [ ] **(Optional — enables the deferred auto-deploy):** create a **scoped Cloudflare API token** (Cloudflare → My Profile → API Tokens → "Edit Cloudflare Workers" template; limit to your account, no DNS/billing scopes). Add it as repo secret `CLOUDFLARE_API_TOKEN`, plus `CLOUDFLARE_ACCOUNT_ID`. The deploy job described under *Deferred: CI/CD automation* uses `cloudflare/wrangler-action` to run `wrangler deploy` on push to `main`. **Not needed for the first manual deploy.**
+- [ ] **(Optional — enables the deferred auto-deploy):** create a **scoped Cloudflare API token** (Cloudflare → My Profile → API Tokens → "Edit Cloudflare Workers" template; limit to your account, no DNS/billing scopes). Add it as repo secret `CLOUDFLARE_API_TOKEN`, plus `CLOUDFLARE_ACCOUNT_ID`. The deploy job described under _Deferred: CI/CD automation_ uses `cloudflare/wrangler-action` to run `wrangler deploy` on push to `main`. **Not needed for the first manual deploy.**
 
 ---
 
@@ -129,7 +129,7 @@ rewrite needed). So the only wiring is uploading two Worker secrets.
 ## Deferred work & edge cases (the batch — NOT built here)
 
 infrastructure.md is emphatic that the daily GitHub-sync + AI-classification batch is the
-*architecturally hardest* part and that it's all greenfield. Flagging the concrete
+_architecturally hardest_ part and that it's all greenfield. Flagging the concrete
 Cloudflare-specific traps so the future feature build budgets for them:
 
 1. **Custom entrypoint required for Cron/Workflow.** `wrangler.jsonc` `main` points at the
@@ -142,7 +142,7 @@ Cloudflare-specific traps so the future feature build budgets for them:
    idempotent durable steps from day one; chunk GitHub pagination + per-comment
    classification across steps. Trigger via a free **Cron Trigger** (daily).
 3. **workerd ≠ Node for the GitHub client.** Octokit pagination/retry/stream code can break
-   *only in production*. Prefer fetch-based GitHub calls; test the client on workerd early;
+   _only in production_. Prefer fetch-based GitHub calls; test the client on workerd early;
    `nodejs_compat` is already set.
 4. **Binding env access changed in v13.** `Astro.locals.runtime` was **removed**. Read
    bindings via `import { env } from 'cloudflare:workers'` (or `Astro.locals.cfContext` for

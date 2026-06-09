@@ -44,6 +44,7 @@ Verification: visit `/boards/new`, complete both screens, verify board page show
 - **Storing `github_username` / `github_user_id` on boards** — the display during creation comes from the validate-pat response; no persistent storage needed for MVP
 - **OAuth / GitHub App flow** — PAT-based only
 - **Org-level linking** — repo-level only, as established in F-02
+
 ## Implementation Approach
 
 Before Phase 2, install shadcn/ui components for the form UI: `npx shadcn@latest add checkbox badge card skeleton input`. These are copy-pasted source files (not npm packages) except `@radix-ui/react-checkbox`. Checkbox provides accessible keyboard navigation for the repo picker; Badge, Card, Skeleton, and Input establish reusable primitives consistent with the existing Button component.
@@ -450,7 +451,7 @@ Replace the "Coming soon (S-02)" placeholder on the board detail page with the l
 #### Manual
 
 - [x] 1.5 validate-pat with valid classic PAT returns login + avatar — e3e5611
-- [x] 1.6 validate-pat with github_pat_ prefix returns fine-grained warning — e3e5611
+- [x] 1.6 validate-pat with github*pat* prefix returns fine-grained warning — e3e5611
 - [x] 1.7 validate-pat with invalid token returns error — e3e5611
 - [x] 1.8 repos returns user's repo list with push-access flags — e3e5611
 - [x] 1.9 validate-repo with existing public repo returns info — e3e5611
@@ -484,7 +485,7 @@ Replace the "Coming soon (S-02)" placeholder on the board detail page with the l
 - [x] 3.3 PAT field renders with label and help text — 61c7656
 - [x] 3.4 Valid classic PAT triggers validation, shows @username — 61c7656
 - [x] 3.5 Invalid token shows error — 61c7656
-- [x] 3.6 github_pat_ prefix shows fine-grained warning — 61c7656
+- [x] 3.6 github*pat* prefix shows fine-grained warning — 61c7656
 - [x] 3.7 Next disabled until PAT validates — 61c7656
 - [x] 3.8 Back from step 2 preserves PAT + validation state — 61c7656
 

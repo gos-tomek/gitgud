@@ -16,20 +16,21 @@ A board can have an encrypted GitHub PAT and linked repos. A sync service fetche
 
 ## Key Decisions Made
 
-| Decision | Choice | Why (1 sentence) | Source |
-| --- | --- | --- | --- |
-| GitHub auth mechanism | Fine-grained PAT | Zero infrastructure — no GitHub App registration needed; EM controls scope directly. | Plan |
-| Client library | Octokit (@octokit/rest) | Full GitHub API coverage with typed methods and built-in pagination. | Plan |
-| Data persistence | Persist into Supabase tables | F-03 and S-04 need local data; avoids rate-limit pressure on page loads. | Plan |
-| Token encryption | pgcrypto with app-layer env var key | Encrypted at rest; simpler than Vault for MVP; SECURITY DEFINER functions handle decrypt. | Plan |
-| Link granularity | Repo-level (not org-level) | User provides exact repos; one board can span multiple orgs. Departs from PRD FR-002 per user decision. | Plan |
-| Token location | Column on boards table | Token is per-board (from the EM); avoids separate user-level token table. | Plan |
-| Error handling | Retry with exponential backoff + rate-limit awareness | Robust against transient GitHub failures and rate limits. | Plan |
-| Testing approach | Manual verification + typed builds | No mock server; verify types via build, verify pipeline manually with a real PAT. | Plan |
+| Decision              | Choice                                                | Why (1 sentence)                                                                                        | Source |
+| --------------------- | ----------------------------------------------------- | ------------------------------------------------------------------------------------------------------- | ------ |
+| GitHub auth mechanism | Fine-grained PAT                                      | Zero infrastructure — no GitHub App registration needed; EM controls scope directly.                    | Plan   |
+| Client library        | Octokit (@octokit/rest)                               | Full GitHub API coverage with typed methods and built-in pagination.                                    | Plan   |
+| Data persistence      | Persist into Supabase tables                          | F-03 and S-04 need local data; avoids rate-limit pressure on page loads.                                | Plan   |
+| Token encryption      | pgcrypto with app-layer env var key                   | Encrypted at rest; simpler than Vault for MVP; SECURITY DEFINER functions handle decrypt.               | Plan   |
+| Link granularity      | Repo-level (not org-level)                            | User provides exact repos; one board can span multiple orgs. Departs from PRD FR-002 per user decision. | Plan   |
+| Token location        | Column on boards table                                | Token is per-board (from the EM); avoids separate user-level token table.                               | Plan   |
+| Error handling        | Retry with exponential backoff + rate-limit awareness | Robust against transient GitHub failures and rate limits.                                               | Plan   |
+| Testing approach      | Manual verification + typed builds                    | No mock server; verify types via build, verify pipeline manually with a real PAT.                       | Plan   |
 
 ## Scope
 
 **In scope:**
+
 - Encrypted PAT column on `boards` with encrypt/decrypt SECURITY DEFINER functions
 - `github_repos` connection table (1:many from board)
 - `github_pull_requests`, `github_reviews`, `github_review_comments` data tables with RLS
@@ -39,6 +40,7 @@ A board can have an encrypted GitHub PAT and linked repos. A sync service fetche
 - New env var: `GITHUB_TOKEN_ENCRYPTION_KEY`
 
 **Out of scope:**
+
 - UI for entering PAT or selecting repos (S-02)
 - Contribution profile view (S-04)
 - Comment classification (F-03)
@@ -62,10 +64,10 @@ Data flows one direction: GitHub → Supabase. All tables have RLS scoped to boa
 
 ## Phases at a Glance
 
-| Phase | What it delivers | Key risk |
-| --- | --- | --- |
-| 1. Schema & Token Infrastructure | Migration with all tables, RLS, encrypt/decrypt functions, env var | pgcrypto function signature or RLS policy errors — caught by `supabase db reset` |
-| 2. GitHub API Client | Octokit factory with retry/rate-limit logic, error types | Octokit compatibility with workerd — must verify manually |
+| Phase                                       | What it delivers                                                   | Key risk                                                                                                  |
+| ------------------------------------------- | ------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------- |
+| 1. Schema & Token Infrastructure            | Migration with all tables, RLS, encrypt/decrypt functions, env var | pgcrypto function signature or RLS policy errors — caught by `supabase db reset`                          |
+| 2. GitHub API Client                        | Octokit factory with retry/rate-limit logic, error types           | Octokit compatibility with workerd — must verify manually                                                 |
 | 3. Fetch Service & Integration Verification | Sync service, upsert helpers, test API route, workerd verification | Large repos may exceed workerd request timeout — acceptable for F-02; F-03 handles with durable execution |
 
 **Prerequisites:** Local Supabase running (`npx supabase start`), a real fine-grained GitHub PAT for testing, `.dev.vars` with `GITHUB_TOKEN_ENCRYPTION_KEY` set.

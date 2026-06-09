@@ -73,21 +73,25 @@ The end state we're aiming for:
 ## Scope and Constraints
 
 **In scope (Priority 1):**
+
 - Data from GitHub (PRs/change requests, code reviews, comments, approvals, merge times, contributors) and Jira (issues, epics, estimates, statuses, linkage to PRs).
 - Team-level and individual-level views.
 - Connecting GitHub activity to Jira issues to provide business context for code changes.
 
 **In scope (Priority 2 — to explore):**
+
 - Qualitative assessment of code review comments using a language model, to distinguish substantive feedback from noise. Intended to use a local, open-source model. [Assumption: feasibility and accuracy to be validated through testing.]
 - Data quality metrics — showing what percentage of PRs are linked to Jira issues, so the user knows how complete the picture is. If data can't be connected, the tool should say so explicitly rather than show incomplete metrics silently.
 - Collecting manager's 1:1 notes as an additional data source for later analysis.
 
 **Out of scope for now:**
+
 - Calendar integration (interesting idea for overlaying capacity data on velocity, but no concrete plan yet).
 - Slack or email data.
 - Deployment tracking (not every merged PR is deployed — this varies by team's SDLC and needs research).
 
 **Key constraints and assumptions:**
+
 - [Assumption] PR-to-Jira linkage depends on issue IDs being present in PR titles or descriptions. If they're missing, the cross-referencing won't work and the tool should communicate this clearly.
 - [Assumption] Different teams may have different SDLCs, which could affect how metrics are calculated. The tool may need to be configurable per team.
 - [Assumption] The tool should not compare individuals against each other. Team context + individual context is sufficient.
@@ -114,8 +118,8 @@ The end state we're aiming for:
 
 ---
 
-*Document version: 3.1 (Source-verified)*
-*Date: April 11, 2026*
-*Source: Product discovery conversation + market research report*
-*Status: Draft — all [Assumptions] require verification*
-*All cited data points have been independently verified against original sources.*
+_Document version: 3.1 (Source-verified)_
+_Date: April 11, 2026_
+_Source: Product discovery conversation + market research report_
+_Status: Draft — all [Assumptions] require verification_
+_All cited data points have been independently verified against original sources._
