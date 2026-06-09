@@ -77,6 +77,26 @@ const astroConfig = tseslint.config({
   },
 });
 
+const testConfig = tseslint.config({
+  files: ["tests/**/*.ts"],
+  languageOptions: {
+    globals: {
+      describe: "readonly",
+      it: "readonly",
+      expect: "readonly",
+      beforeAll: "readonly",
+      afterAll: "readonly",
+      beforeEach: "readonly",
+      afterEach: "readonly",
+      vi: "readonly",
+    },
+  },
+  rules: {
+    "no-console": "off",
+    "@typescript-eslint/no-explicit-any": "off",
+  },
+});
+
 export default tseslint.config(
   includeIgnoreFile(gitignorePath),
   baseConfig,
@@ -84,5 +104,6 @@ export default tseslint.config(
   eslintPluginAstro.configs["flat/recommended"],
   ...eslintPluginAstro.configs["flat/jsx-a11y-recommended"],
   astroConfig,
+  testConfig,
   eslintPluginPrettier,
 );
