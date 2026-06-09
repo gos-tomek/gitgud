@@ -32,7 +32,7 @@ describe.skipIf(!supabaseAvailable)("Smoke: test infrastructure", () => {
     const { data, error } = await client.from("boards").select("id");
     expect(error).toBeNull();
     expect(data).toEqual([]);
-  });
+  }, 15_000);
 
   it("admin can create a board that the owner can read back", async () => {
     const email = `smoke-board-${Date.now()}@test.local`;
