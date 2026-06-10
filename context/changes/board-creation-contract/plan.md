@@ -363,26 +363,26 @@ N/A — no data or schema changes.
 
 #### Automated
 
-- [x] 1.1 npm install succeeds with no peer dependency conflicts
-- [x] 1.2 Existing integration tests pass without regression
-- [x] 1.3 TypeScript compiles with updated tsconfig
+- [x] 1.1 npm install succeeds with no peer dependency conflicts — 4a897ee
+- [x] 1.2 Existing integration tests pass without regression — 4a897ee
+- [x] 1.3 TypeScript compiles with updated tsconfig — 4a897ee
 
 #### Manual
 
-- [x] 1.4 package.json devDependencies include all 5 new packages
+- [x] 1.4 package.json devDependencies include all 5 new packages — 4a897ee
 
 ### Phase 2: Hermetic API Tests (H1-H8)
 
 #### Automated
 
-- [ ] 2.1 All 8 hermetic tests pass
-- [ ] 2.2 Lint passes
-- [ ] 2.3 TypeScript compiles
+- [x] 2.1 All 8 hermetic tests pass
+- [x] 2.2 Lint passes
+- [x] 2.3 TypeScript compiles
 
 #### Manual
 
-- [ ] 2.4 Each test name identifies its scenario (H1-H8)
-- [ ] 2.5 Defect-documenting tests have inline comments
+- [x] 2.4 Each test name identifies its scenario (H1-H8)
+- [x] 2.5 Defect-documenting tests have inline comments
 
 ### Phase 3: Component Tests (W1-W9)
 
