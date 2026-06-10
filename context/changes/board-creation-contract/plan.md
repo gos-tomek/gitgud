@@ -167,16 +167,16 @@ mockSupabase.from.mockImplementation((table: string) => {
 
 **Contract**: Scenarios map to test cases as follows:
 
-| Test | Scenario | Key assertion |
-|------|----------|---------------|
-| H1 | Happy path: all 4 steps succeed | `status === 201`, body `{ id }` |
-| H2 | Step 1 fails: unique name (code 23505) | `status === 409`, error message, no further calls |
-| H3 | Step 2 fails: PAT storage | `status === 500`, board not deleted (documents S3 defect) |
-| H4 | Step 3 fails: repo linking | `status === 201` (documents S4 defect), `addBoardContributors` still called |
-| H5 | Step 4 fails, cleanup succeeds | `status === 500`, board delete called with correct ID |
-| H6 | Step 4 fails, cleanup fails | `status === 500`, `logger.error` called with cleanup failure |
-| H7 | Validation: missing/invalid fields | `status === 400`, specific error messages per field |
-| H8 | Auth: no session | `status === 401` |
+| Test | Scenario                               | Key assertion                                                               |
+| ---- | -------------------------------------- | --------------------------------------------------------------------------- |
+| H1   | Happy path: all 4 steps succeed        | `status === 201`, body `{ id }`                                             |
+| H2   | Step 1 fails: unique name (code 23505) | `status === 409`, error message, no further calls                           |
+| H3   | Step 2 fails: PAT storage              | `status === 500`, board not deleted (documents S3 defect)                   |
+| H4   | Step 3 fails: repo linking             | `status === 201` (documents S4 defect), `addBoardContributors` still called |
+| H5   | Step 4 fails, cleanup succeeds         | `status === 500`, board delete called with correct ID                       |
+| H6   | Step 4 fails, cleanup fails            | `status === 500`, `logger.error` called with cleanup failure                |
+| H7   | Validation: missing/invalid fields     | `status === 400`, specific error messages per field                         |
+| H8   | Auth: no session                       | `status === 401`                                                            |
 
 H3 and H4 must include a comment documenting the known defect (e.g. `// Known defect S3: PAT failure does not clean up orphaned board`).
 
@@ -226,17 +226,17 @@ A helper function configures the common fetch mock sequence for advancing throug
 
 **Contract**: Scenarios map to test cases:
 
-| Test | Scenario | Key assertion |
-|------|----------|---------------|
-| W1 | Step 1→2: name empty | Next button click does not advance, error shown |
-| W2 | Step 1→2: PAT not validated | Next button disabled |
-| W3 | Step 1→2→3→submit: complete flow | `fetch` called with POST /api/boards, body contains data from all 3 steps |
-| W4 | Step 2→1→2: PAT changed | `selectedRepos` cleared, repos re-fetched |
-| W5 | Step 3→2→3: repos changed | Collaborators re-fetched |
-| W6 | Step 3→2→3: stale contributors | `selectedContributors` still contains entries from old repo set (documents bug) |
-| W7 | Step 2: no repos selected | Next button disabled |
-| W8 | Step 3: no contributors selected | Create Board button disabled |
-| W9 | Step 3: empty collaborator list from API | "No collaborators found" shown, submit disabled |
+| Test | Scenario                                 | Key assertion                                                                   |
+| ---- | ---------------------------------------- | ------------------------------------------------------------------------------- |
+| W1   | Step 1→2: name empty                     | Next button click does not advance, error shown                                 |
+| W2   | Step 1→2: PAT not validated              | Next button disabled                                                            |
+| W3   | Step 1→2→3→submit: complete flow         | `fetch` called with POST /api/boards, body contains data from all 3 steps       |
+| W4   | Step 2→1→2: PAT changed                  | `selectedRepos` cleared, repos re-fetched                                       |
+| W5   | Step 3→2→3: repos changed                | Collaborators re-fetched                                                        |
+| W6   | Step 3→2→3: stale contributors           | `selectedContributors` still contains entries from old repo set (documents bug) |
+| W7   | Step 2: no repos selected                | Next button disabled                                                            |
+| W8   | Step 3: no contributors selected         | Create Board button disabled                                                    |
+| W9   | Step 3: empty collaborator list from API | "No collaborators found" shown, submit disabled                                 |
 
 W6 must include a comment documenting the stale-selection bug.
 
@@ -388,23 +388,23 @@ N/A — no data or schema changes.
 
 #### Automated
 
-- [x] 3.1 All 9 component tests pass
-- [x] 3.2 Full suite passes (npm test)
-- [x] 3.3 Lint passes
+- [x] 3.1 All 9 component tests pass — 0cade11
+- [x] 3.2 Full suite passes (npm test) — 0cade11
+- [x] 3.3 Lint passes — 0cade11
 
 #### Manual
 
-- [x] 3.4 Tests use accessible queries only
-- [x] 3.5 Stale-state bug test has inline comment
+- [x] 3.4 Tests use accessible queries only — 0cade11
+- [x] 3.5 Stale-state bug test has inline comment — 0cade11
 
 ### Phase 4: Cookbook & Plan Sync
 
 #### Automated
 
-- [ ] 4.1 Full test suite passes
-- [ ] 4.2 Format passes on updated markdown
+- [x] 4.1 Full test suite passes
+- [x] 4.2 Format passes on updated markdown
 
 #### Manual
 
-- [ ] 4.3 §6.2 contains actionable component test patterns
-- [ ] 4.4 §3 Phase 2 row shows shipped
+- [x] 4.3 §6.2 contains actionable component test patterns
+- [x] 4.4 §3 Phase 2 row shows shipped

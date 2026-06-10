@@ -41,12 +41,12 @@ Key findings:
 
 The endpoint at `src/pages/api/boards/index.ts:33-112` performs 4 sequential operations. Each is a separate HTTP request to PostgREST — there is no wrapping DB transaction.
 
-| Step | Operation | Call site | DB table/function | Atomic scope |
-|------|-----------|-----------|-------------------|--------------|
-| 1 | Insert board | `index.ts:60` via `boards.ts:33-47` | `boards` INSERT + trigger inserts `board_members` | Single PostgREST tx (board + trigger) |
-| 2 | Store encrypted PAT | `index.ts:62-69` | `set_board_github_pat` RPC (UPDATE on `boards`) | Single PostgREST tx (function body) |
-| 3 | Link repos | `index.ts:72-82` | `github_repos` batch INSERT | Single PostgREST tx (one INSERT statement) |
-| 4 | Add contributors | `index.ts:84-102` via `boards.ts:116-131` | `board_contributors` batch INSERT | Single PostgREST tx (one INSERT statement) |
+| Step | Operation           | Call site                                 | DB table/function                                 | Atomic scope                               |
+| ---- | ------------------- | ----------------------------------------- | ------------------------------------------------- | ------------------------------------------ |
+| 1    | Insert board        | `index.ts:60` via `boards.ts:33-47`       | `boards` INSERT + trigger inserts `board_members` | Single PostgREST tx (board + trigger)      |
+| 2    | Store encrypted PAT | `index.ts:62-69`                          | `set_board_github_pat` RPC (UPDATE on `boards`)   | Single PostgREST tx (function body)        |
+| 3    | Link repos          | `index.ts:72-82`                          | `github_repos` batch INSERT                       | Single PostgREST tx (one INSERT statement) |
+| 4    | Add contributors    | `index.ts:84-102` via `boards.ts:116-131` | `board_contributors` batch INSERT                 | Single PostgREST tx (one INSERT statement) |
 
 #### Trigger: auto-membership
 
@@ -54,14 +54,14 @@ After step 1, the `boards_insert_owner_as_member` AFTER INSERT trigger (`2026052
 
 ### 2. Partial-Failure Scenario Matrix
 
-| Scenario | Steps completed | User response | DB state | Retry blocked? |
-|----------|----------------|---------------|----------|----------------|
-| S1: Step 1 fails (unique name) | None | 409 "You already have a board with that name" | Clean | No |
-| S2: Step 1 fails (other) | None | 500 generic | Clean | No |
-| **S3: Step 2 fails (PAT storage)** | Board + member | 500 "Failed to store GitHub token" | **Orphaned board** (no PAT, no repos, no contributors) | **Yes — name taken** |
-| **S4: Step 3 fails (repo linking)** | Board + PAT | **201 success** | Board exists **without repos** | No (but data incomplete) |
-| S5: Step 4 fails, cleanup succeeds | All created then deleted | 500 generic | Clean | No |
-| **S6: Step 4 fails, cleanup fails** | Board + PAT + repos | 500 generic | **Orphaned board** (no contributors) | **Yes — name taken** |
+| Scenario                            | Steps completed          | User response                                 | DB state                                               | Retry blocked?           |
+| ----------------------------------- | ------------------------ | --------------------------------------------- | ------------------------------------------------------ | ------------------------ |
+| S1: Step 1 fails (unique name)      | None                     | 409 "You already have a board with that name" | Clean                                                  | No                       |
+| S2: Step 1 fails (other)            | None                     | 500 generic                                   | Clean                                                  | No                       |
+| **S3: Step 2 fails (PAT storage)**  | Board + member           | 500 "Failed to store GitHub token"            | **Orphaned board** (no PAT, no repos, no contributors) | **Yes — name taken**     |
+| **S4: Step 3 fails (repo linking)** | Board + PAT              | **201 success**                               | Board exists **without repos**                         | No (but data incomplete) |
+| S5: Step 4 fails, cleanup succeeds  | All created then deleted | 500 generic                                   | Clean                                                  | No                       |
+| **S6: Step 4 fails, cleanup fails** | Board + PAT + repos      | 500 generic                                   | **Orphaned board** (no contributors)                   | **Yes — name taken**     |
 
 #### S3 detail: PAT failure orphans with no cleanup
 
@@ -120,21 +120,21 @@ The wizard manages a 3-step flow with 17 `useState` hooks and 2 `useRef` hooks (
 
 #### State carried across steps
 
-| Variable | Entered at | Used at | Final submit field |
-|----------|-----------|---------|-------------------|
-| `name` | Step 1 | Submit | `name` |
-| `pat` | Step 1 | Steps 2, 3 fetches + Submit | `pat` |
-| `selectedRepos` | Step 2 | Step 3 fetch + Submit | `repos` |
-| `selectedContributors` | Step 3 | Submit | `contributors` |
+| Variable               | Entered at | Used at                     | Final submit field |
+| ---------------------- | ---------- | --------------------------- | ------------------ |
+| `name`                 | Step 1     | Submit                      | `name`             |
+| `pat`                  | Step 1     | Steps 2, 3 fetches + Submit | `pat`              |
+| `selectedRepos`        | Step 2     | Step 3 fetch + Submit       | `repos`            |
+| `selectedContributors` | Step 3     | Submit                      | `contributors`     |
 
 #### Step transition guards
 
-| Transition | Guards | Side effects |
-|-----------|--------|-------------|
-| 1 → 2 (`handleNext`, line 189) | `name` non-empty + `nameError` falsy + `patValidation.status === "valid"` + async name-uniqueness check passes | Clears `apiError`; fetches repos if PAT changed or repos empty |
-| 2 → 3 (`handleNextToStep3`, line 230) | `selectedRepos.length > 0` | Clears `apiError`; always fetches collaborators |
-| 2 → 1 (`handleBack`, line 220) | None | Clears `apiError` only; all step 2 state preserved |
-| 3 → 2 (`handleBackToStep2`, line 225) | None | Clears `apiError` only; all step 3 state preserved |
+| Transition                            | Guards                                                                                                         | Side effects                                                   |
+| ------------------------------------- | -------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------- |
+| 1 → 2 (`handleNext`, line 189)        | `name` non-empty + `nameError` falsy + `patValidation.status === "valid"` + async name-uniqueness check passes | Clears `apiError`; fetches repos if PAT changed or repos empty |
+| 2 → 3 (`handleNextToStep3`, line 230) | `selectedRepos.length > 0`                                                                                     | Clears `apiError`; always fetches collaborators                |
+| 2 → 1 (`handleBack`, line 220)        | None                                                                                                           | Clears `apiError` only; all step 2 state preserved             |
+| 3 → 2 (`handleBackToStep2`, line 225) | None                                                                                                           | Clears `apiError` only; all step 3 state preserved             |
 
 #### Step bypass
 
@@ -147,6 +147,7 @@ Not possible via UI — `handleCreate()` is only callable from the step 3 button
 **Location**: `CreateBoardForm.tsx:225-235`
 
 When navigating back and changing the PAT (step 1) or repo selection (step 2), `selectedContributors` is never cleared. The collaborator list refreshes on forward navigation (step 2→3), but previously-selected contributors persist. These stale entries:
+
 - Won't have matching checkboxes in the new collaborator list (can't be deselected via UI)
 - Will still appear in the count badge (`CreateBoardForm.tsx:659`)
 - Will be included in the final submit payload
@@ -225,38 +226,38 @@ Zod validation at `index.ts:26-31` enforces: name 1-80 chars, pat min 1, repos m
 
 ### Risk #4: API partial-failure — hermetic tests (stubbed client)
 
-| # | Scenario | Expected outcome | Stub setup |
-|---|----------|-----------------|------------|
-| H1 | Happy path: all 4 steps succeed | 201, `{ id }` returned | All calls return success |
-| H2 | Step 1 fails (unique name, code 23505) | 409, "You already have a board with that name", no orphan | `createBoard` throws `BoardNameTakenError` |
-| H3 | Step 2 fails (PAT storage) | 500, board persists (orphan — documents current defect) | `rpc` returns `{ error }` |
-| H4 | Step 3 fails (repo linking) | 201 (silent success — documents current defect), board has no repos | `from("github_repos").insert` returns `{ error }` |
-| H5 | Step 4 fails, cleanup succeeds | 500, board deleted (cascade verified) | `addBoardContributors` throws; `delete` returns success |
-| H6 | Step 4 fails, cleanup fails | 500, board persists (orphan) | `addBoardContributors` throws; `delete` returns `{ error }` |
-| H7 | Validation: missing/invalid fields | 400 with specific message | N/A (no stub needed) |
-| H8 | Auth: no session | 401 | `getUser` returns `{ data: { user: null } }` |
+| #   | Scenario                               | Expected outcome                                                    | Stub setup                                                  |
+| --- | -------------------------------------- | ------------------------------------------------------------------- | ----------------------------------------------------------- |
+| H1  | Happy path: all 4 steps succeed        | 201, `{ id }` returned                                              | All calls return success                                    |
+| H2  | Step 1 fails (unique name, code 23505) | 409, "You already have a board with that name", no orphan           | `createBoard` throws `BoardNameTakenError`                  |
+| H3  | Step 2 fails (PAT storage)             | 500, board persists (orphan — documents current defect)             | `rpc` returns `{ error }`                                   |
+| H4  | Step 3 fails (repo linking)            | 201 (silent success — documents current defect), board has no repos | `from("github_repos").insert` returns `{ error }`           |
+| H5  | Step 4 fails, cleanup succeeds         | 500, board deleted (cascade verified)                               | `addBoardContributors` throws; `delete` returns success     |
+| H6  | Step 4 fails, cleanup fails            | 500, board persists (orphan)                                        | `addBoardContributors` throws; `delete` returns `{ error }` |
+| H7  | Validation: missing/invalid fields     | 400 with specific message                                           | N/A (no stub needed)                                        |
+| H8  | Auth: no session                       | 401                                                                 | `getUser` returns `{ data: { user: null } }`                |
 
 ### Risk #4: API happy path — integration test (real Supabase)
 
-| # | Scenario | Expected outcome |
-|---|----------|-----------------|
-| I1 | Full board creation with valid data | 201; board, board_member, PAT (encrypted), repos, contributors all exist in DB |
-| I2 | Duplicate board name | 409; no orphaned rows |
-| I3 | Bulk insert atomicity (repos) | Either all repos inserted or none (constraint violation on one repo fails the batch) |
+| #   | Scenario                            | Expected outcome                                                                     |
+| --- | ----------------------------------- | ------------------------------------------------------------------------------------ |
+| I1  | Full board creation with valid data | 201; board, board_member, PAT (encrypted), repos, contributors all exist in DB       |
+| I2  | Duplicate board name                | 409; no orphaned rows                                                                |
+| I3  | Bulk insert atomicity (repos)       | Either all repos inserted or none (constraint violation on one repo fails the batch) |
 
 ### Risk #3: Wizard state machine — component tests (vitest + testing-library)
 
-| # | Scenario | Expected outcome |
-|---|----------|-----------------|
-| W1 | Step 1→2: name empty | Blocked, error shown |
-| W2 | Step 1→2: PAT not validated | "Next" disabled |
-| W3 | Step 1→2→3→submit: complete flow | POST body contains correct data from all 3 steps |
-| W4 | Step 2→1→2: PAT changed | `selectedRepos` cleared, repos re-fetched |
-| W5 | Step 3→2→3: repos changed | Collaborators re-fetched |
-| W6 | Step 3→2→3: stale contributors | `selectedContributors` still contains entries from old repo set (documents bug) |
-| W7 | Step 2: no repos selected | "Next" disabled |
-| W8 | Step 3: no contributors selected | "Create Board" disabled |
-| W9 | Step 3: empty collaborator list from API | "No collaborators found" shown, submit disabled |
+| #   | Scenario                                 | Expected outcome                                                                |
+| --- | ---------------------------------------- | ------------------------------------------------------------------------------- |
+| W1  | Step 1→2: name empty                     | Blocked, error shown                                                            |
+| W2  | Step 1→2: PAT not validated              | "Next" disabled                                                                 |
+| W3  | Step 1→2→3→submit: complete flow         | POST body contains correct data from all 3 steps                                |
+| W4  | Step 2→1→2: PAT changed                  | `selectedRepos` cleared, repos re-fetched                                       |
+| W5  | Step 3→2→3: repos changed                | Collaborators re-fetched                                                        |
+| W6  | Step 3→2→3: stale contributors           | `selectedContributors` still contains entries from old repo set (documents bug) |
+| W7  | Step 2: no repos selected                | "Next" disabled                                                                 |
+| W8  | Step 3: no contributors selected         | "Create Board" disabled                                                         |
+| W9  | Step 3: empty collaborator list from API | "No collaborators found" shown, submit disabled                                 |
 
 ## Open Questions
 

@@ -73,13 +73,13 @@ Each row is a discrete rollout phase that will open its own change folder
 via `/10x-new`. Status moves left-to-right through the values below; the
 orchestrator updates Status as artifacts appear on disk.
 
-| #   | Phase name                        | Goal (one line)                                                                         | Risks covered        | Test types                                                      | Status        | Change folder                            |
-| --- | --------------------------------- | --------------------------------------------------------------------------------------- | -------------------- | --------------------------------------------------------------- | ------------- | ---------------------------------------- |
-| 1   | Bootstrap + access boundary       | Install test runner; prove cross-board isolation and PAT non-leakage with real DB tests | #1, #2, #5           | integration (real Supabase)                                     | shipped       | context/changes/testing-access-boundary/ |
-| 2   | Board creation contract           | Prove wizard state machine and API orchestration handle happy + failure paths           | #3, #4               | component (vitest + testing-library), hermetic (stubbed client) | not started   | —                                        |
-| 3   | Validation + data layer templates | RLS regression template for new tables; validation test template for API routes         | #5, #6               | integration (RLS per-table), unit (Zod schemas)                 | not started   | —                                        |
-| 4   | Quality gates                     | Wire vitest into CI; set minimum signal floor; update project conventions               | cross-cutting        | CI gates                                                        | not started   | —                                        |
-| 5   | Slice-ready contracts             | Cover deferred risks #7–#11 as their prerequisite slices ship                           | #7, #8, #9, #10, #11 | integration, hermetic                                           | not started   | —                                        |
+| #   | Phase name                        | Goal (one line)                                                                         | Risks covered        | Test types                                                      | Status      | Change folder                            |
+| --- | --------------------------------- | --------------------------------------------------------------------------------------- | -------------------- | --------------------------------------------------------------- | ----------- | ---------------------------------------- |
+| 1   | Bootstrap + access boundary       | Install test runner; prove cross-board isolation and PAT non-leakage with real DB tests | #1, #2, #5           | integration (real Supabase)                                     | shipped     | context/changes/testing-access-boundary/ |
+| 2   | Board creation contract           | Prove wizard state machine and API orchestration handle happy + failure paths           | #3, #4               | component (vitest + testing-library), hermetic (stubbed client) | shipped     | context/changes/board-creation-contract/ |
+| 3   | Validation + data layer templates | RLS regression template for new tables; validation test template for API routes         | #5, #6               | integration (RLS per-table), unit (Zod schemas)                 | not started | —                                        |
+| 4   | Quality gates                     | Wire vitest into CI; set minimum signal floor; update project conventions               | cross-cutting        | CI gates                                                        | not started | —                                        |
+| 5   | Slice-ready contracts             | Cover deferred risks #7–#11 as their prerequisite slices ship                           | #7, #8, #9, #10, #11 | integration, hermetic                                           | not started | —                                        |
 
 ## 4. Stack
 
@@ -167,20 +167,24 @@ For cross-isolation tests, use `seedTwoBoards()` from `tests/helpers/seed.ts` wh
 Always delete in `afterAll` and always cascade from the top (`boards` DELETE cascades all child rows); then delete users last. Pattern:
 
 ```ts
-beforeAll(async () => { fixture = await seedTwoBoards(); });
-afterAll(async () => { await fixture.cleanup(); });
+beforeAll(async () => {
+  fixture = await seedTwoBoards();
+});
+afterAll(async () => {
+  await fixture.cleanup();
+});
 ```
 
 #### RLS denial assertion patterns
 
 RLS denials behave differently per operation — assert the correct shape:
 
-| Operation | RLS behavior | Assertion |
-|-----------|-------------|-----------|
-| SELECT | USING clause filters silently — denied reads return an empty array, no error | `expect(error).toBeNull(); expect(data).toEqual([]);` |
-| INSERT | WITH CHECK failure → PostgreSQL error code `42501` | `expect(error?.code).toBe("42501");` |
-| UPDATE | USING clause match returns 0 rows — silently a no-op | Read via admin before + after; `expect(after?.field).toBe(before?.field)` |
-| DELETE | USING clause match returns 0 rows — silently a no-op | Read via admin after; `expect(data).toHaveLength(N)` where N is expected surviving count |
+| Operation | RLS behavior                                                                 | Assertion                                                                                |
+| --------- | ---------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
+| SELECT    | USING clause filters silently — denied reads return an empty array, no error | `expect(error).toBeNull(); expect(data).toEqual([]);`                                    |
+| INSERT    | WITH CHECK failure → PostgreSQL error code `42501`                           | `expect(error?.code).toBe("42501");`                                                     |
+| UPDATE    | USING clause match returns 0 rows — silently a no-op                         | Read via admin before + after; `expect(after?.field).toBe(before?.field)`                |
+| DELETE    | USING clause match returns 0 rows — silently a no-op                         | Read via admin after; `expect(data).toHaveLength(N)` where N is expected surviving count |
 
 For UPDATE/DELETE, always verify via the admin client that the row was not modified/deleted — the operation itself returns no error, so only the database state tells the truth.
 
@@ -229,21 +233,176 @@ const res = await authFetch("/api/github/sync", {
 
 ### 6.2 Adding a component test (React island)
 
-TBD — see §3 Phase 2 for wizard state machine and multi-step form patterns.
+**Reference implementation**: `tests/component/CreateBoardForm.test.tsx`
 
-### 6.3 Adding a unit test (Zod schema / pure function)
+#### Per-file environment override
+
+Component tests render into a DOM; integration and hermetic tests don't and stay faster without one. Override Vitest's default Node environment per file with a docblock as the very first line:
+
+```ts
+// @vitest-environment happy-dom
+```
+
+#### Mocking `fetch`
+
+React islands call API routes via `fetch`, not the Supabase client. Stub `globalThis.fetch` with `vi.stubGlobal` and dispatch on the request URL:
+
+```ts
+const fetchMock = vi.fn((input: string, _init?: RequestInit): Response => {
+  switch (input) {
+    case "/api/github/validate-pat":
+      return jsonResponse({ login: "octocat", avatarUrl: "..." });
+    case "/api/boards/check-name":
+      return new Response(null, { status: 204 });
+    default:
+      throw new Error(`Unhandled fetch to ${input}`);
+  }
+});
+vi.stubGlobal("fetch", fetchMock);
+```
+
+Throwing on an unhandled URL surfaces a missing mock case immediately, instead of failing later with a confusing `undefined` error.
+
+#### Mocking `window.location`
+
+Components that redirect on success (`window.location.href = ...`) need `location` stubbed — happy-dom throws on real navigation:
+
+```ts
+beforeEach(() => {
+  vi.stubGlobal("location", { href: "" });
+});
+
+afterEach(() => {
+  vi.unstubAllGlobals();
+  vi.restoreAllMocks();
+});
+```
+
+Assert the redirect by reading `window.location.href` after the triggering action.
+
+#### Debounced inputs
+
+For inputs with a debounce (e.g. PAT validation at 500ms), prefer `waitFor` over fake timers — `userEvent` relies on real timers internally, and mixing it with `vi.useFakeTimers()` is fragile:
+
+```ts
+await user.type(screen.getByLabelText(/GitHub Personal Access Token/i), PAT);
+await waitFor(() => expect(screen.getByText(/Connected as/i)).toBeInTheDocument(), { timeout: 2000 });
+```
+
+#### `userEvent.setup()`
+
+Always create an instance with `userEvent.setup()` and use it for every interaction — do not call `userEvent.click()` etc. as bare static methods:
+
+```ts
+const user = userEvent.setup();
+await user.click(screen.getByRole("button", { name: /next/i }));
+```
+
+#### Accessible queries
+
+Query by role, label, and visible text — `getByRole`, `getByLabelText`, `getByText`, `findByText`. Never assert on class names or test IDs. To find a checkbox inside a `<label>` by its visible text, locate the text node and scope with `within`:
+
+```ts
+const label = screen.getByText(fullName).closest("label");
+await user.click(within(label!).getByRole("checkbox"));
+```
+
+### 6.3 Adding a hermetic API test (stubbed Supabase client)
+
+**Reference implementation**: `tests/hermetic/board-creation.test.ts`
+
+Hermetic tests run in the default Node environment (no `@vitest-environment` override) and call the API route's exported handler (`POST`, `GET`, ...) directly as a plain async function — no Astro middleware involved.
+
+#### `vi.hoisted()` for mock variables
+
+`vi.mock()` calls are hoisted above all other code by Vitest's transform. Any variable a mock factory references must be declared with `vi.hoisted()`, or it's `undefined`/`ReferenceError` when the factory runs:
+
+```ts
+const mockSupabase = vi.hoisted(() => ({
+  auth: { getUser: vi.fn() },
+  rpc: vi.fn(),
+  from: vi.fn(),
+}));
+vi.mock("@/lib/supabase", () => ({ createClient: vi.fn(() => mockSupabase) }));
+```
+
+#### Mocking `astro:env/server` and service modules
+
+`astro:env/server` is a virtual module — Vitest cannot resolve it without an explicit factory. Mock it alongside any `@/lib/services/*` modules the handler imports:
+
+```ts
+vi.mock("astro:env/server", () => ({
+  GITHUB_TOKEN_ENCRYPTION_KEY: "test-encryption-key",
+  SUPABASE_URL: "https://example.supabase.co",
+  SUPABASE_KEY: "test-supabase-key",
+}));
+```
+
+#### Re-declaring error classes for `instanceof` checks
+
+If the handler does `instanceof` against an error class exported by a mocked module, re-declare that class inside the same `vi.hoisted()` block — the handler's imported reference and the thrown instance must share a constructor:
+
+```ts
+const mockBoardServices = vi.hoisted(() => ({
+  createBoard: vi.fn(),
+  BoardNameTakenError: class BoardNameTakenError extends Error {
+    constructor() {
+      super("You already have a board with that name");
+      this.name = "BoardNameTakenError";
+    }
+  },
+}));
+vi.mock("@/lib/services/boards", () => mockBoardServices);
+```
+
+#### Fluent chain mocking with table-name dispatch
+
+`supabase.from(table)` returns a different chain shape per table. Dispatch on the table name inside `mockImplementation`, throwing on any table the test doesn't expect:
+
+```ts
+mockSupabase.from.mockImplementation((table: string) => {
+  if (table === "github_repos") return { insert: mockRepoInsert };
+  if (table === "boards") return { delete: vi.fn(() => ({ eq: mockDeleteEq })) };
+  throw new Error(`Unexpected table: ${table}`);
+});
+```
+
+#### `makeContext` helper
+
+Build the minimal `APIContext` the handler needs from a real `Request`:
+
+```ts
+function makeContext(body: unknown): APIContext {
+  const request = new Request("http://localhost/api/boards", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  return { request, cookies: {} } as unknown as APIContext;
+}
+```
+
+#### `beforeEach` reset and happy-path defaults
+
+Call `vi.clearAllMocks()` then reconfigure every dependency to its happy-path return value, so each test only needs to override the one step it's exercising with `mockResolvedValueOnce` / `mockRejectedValueOnce`.
+
+#### Documenting known defects
+
+When a test asserts current (buggy) behavior rather than desired behavior, add an inline `// Known defect ...` comment naming it — so a future fix to the production code is recognized as a deliberate behavior change, not a test regression.
+
+### 6.4 Adding a unit test (Zod schema / pure function)
 
 TBD — see §3 Phase 3 for validation template and Zod schema patterns.
 
-### 6.4 Adding a test for a new API endpoint
+### 6.5 Adding a test for a new API endpoint
 
 TBD — see §3 Phase 1 (integration) and Phase 3 (validation template).
 
-### 6.5 Adding an RLS test for a new migration
+### 6.6 Adding an RLS test for a new migration
 
 TBD — see §3 Phase 3 for the per-table RLS regression template.
 
-### 6.6 Per-rollout-phase notes
+### 6.7 Per-rollout-phase notes
 
 (Filled in as each phase ships.)
 

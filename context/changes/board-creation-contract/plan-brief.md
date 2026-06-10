@@ -17,18 +17,19 @@ Phase 1 shipped Vitest 4.x with integration tests against real Supabase (`tests/
 
 ## Key Decisions Made
 
-| Decision | Choice | Why (1 sentence) | Source |
-|----------|--------|-------------------|--------|
-| Bug fix vs document | Document first, fix later | Clean separation — this change is about testing, not refactoring | Plan |
-| DOM environment | happy-dom | 2-3x faster than jsdom; sufficient for standard form inputs and checkboxes | Plan |
-| Stub strategy | vi.fn() mocks on imported modules | User preference; vi.mock() works with @/ alias and handles the fluent chain | Plan |
-| Wizard test scope | Full W1-W9 | Complete contract coverage per user decision | Plan |
-| Phase ordering | Tooling → Hermetic → Component → Cookbook | Hermetic tests are simpler and validate the mock pattern before tackling DOM tests | Plan |
-| Integration tests (I1-I3) | Excluded | Test plan defines Phase 2 as component + hermetic only | Research |
+| Decision                  | Choice                                    | Why (1 sentence)                                                                   | Source   |
+| ------------------------- | ----------------------------------------- | ---------------------------------------------------------------------------------- | -------- |
+| Bug fix vs document       | Document first, fix later                 | Clean separation — this change is about testing, not refactoring                   | Plan     |
+| DOM environment           | happy-dom                                 | 2-3x faster than jsdom; sufficient for standard form inputs and checkboxes         | Plan     |
+| Stub strategy             | vi.fn() mocks on imported modules         | User preference; vi.mock() works with @/ alias and handles the fluent chain        | Plan     |
+| Wizard test scope         | Full W1-W9                                | Complete contract coverage per user decision                                       | Plan     |
+| Phase ordering            | Tooling → Hermetic → Component → Cookbook | Hermetic tests are simpler and validate the mock pattern before tackling DOM tests | Plan     |
+| Integration tests (I1-I3) | Excluded                                  | Test plan defines Phase 2 as component + hermetic only                             | Research |
 
 ## Scope
 
 **In scope:**
+
 - Install testing-library + happy-dom + jest-dom + user-event
 - Configure Vitest for dual environments (Node + happy-dom per-file)
 - 8 hermetic API tests (H1-H8) with stubbed Supabase client
@@ -37,6 +38,7 @@ Phase 1 shipped Vitest 4.x with integration tests against real Supabase (`tests/
 - Test-plan §3 Phase 2 → shipped
 
 **Out of scope:**
+
 - Fixing defects S3, S4, S6 (PAT orphan, silent repo failure, cleanup-of-cleanup)
 - Integration tests I1-I3 (real Supabase board creation)
 - PAT validation race condition (Bug 2)
@@ -48,12 +50,12 @@ Two new test directories (`tests/hermetic/`, `tests/component/`) alongside exist
 
 ## Phases at a Glance
 
-| Phase | What it delivers | Key risk |
-|-------|-----------------|----------|
-| 1. Tooling & Infrastructure | npm packages installed, vitest config updated, directory structure | Peer dependency conflicts with React 19 |
-| 2. Hermetic API Tests (H1-H8) | 8 tests covering all partial-failure scenarios | astro:env/server virtual module mock; BoardNameTakenError instanceof across mock boundary |
-| 3. Component Tests (W1-W9) | 9 tests covering wizard state machine | 500ms debounce timing in tests; fetch mock sequencing across multi-step flows |
-| 4. Cookbook & Plan Sync | Updated test-plan §6.2, new hermetic pattern section, Phase 2 shipped | None |
+| Phase                         | What it delivers                                                      | Key risk                                                                                  |
+| ----------------------------- | --------------------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
+| 1. Tooling & Infrastructure   | npm packages installed, vitest config updated, directory structure    | Peer dependency conflicts with React 19                                                   |
+| 2. Hermetic API Tests (H1-H8) | 8 tests covering all partial-failure scenarios                        | astro:env/server virtual module mock; BoardNameTakenError instanceof across mock boundary |
+| 3. Component Tests (W1-W9)    | 9 tests covering wizard state machine                                 | 500ms debounce timing in tests; fetch mock sequencing across multi-step flows             |
+| 4. Cookbook & Plan Sync       | Updated test-plan §6.2, new hermetic pattern section, Phase 2 shipped | None                                                                                      |
 
 **Prerequisites:** Phase 1 test infrastructure (vitest, helpers) — already shipped.
 **Estimated effort:** ~2-3 sessions across 4 phases.
