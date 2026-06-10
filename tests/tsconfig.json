@@ -4,6 +4,6 @@
     "types": ["vitest/globals", "node"],
     "noEmit": true
   },
-  "include": ["./**/*.ts", "../.astro/types.d.ts"],
+  "include": ["./**/*.ts", "./**/*.tsx", "../.astro/types.d.ts"],
   "exclude": ["../dist"]
 }
