@@ -375,27 +375,27 @@ N/A — no data or schema changes.
 
 #### Automated
 
-- [x] 2.1 All 8 hermetic tests pass
-- [x] 2.2 Lint passes
-- [x] 2.3 TypeScript compiles
+- [x] 2.1 All 8 hermetic tests pass — de54c9e
+- [x] 2.2 Lint passes — de54c9e
+- [x] 2.3 TypeScript compiles — de54c9e
 
 #### Manual
 
-- [x] 2.4 Each test name identifies its scenario (H1-H8)
-- [x] 2.5 Defect-documenting tests have inline comments
+- [x] 2.4 Each test name identifies its scenario (H1-H8) — de54c9e
+- [x] 2.5 Defect-documenting tests have inline comments — de54c9e
 
 ### Phase 3: Component Tests (W1-W9)
 
 #### Automated
 
-- [ ] 3.1 All 9 component tests pass
-- [ ] 3.2 Full suite passes (npm test)
-- [ ] 3.3 Lint passes
+- [x] 3.1 All 9 component tests pass
+- [x] 3.2 Full suite passes (npm test)
+- [x] 3.3 Lint passes
 
 #### Manual
 
-- [ ] 3.4 Tests use accessible queries only
-- [ ] 3.5 Stale-state bug test has inline comment
+- [x] 3.4 Tests use accessible queries only
+- [x] 3.5 Stale-state bug test has inline comment
 
 ### Phase 4: Cookbook & Plan Sync
 
