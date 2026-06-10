@@ -401,10 +401,10 @@ N/A — no data or schema changes.
 
 #### Automated
 
-- [x] 4.1 Full test suite passes
-- [x] 4.2 Format passes on updated markdown
+- [x] 4.1 Full test suite passes — d5dcd2b
+- [x] 4.2 Format passes on updated markdown — d5dcd2b
 
 #### Manual
 
-- [x] 4.3 §6.2 contains actionable component test patterns
-- [x] 4.4 §3 Phase 2 row shows shipped
+- [x] 4.3 §6.2 contains actionable component test patterns — d5dcd2b
+- [x] 4.4 §3 Phase 2 row shows shipped — d5dcd2b
