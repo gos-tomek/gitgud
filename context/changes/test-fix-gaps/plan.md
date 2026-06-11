@@ -28,7 +28,8 @@ Compensation logic is inconsistent:
 - Bug 1: `selectedContributors` not cleared when returning to step 2 (line 225-228)
 - Bug 2: PAT validation race — `fetchRepos` called after `setStep(2)`, stale `lastFetchedPat.current` ref (line 86-107)
 - Bug 3: API warnings from PAT validation parsed but never stored or displayed (line 172-176)
-- Bug 4: Empty collaborators → submit disabled, no escape path (line 666-671)
+
+> **Reclassified during Phase 6 manual review**: the original "Bug 4" (submit disabled with empty `selectedContributors`, line 666-671) is **not a defect** — the business rule requires at least one contributor per board. The "no escape path" symptom was caused by Bug 1 (Back navigation didn't refresh repos/collaborators), which is fixed above. With Bug 1 fixed, a user who lands on a repo set with no collaborators can go Back, change repos, and try again. Submission continues to require `selectedContributors.length >= 1`, matching the original (pre-Phase-5) behavior.
 
 ### Infrastructure gaps
 
@@ -48,7 +49,7 @@ Compensation logic is inconsistent:
 ## Desired End State
 
 - POST `/api/boards` calls a single plpgsql function that creates the board, encrypts the PAT, links repos, and adds contributors in one atomic transaction. Any failure rolls back everything — no orphaned boards, no partial state.
-- `CreateBoardForm` uses a `useReducer` with a discriminated union state type. Step transitions are explicit actions with guard conditions. Bugs 1-4 are eliminated by design.
+- `CreateBoardForm` uses a `useReducer` with a discriminated union state type. Step transitions are explicit actions with guard conditions. Bugs 1-3 are eliminated by design; the Bug-4 concern is resolved by Bug 1's fix, and the ≥1-contributor submission rule is preserved.
 - All 7 tables have `REVOKE ALL FROM anon, authenticated` with complete per-operation RLS policies. Logger redacts known sensitive patterns before output.
 - All existing test suites pass. "Known defect" markers in tests are replaced with assertions of correct behavior.
 
@@ -321,7 +322,7 @@ Key bug fixes embedded in the reducer:
 - **Bug 1**: `BACK_TO_STEP_2` action resets `selectedContributors` to `[]`
 - **Bug 2**: `SET_PAT` action resets `patValidation` to `{ status: "idle" }` immediately, cancelling any in-flight validation
 - **Bug 3**: `VALIDATE_PAT_SUCCESS` action stores `warnings` array in `patValidation` state
-- **Bug 4**: `NEXT_TO_STEP_3` or submit does not require `selectedContributors.length > 0` — user can proceed with zero contributors, or the UI shows clear guidance to go back
+- **Bug 4 (reclassified)**: submission still requires `selectedContributors.length > 0` (`SUBMIT_START` is a no-op otherwise) — this is the correct business rule, not a bug. The dead-end concern is addressed by Bug 1's fix instead.
 
 #### 2. Reducer unit tests
 
@@ -337,7 +338,7 @@ Key bug fixes embedded in the reducer:
 - Step 3 → 2 back: clears selectedContributors (Bug 1 fix)
 - PAT change resets validation to idle (Bug 2 fix)
 - PAT validation success stores warnings (Bug 3 fix)
-- Step 3 allows submit with empty selectedContributors (Bug 4 fix)
+- Step 3 rejects `SUBMIT_START` with empty selectedContributors (Bug 4 reclassified — business rule, not a bug); succeeds once at least one contributor is selected
 - Invalid transitions are no-ops (e.g., NEXT_TO_STEP_3 from step 1)
 
 ### Success Criteria:
@@ -380,7 +381,7 @@ Wire the `wizardReducer` into `CreateBoardForm`, replacing 17 `useState` hooks w
 - Bug 1: `BACK_TO_STEP_2` now clears selectedContributors automatically via reducer
 - Bug 2: `SET_PAT` resets patValidation; the debounced validation effect dispatches `VALIDATE_PAT_START`/`SUCCESS`/`ERROR`
 - Bug 3: `VALIDATE_PAT_SUCCESS` stores warnings in state; the UI renders them (e.g., a warning banner in step 2)
-- Bug 4: Submit button in step 3 is enabled even with 0 selectedContributors, or the UI shows a clear "no collaborators found — you can still create the board" message
+- Bug 4 (reclassified): Submit button in step 3 stays disabled with 0 selectedContributors, matching the pre-existing business rule; the dead-end concern is resolved by Bug 1's fix to Back navigation
 
 ### Success Criteria:
 
@@ -396,7 +397,7 @@ Wire the `wizardReducer` into `CreateBoardForm`, replacing 17 `useState` hooks w
 - Back navigation: step 3 → step 2 → change repos → step 3 → contributors list is fresh (Bug 1 fixed)
 - PAT change: enter PAT → validation starts → change PAT mid-validation → previous validation cancelled (Bug 2 fixed)
 - Warnings displayed: use a PAT with limited scopes → warnings shown in step 2 (Bug 3 fixed)
-- Empty contributors: select repos with no collaborators → can still submit (Bug 4 fixed)
+- Empty contributors: select repos with no collaborators → Create Board stays disabled; Back → pick different repos → contributors available (Bug 4 reclassified, Bug 1 provides the escape path)
 
 **Implementation Note**: After completing this phase and all automated verification passes, pause here for manual confirmation from the human that the manual testing was successful before proceeding to the next phase.
 
@@ -420,7 +421,7 @@ Update the existing component tests (W1-W9) to assert correct behavior instead o
 - **W6 (Bug 1)**: Currently asserts stale selectedContributors persist → now asserts selectedContributors are cleared after back-to-step-2 navigation
 - **Bug 2 tests** (if present): Assert PAT validation resets on PAT change, no stale state
 - **Bug 3 tests** (if present): Assert warnings are rendered in the UI after PAT validation
-- **Bug 4 tests** (if present): Assert user can submit with zero contributors, or guidance message is shown
+- **Bug 4 tests** (if present): Assert `SUBMIT_START`/Create Board remains blocked with zero selectedContributors (reclassified as required business rule, not a bug)
 
 The mock `fetch` setup may need updating if the component's fetch call patterns changed (e.g., if warnings are now stored in state, the mock must return warnings in the validate-pat response).
 
@@ -683,30 +684,30 @@ All migrations are additive:
 
 #### Automated
 
-- [x] 5.1 `npm test -- tests/unit/wizard-reducer.test.ts` passes
-- [x] 5.2 TypeScript compiles: `npm run lint`
-- [x] 5.3 Reducer is a pure function (no side effects)
+- [x] 5.1 `npm test -- tests/unit/wizard-reducer.test.ts` passes — 6ee8f21
+- [x] 5.2 TypeScript compiles: `npm run lint` — 6ee8f21
+- [x] 5.3 Reducer is a pure function (no side effects) — 6ee8f21
 
 #### Manual
 
-- [x] 5.4 Review reducer transitions match wizard flow
-- [x] 5.5 Review bug fix assertions (each bug has at least one test)
+- [x] 5.4 Review reducer transitions match wizard flow — 6ee8f21
+- [x] 5.5 Review bug fix assertions (each bug has at least one test) — 6ee8f21
 
 ### Phase 6: Component Refactor
 
 #### Automated
 
-- [ ] 6.1 TypeScript compiles: `npm run lint`
-- [ ] 6.2 Build succeeds: `npm run build`
-- [ ] 6.3 React Compiler lint rule passes
+- [x] 6.1 TypeScript compiles: `npm run lint`
+- [x] 6.2 Build succeeds: `npm run build`
+- [x] 6.3 React Compiler lint rule passes
 
 #### Manual
 
-- [ ] 6.4 Full wizard flow: step 1 → 2 → 3 → submit → redirect
-- [ ] 6.5 Bug 1: back from step 3, change repos, return → fresh contributors
-- [ ] 6.6 Bug 2: change PAT mid-validation → previous cancelled
-- [ ] 6.7 Bug 3: limited-scope PAT → warnings displayed
-- [ ] 6.8 Bug 4: repos with no collaborators → can still submit
+- [x] 6.4 Full wizard flow: step 1 → 2 → 3 → submit → redirect
+- [x] 6.5 Bug 1: back from step 3, change repos, return → fresh contributors
+- [x] 6.6 Bug 2: change PAT mid-validation → previous cancelled
+- [x] 6.7 Bug 3: limited-scope PAT → warnings displayed
+- [x] 6.8 Bug 4 (reclassified): repos with no collaborators → Create Board stays disabled; Back lets you pick different repos
 
 ### Phase 7: Component Test Adaptation
 

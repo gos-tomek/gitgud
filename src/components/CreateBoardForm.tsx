@@ -1,4 +1,4 @@
-import React, { useState, useRef } from "react";
+import React, { useReducer, useRef } from "react";
 import {
   Layout as LayoutIcon,
   ArrowRight,
@@ -19,69 +19,23 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Input } from "@/components/ui/input";
-
-type PatStatus = "idle" | "validating" | "valid" | "error" | "warning";
-
-interface PatValidation {
-  status: PatStatus;
-  login?: string;
-  avatarUrl?: string;
-  message?: string;
-}
-
-interface RepoItem {
-  owner: string;
-  name: string;
-  fullName: string;
-  private: boolean;
-  pushAccess: boolean;
-}
-
-interface CollaboratorItem {
-  login: string;
-  id: number;
-  avatarUrl: string;
-  type: string;
-}
+import { wizardReducer, initialState, type RepoItem, type CollaboratorItem } from "./wizard-reducer";
 
 export default function CreateBoardForm() {
-  const [step, setStep] = useState<1 | 2 | 3>(1);
-  const [name, setName] = useState("");
-  const [nameError, setNameError] = useState<string | undefined>();
-  const [apiError, setApiError] = useState<string | undefined>();
-  const [submitting, setSubmitting] = useState(false);
-  const [checkingName, setCheckingName] = useState(false);
+  const [state, dispatch] = useReducer(wizardReducer, initialState);
 
-  // PAT state
-  const [pat, setPat] = useState("");
-  const [patVisible, setPatVisible] = useState(false);
-  const [patValidation, setPatValidation] = useState<PatValidation>({ status: "idle" });
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const latestPatRef = useRef("");
+  const lastFetchedPat = useRef("");
 
-  // Repo picker state
-  const [repos, setRepos] = useState<RepoItem[]>([]);
-  const [reposLoading, setReposLoading] = useState(false);
-  const [reposError, setReposError] = useState<string | undefined>();
-  const [repoFilter, setRepoFilter] = useState("");
-  const [selectedRepos, setSelectedRepos] = useState<RepoItem[]>([]);
-  const lastFetchedPat = useRef<string>("");
-
-  // Manual entry state
-  const [manualEntry, setManualEntry] = useState("");
-  const [manualEntryLoading, setManualEntryLoading] = useState(false);
-  const [manualEntryError, setManualEntryError] = useState<string | undefined>();
-
-  // Contributor picker state
-  const [collaborators, setCollaborators] = useState<CollaboratorItem[]>([]);
-  const [selectedContributors, setSelectedContributors] = useState<CollaboratorItem[]>([]);
-  const [collaboratorsLoading, setCollaboratorsLoading] = useState(false);
-  const [collaboratorsError, setCollaboratorsError] = useState<string | undefined>();
-  const [contributorFilter, setContributorFilter] = useState("");
-
-  const filteredRepos = repos.filter((r) => r.fullName.toLowerCase().includes(repoFilter.toLowerCase()));
-  const filteredCollaborators = collaborators.filter((c) =>
-    c.login.toLowerCase().includes(contributorFilter.toLowerCase()),
-  );
+  const filteredRepos =
+    state.step === 2
+      ? state.repos.filter((r) => r.fullName.toLowerCase().includes(state.repoFilter.toLowerCase()))
+      : [];
+  const filteredCollaborators =
+    state.step === 3
+      ? state.collaborators.filter((c) => c.login.toLowerCase().includes(state.contributorFilter.toLowerCase()))
+      : [];
 
   async function validatePat(token: string) {
     try {
@@ -91,55 +45,39 @@ export default function CreateBoardForm() {
         body: JSON.stringify({ pat: token }),
       });
       const data = (await res.json()) as { login?: string; avatarUrl?: string; warning?: string; error?: string };
+      if (latestPatRef.current !== token) return;
       if (res.ok && data.login) {
-        setPatValidation({
-          status: "valid",
+        dispatch({
+          type: "VALIDATE_PAT_SUCCESS",
           login: data.login,
           avatarUrl: data.avatarUrl,
-          message: data.warning,
+          warnings: data.warning ? [data.warning] : undefined,
         });
       } else {
-        setPatValidation({ status: "error", message: data.error ?? "Token is invalid or expired" });
+        dispatch({ type: "VALIDATE_PAT_ERROR", message: data.error ?? "Token is invalid or expired" });
       }
     } catch {
-      setPatValidation({ status: "error", message: "Could not validate token — network error" });
+      if (latestPatRef.current !== token) return;
+      dispatch({ type: "VALIDATE_PAT_ERROR", message: "Could not validate token — network error" });
     }
   }
 
   function handlePatChange(value: string) {
-    setPat(value);
     if (debounceRef.current) clearTimeout(debounceRef.current);
+    latestPatRef.current = value.trim();
+    dispatch({ type: "SET_PAT", pat: value });
 
-    if (!value.trim()) {
-      setPatValidation({ status: "idle" });
-      return;
-    }
+    const trimmed = value.trim();
+    if (!trimmed || trimmed.startsWith("github_pat_")) return;
 
-    if (value.trim().startsWith("github_pat_")) {
-      setPatValidation({
-        status: "error",
-        message: "Fine-grained tokens are not supported. Please use a classic PAT (starts with ghp_).",
-      });
-      return;
-    }
-
-    setPatValidation({ status: "validating" });
     debounceRef.current = setTimeout(() => {
-      void validatePat(value.trim());
+      dispatch({ type: "VALIDATE_PAT_START" });
+      void validatePat(trimmed);
     }, 500);
   }
 
-  function validateName(): boolean {
-    if (!name.trim()) {
-      setNameError("Board name is required");
-      return false;
-    }
-    return !nameError;
-  }
-
-  async function fetchRepos() {
-    setReposLoading(true);
-    setReposError(undefined);
+  async function fetchRepos(pat: string) {
+    dispatch({ type: "FETCH_REPOS_START" });
     try {
       const res = await fetch("/api/github/repos", {
         method: "POST",
@@ -148,99 +86,96 @@ export default function CreateBoardForm() {
       });
       const data = (await res.json()) as { repos?: RepoItem[]; error?: string };
       if (res.ok && data.repos) {
-        setRepos(data.repos);
+        dispatch({ type: "FETCH_REPOS_SUCCESS", repos: data.repos });
         lastFetchedPat.current = pat;
       } else {
-        setReposError(data.error ?? "Failed to load repositories");
+        dispatch({ type: "FETCH_REPOS_ERROR", message: data.error ?? "Failed to load repositories" });
       }
     } catch {
-      setReposError("Network error — failed to load repositories");
-    } finally {
-      setReposLoading(false);
+      dispatch({ type: "FETCH_REPOS_ERROR", message: "Network error — failed to load repositories" });
     }
   }
 
-  async function fetchCollaborators() {
-    setCollaboratorsLoading(true);
-    setCollaboratorsError(undefined);
+  async function fetchCollaborators(pat: string, repos: RepoItem[]) {
+    dispatch({ type: "FETCH_COLLABORATORS_START" });
     try {
       const res = await fetch("/api/github/collaborators", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ pat, repos: selectedRepos.map((r) => ({ owner: r.owner, name: r.name })) }),
+        body: JSON.stringify({ pat, repos: repos.map((r) => ({ owner: r.owner, name: r.name })) }),
       });
-      const data = (await res.json()) as {
-        collaborators?: CollaboratorItem[];
-        warnings?: { repo: string; message: string }[];
-        error?: string;
-      };
+      const data = (await res.json()) as { collaborators?: CollaboratorItem[]; error?: string };
       if (res.ok && data.collaborators) {
-        setCollaborators(data.collaborators);
+        dispatch({ type: "FETCH_COLLABORATORS_SUCCESS", collaborators: data.collaborators });
       } else {
-        setCollaboratorsError(data.error ?? "Failed to load collaborators");
+        dispatch({ type: "FETCH_COLLABORATORS_ERROR", message: data.error ?? "Failed to load collaborators" });
       }
     } catch {
-      setCollaboratorsError("Network error — failed to load collaborators");
-    } finally {
-      setCollaboratorsLoading(false);
+      dispatch({ type: "FETCH_COLLABORATORS_ERROR", message: "Network error — failed to load collaborators" });
     }
   }
 
   async function handleNext() {
-    if (!validateName()) return;
-    if (patValidation.status !== "valid") return;
-    setCheckingName(true);
+    if (state.step !== 1) return;
+    if (!state.name.trim()) {
+      dispatch({ type: "SET_NAME_ERROR", error: "Board name is required" });
+      return;
+    }
+    if (state.patValidation.status !== "valid") return;
+
+    const pat = state.pat;
+    dispatch({ type: "SET_CHECKING_NAME", checking: true });
     try {
       const res = await fetch("/api/boards/check-name", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: name.trim() }),
+        body: JSON.stringify({ name: state.name.trim() }),
       });
       if (res.status === 409) {
         const data = (await res.json()) as { error?: string };
-        setNameError(data.error ?? "You already have a board with that name");
+        dispatch({ type: "SET_NAME_ERROR", error: data.error ?? "You already have a board with that name" });
         return;
       }
     } catch {
       // network error — let the final submit surface it
     } finally {
-      setCheckingName(false);
+      dispatch({ type: "SET_CHECKING_NAME", checking: false });
     }
-    setApiError(undefined);
-    setStep(2);
 
-    if (lastFetchedPat.current !== pat) {
-      setSelectedRepos([]);
-      void fetchRepos();
-    } else if (repos.length === 0) {
-      void fetchRepos();
-    }
+    const patChanged = lastFetchedPat.current !== pat;
+    dispatch({ type: "NEXT_TO_STEP_2" });
+    if (patChanged) dispatch({ type: "CLEAR_SELECTED_REPOS" });
+    void fetchRepos(pat);
   }
 
   function handleBack() {
-    setApiError(undefined);
-    setStep(1);
+    dispatch({ type: "BACK_TO_STEP_1" });
   }
 
   function handleBackToStep2() {
-    setApiError(undefined);
-    setStep(2);
+    if (state.step !== 3) return;
+    const pat = state.pat;
+    dispatch({ type: "BACK_TO_STEP_2" });
+    void fetchRepos(pat);
   }
 
   function handleNextToStep3() {
-    if (selectedRepos.length === 0) return;
-    setApiError(undefined);
-    setStep(3);
-    void fetchCollaborators();
+    if (state.step !== 2) return;
+    if (state.selectedRepos.length === 0) return;
+    const pat = state.pat;
+    const repos = state.selectedRepos;
+    dispatch({ type: "NEXT_TO_STEP_3" });
+    void fetchCollaborators(pat, repos);
   }
 
   async function handleAddManual() {
-    const trimmed = manualEntry.trim();
+    if (state.step !== 2) return;
+    const trimmed = state.manualEntry.trim();
     if (!trimmed) return;
 
     const slashIndex = trimmed.indexOf("/");
     if (slashIndex < 1 || slashIndex === trimmed.length - 1) {
-      setManualEntryError("Enter in owner/name format (e.g. facebook/react)");
+      dispatch({ type: "ADD_MANUAL_REPO_ERROR", message: "Enter in owner/name format (e.g. facebook/react)" });
       return;
     }
 
@@ -248,18 +183,17 @@ export default function CreateBoardForm() {
     const repoName = trimmed.slice(slashIndex + 1);
     const fullName = `${owner}/${repoName}`;
 
-    if (selectedRepos.some((r) => r.fullName.toLowerCase() === fullName.toLowerCase())) {
-      setManualEntryError("Repository already added");
+    if (state.selectedRepos.some((r) => r.fullName.toLowerCase() === fullName.toLowerCase())) {
+      dispatch({ type: "ADD_MANUAL_REPO_ERROR", message: "Repository already added" });
       return;
     }
 
-    setManualEntryLoading(true);
-    setManualEntryError(undefined);
+    dispatch({ type: "ADD_MANUAL_REPO_START" });
     try {
       const res = await fetch("/api/github/validate-repo", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ pat, owner, name: repoName }),
+        body: JSON.stringify({ pat: state.pat, owner, name: repoName }),
       });
       const data = (await res.json()) as RepoItem & { error?: string };
       if (res.ok) {
@@ -270,38 +204,30 @@ export default function CreateBoardForm() {
           private: data.private,
           pushAccess: data.pushAccess,
         };
-        // Merge into picker list so the repo appears with its checkbox checked
-        setRepos((prev) => {
-          const exists = prev.some((r) => r.fullName.toLowerCase() === newRepo.fullName.toLowerCase());
-          return exists ? prev : [...prev, newRepo];
-        });
-        setSelectedRepos((prev) => {
-          const exists = prev.some((r) => r.fullName.toLowerCase() === newRepo.fullName.toLowerCase());
-          return exists ? prev : [...prev, newRepo];
-        });
-        setManualEntry("");
+        dispatch({ type: "ADD_MANUAL_REPO_SUCCESS", repo: newRepo });
       } else {
-        setManualEntryError((data as { error?: string }).error ?? "Repository not found or not accessible");
+        dispatch({
+          type: "ADD_MANUAL_REPO_ERROR",
+          message: (data as { error?: string }).error ?? "Repository not found or not accessible",
+        });
       }
     } catch {
-      setManualEntryError("Network error — could not validate repository");
-    } finally {
-      setManualEntryLoading(false);
+      dispatch({ type: "ADD_MANUAL_REPO_ERROR", message: "Network error — could not validate repository" });
     }
   }
 
   async function handleCreate() {
-    setApiError(undefined);
-    setSubmitting(true);
+    if (state.step !== 3) return;
+    dispatch({ type: "SUBMIT_START" });
     try {
       const res = await fetch("/api/boards", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          name: name.trim(),
-          pat,
-          repos: selectedRepos.map((r) => ({ owner: r.owner, name: r.name })),
-          contributors: selectedContributors.map((c) => ({
+          name: state.name.trim(),
+          pat: state.pat,
+          repos: state.selectedRepos.map((r) => ({ owner: r.owner, name: r.name })),
+          contributors: state.selectedContributors.map((c) => ({
             githubId: c.id,
             githubLogin: c.login,
             avatarUrl: c.avatarUrl,
@@ -310,18 +236,14 @@ export default function CreateBoardForm() {
       });
       const data = (await res.json()) as { id?: string; error?: string };
       if (!res.ok) {
-        setApiError(data.error ?? "Something went wrong. Please try again.");
+        dispatch({ type: "SUBMIT_ERROR", message: data.error ?? "Something went wrong. Please try again." });
         return;
       }
       window.location.href = `/boards/${data.id}`;
     } catch {
-      setApiError("Network error. Please try again.");
-    } finally {
-      setSubmitting(false);
+      dispatch({ type: "SUBMIT_ERROR", message: "Network error. Please try again." });
     }
   }
-
-  const nextDisabled = checkingName || patValidation.status !== "valid";
 
   return (
     <div className="space-y-4">
@@ -330,42 +252,41 @@ export default function CreateBoardForm() {
         {[1, 2, 3].map((n) => (
           <div
             key={n}
-            className={`size-2 rounded-full transition-colors ${step === n ? "bg-purple-400" : "bg-white/20"}`}
+            className={`size-2 rounded-full transition-colors ${state.step === n ? "bg-purple-400" : "bg-white/20"}`}
           />
         ))}
-        <span className="ml-2 text-xs text-blue-100/50">Step {step} of 3</span>
+        <span className="ml-2 text-xs text-blue-100/50">Step {state.step} of 3</span>
       </div>
 
       <Card className="border-white/10 bg-white/5">
         <CardContent className="pt-6">
-          {step === 1 && (
+          {state.step === 1 && (
             <div className="space-y-4">
               <FormField
                 id="name"
                 label="Board name"
-                value={name}
+                value={state.name}
                 onChange={(v) => {
-                  setName(v);
-                  if (nameError) setNameError(undefined);
+                  dispatch({ type: "SET_NAME", name: v });
                 }}
                 placeholder="e.g. Platform Team"
-                error={nameError}
+                error={state.nameError}
                 icon={<LayoutIcon className="size-4" />}
               />
 
               <FormField
                 id="pat"
                 label="GitHub Personal Access Token"
-                type={patVisible ? "text" : "password"}
-                value={pat}
+                type={state.patVisible ? "text" : "password"}
+                value={state.pat}
                 onChange={handlePatChange}
                 placeholder="ghp_..."
                 icon={<KeyRound className="size-4" />}
                 endContent={
                   <PasswordToggle
-                    visible={patVisible}
+                    visible={state.patVisible}
                     onToggle={() => {
-                      setPatVisible((v) => !v);
+                      dispatch({ type: "TOGGLE_PAT_VISIBLE" });
                     }}
                   />
                 }
@@ -386,34 +307,40 @@ export default function CreateBoardForm() {
                 }
               />
 
-              {patValidation.status === "validating" && (
+              {state.patValidation.status === "validating" && (
                 <div className="flex items-center gap-2 text-sm text-blue-100/60">
                   <Loader2 className="size-4 animate-spin" />
                   Validating token…
                 </div>
               )}
-              {patValidation.status === "valid" && (
-                <div className="flex items-center gap-2 text-sm text-green-400">
-                  <CheckCircle2 className="size-4" />
-                  Connected as <span className="font-semibold">@{patValidation.login}</span>
-                  {patValidation.message && <span className="ml-1 text-yellow-400/80">({patValidation.message})</span>}
+              {state.patValidation.status === "valid" && (
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2 text-sm text-green-400">
+                    <CheckCircle2 className="size-4" />
+                    Connected as <span className="font-semibold">@{state.patValidation.login}</span>
+                  </div>
+                  {state.patValidation.warnings?.map((warning) => (
+                    <div
+                      key={warning}
+                      className="flex items-start gap-2 rounded-md bg-yellow-500/10 p-3 text-sm text-yellow-300"
+                    >
+                      <AlertTriangle className="mt-0.5 size-4 shrink-0" />
+                      {warning}
+                    </div>
+                  ))}
                 </div>
               )}
-              {patValidation.status === "error" && <p className="text-sm text-red-300">{patValidation.message}</p>}
-              {patValidation.status === "warning" && (
-                <div className="flex items-start gap-2 rounded-md bg-yellow-500/10 p-3 text-sm text-yellow-300">
-                  <AlertTriangle className="mt-0.5 size-4 shrink-0" />
-                  {patValidation.message}
-                </div>
+              {state.patValidation.status === "error" && (
+                <p className="text-sm text-red-300">{state.patValidation.message}</p>
               )}
 
               <Button
                 type="button"
-                onClick={handleNext}
-                disabled={nextDisabled}
+                onClick={() => void handleNext()}
+                disabled={state.checkingName || state.patValidation.status !== "valid"}
                 className="w-full rounded-lg bg-purple-600 px-4 py-2 font-medium text-white transition-colors hover:bg-purple-500 disabled:opacity-50"
               >
-                {checkingName ? (
+                {state.checkingName ? (
                   <span className="flex items-center gap-2">
                     <span className="size-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
                     Checking...
@@ -428,10 +355,10 @@ export default function CreateBoardForm() {
             </div>
           )}
 
-          {step === 2 && (
+          {state.step === 2 && (
             <div className="space-y-4">
               {/* Repo loading skeletons */}
-              {reposLoading && (
+              {state.reposLoading && (
                 <div className="space-y-2">
                   {[1, 2, 3].map((i) => (
                     <Skeleton key={i} className="h-10 w-full bg-white/10" />
@@ -440,12 +367,12 @@ export default function CreateBoardForm() {
               )}
 
               {/* Repo fetch error */}
-              {!reposLoading && reposError && (
+              {!state.reposLoading && state.reposError && (
                 <div className="rounded-md bg-red-500/10 p-3">
-                  <p className="text-sm text-red-300">{reposError}</p>
+                  <p className="text-sm text-red-300">{state.reposError}</p>
                   <button
                     type="button"
-                    onClick={() => void fetchRepos()}
+                    onClick={() => void fetchRepos(state.pat)}
                     className="mt-1 text-xs text-blue-100/60 underline hover:text-blue-100/80"
                   >
                     Retry
@@ -454,15 +381,15 @@ export default function CreateBoardForm() {
               )}
 
               {/* Repo picker */}
-              {!reposLoading && !reposError && repos.length > 0 && (
+              {!state.reposLoading && !state.reposError && state.repos.length > 0 && (
                 <>
                   <div className="relative">
                     <Search className="absolute top-1/2 left-3 size-4 -translate-y-1/2 text-blue-100/40" />
                     <Input
                       placeholder="Filter repositories..."
-                      value={repoFilter}
+                      value={state.repoFilter}
                       onChange={(e) => {
-                        setRepoFilter(e.target.value);
+                        dispatch({ type: "SET_REPO_FILTER", filter: e.target.value });
                       }}
                       className="border-white/10 bg-white/5 pl-9 text-white placeholder:text-blue-100/40 focus-visible:ring-purple-500"
                     />
@@ -473,7 +400,7 @@ export default function CreateBoardForm() {
                       <p className="px-3 py-2 text-sm text-blue-100/50">No repositories match your filter.</p>
                     ) : (
                       filteredRepos.map((repo) => {
-                        const isSelected = selectedRepos.some((r) => r.fullName === repo.fullName);
+                        const isSelected = state.selectedRepos.some((r) => r.fullName === repo.fullName);
                         return (
                           <label
                             key={repo.fullName}
@@ -481,12 +408,8 @@ export default function CreateBoardForm() {
                           >
                             <Checkbox
                               checked={isSelected}
-                              onCheckedChange={(checked) => {
-                                if (checked) {
-                                  setSelectedRepos((prev) => [...prev, repo]);
-                                } else {
-                                  setSelectedRepos((prev) => prev.filter((r) => r.fullName !== repo.fullName));
-                                }
+                              onCheckedChange={() => {
+                                dispatch({ type: "TOGGLE_REPO_SELECTION", repo });
                               }}
                             />
                             <span className="flex-1 truncate text-sm text-white">{repo.fullName}</span>
@@ -508,9 +431,9 @@ export default function CreateBoardForm() {
                     )}
                   </div>
 
-                  {selectedRepos.length > 0 && (
+                  {state.selectedRepos.length > 0 && (
                     <p className="text-xs text-blue-100/50">
-                      {selectedRepos.length} repo{selectedRepos.length !== 1 ? "s" : ""} selected
+                      {state.selectedRepos.length} repo{state.selectedRepos.length !== 1 ? "s" : ""} selected
                     </p>
                   )}
                 </>
@@ -522,10 +445,9 @@ export default function CreateBoardForm() {
                 <div className="flex gap-2">
                   <Input
                     placeholder="owner/name (e.g. facebook/react)"
-                    value={manualEntry}
+                    value={state.manualEntry}
                     onChange={(e) => {
-                      setManualEntry(e.target.value);
-                      if (manualEntryError) setManualEntryError(undefined);
+                      dispatch({ type: "SET_MANUAL_ENTRY", value: e.target.value });
                     }}
                     onKeyDown={(e) => {
                       if (e.key === "Enter") void handleAddManual();
@@ -535,17 +457,21 @@ export default function CreateBoardForm() {
                   <Button
                     type="button"
                     onClick={() => void handleAddManual()}
-                    disabled={!manualEntry.trim() || manualEntryLoading}
+                    disabled={!state.manualEntry.trim() || state.manualEntryLoading}
                     variant="outline"
                     className="border-white/20 bg-white/5 text-white hover:bg-white/10"
                   >
-                    {manualEntryLoading ? <Loader2 className="size-4 animate-spin" /> : <Plus className="size-4" />}
+                    {state.manualEntryLoading ? (
+                      <Loader2 className="size-4 animate-spin" />
+                    ) : (
+                      <Plus className="size-4" />
+                    )}
                   </Button>
                 </div>
-                {manualEntryError && <p className="text-sm text-red-300">{manualEntryError}</p>}
+                {state.manualEntryError && <p className="text-sm text-red-300">{state.manualEntryError}</p>}
               </div>
 
-              {apiError && <p className="rounded-md bg-red-500/10 p-3 text-sm text-red-300">{apiError}</p>}
+              {state.apiError && <p className="rounded-md bg-red-500/10 p-3 text-sm text-red-300">{state.apiError}</p>}
 
               <div className="flex gap-2">
                 <Button
@@ -562,7 +488,7 @@ export default function CreateBoardForm() {
                 <Button
                   type="button"
                   onClick={handleNextToStep3}
-                  disabled={selectedRepos.length === 0}
+                  disabled={state.selectedRepos.length === 0}
                   className="flex-1 rounded-lg bg-purple-600 px-4 py-2 font-medium text-white transition-colors hover:bg-purple-500 disabled:opacity-50"
                 >
                   <span className="flex items-center gap-2">
@@ -578,10 +504,10 @@ export default function CreateBoardForm() {
             </div>
           )}
 
-          {step === 3 && (
+          {state.step === 3 && (
             <div className="space-y-4">
               {/* Collaborator loading skeletons */}
-              {collaboratorsLoading && (
+              {state.collaboratorsLoading && (
                 <div className="space-y-2">
                   {[1, 2, 3].map((i) => (
                     <Skeleton key={i} className="h-10 w-full bg-white/10" />
@@ -590,12 +516,12 @@ export default function CreateBoardForm() {
               )}
 
               {/* Collaborator fetch error */}
-              {!collaboratorsLoading && collaboratorsError && (
+              {!state.collaboratorsLoading && state.collaboratorsError && (
                 <div className="rounded-md bg-red-500/10 p-3">
-                  <p className="text-sm text-red-300">{collaboratorsError}</p>
+                  <p className="text-sm text-red-300">{state.collaboratorsError}</p>
                   <button
                     type="button"
-                    onClick={() => void fetchCollaborators()}
+                    onClick={() => void fetchCollaborators(state.pat, state.selectedRepos)}
                     className="mt-1 text-xs text-blue-100/60 underline hover:text-blue-100/80"
                   >
                     Retry
@@ -604,17 +530,17 @@ export default function CreateBoardForm() {
               )}
 
               {/* Collaborator picker */}
-              {!collaboratorsLoading && !collaboratorsError && (
+              {!state.collaboratorsLoading && !state.collaboratorsError && (
                 <>
-                  {collaborators.length > 0 ? (
+                  {state.collaborators.length > 0 ? (
                     <>
                       <div className="relative">
                         <Search className="absolute top-1/2 left-3 size-4 -translate-y-1/2 text-blue-100/40" />
                         <Input
                           placeholder="Filter contributors..."
-                          value={contributorFilter}
+                          value={state.contributorFilter}
                           onChange={(e) => {
-                            setContributorFilter(e.target.value);
+                            dispatch({ type: "SET_CONTRIBUTOR_FILTER", filter: e.target.value });
                           }}
                           className="border-white/10 bg-white/5 pl-9 text-white placeholder:text-blue-100/40 focus-visible:ring-purple-500"
                         />
@@ -625,7 +551,7 @@ export default function CreateBoardForm() {
                           <p className="px-3 py-2 text-sm text-blue-100/50">No contributors match your filter.</p>
                         ) : (
                           filteredCollaborators.map((collab) => {
-                            const isSelected = selectedContributors.some((c) => c.id === collab.id);
+                            const isSelected = state.selectedContributors.some((c) => c.id === collab.id);
                             return (
                               <label
                                 key={collab.id}
@@ -633,12 +559,8 @@ export default function CreateBoardForm() {
                               >
                                 <Checkbox
                                   checked={isSelected}
-                                  onCheckedChange={(checked) => {
-                                    if (checked) {
-                                      setSelectedContributors((prev) => [...prev, collab]);
-                                    } else {
-                                      setSelectedContributors((prev) => prev.filter((c) => c.id !== collab.id));
-                                    }
+                                  onCheckedChange={() => {
+                                    dispatch({ type: "TOGGLE_CONTRIBUTOR_SELECTION", contributor: collab });
                                   }}
                                 />
                                 <img
@@ -656,10 +578,10 @@ export default function CreateBoardForm() {
                         )}
                       </div>
 
-                      {selectedContributors.length > 0 && (
+                      {state.selectedContributors.length > 0 && (
                         <p className="text-xs text-blue-100/50">
-                          {selectedContributors.length} contributor{selectedContributors.length !== 1 ? "s" : ""}{" "}
-                          selected
+                          {state.selectedContributors.length} contributor
+                          {state.selectedContributors.length !== 1 ? "s" : ""} selected
                         </p>
                       )}
                     </>
@@ -672,7 +594,7 @@ export default function CreateBoardForm() {
                 </>
               )}
 
-              {apiError && <p className="rounded-md bg-red-500/10 p-3 text-sm text-red-300">{apiError}</p>}
+              {state.apiError && <p className="rounded-md bg-red-500/10 p-3 text-sm text-red-300">{state.apiError}</p>}
 
               <div className="flex gap-2">
                 <Button
@@ -689,10 +611,10 @@ export default function CreateBoardForm() {
                 <Button
                   type="button"
                   onClick={() => void handleCreate()}
-                  disabled={submitting || selectedContributors.length === 0}
+                  disabled={state.submitting || state.selectedContributors.length === 0}
                   className="flex-1 rounded-lg bg-purple-600 px-4 py-2 font-medium text-white transition-colors hover:bg-purple-500 disabled:opacity-50"
                 >
-                  {submitting ? (
+                  {state.submitting ? (
                     <span className="flex items-center gap-2">
                       <span className="size-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
                       Creating...

@@ -283,7 +283,13 @@ export function wizardReducer(state: WizardState, action: WizardAction): WizardS
 
     case "FETCH_REPOS_SUCCESS": {
       if (state.step !== 2) return state;
-      return { ...state, repos: action.repos, reposLoading: false };
+      // Manually-added repos (e.g. public repos the PAT owner doesn't have
+      // access to) won't appear in the freshly-fetched list. Keep any
+      // already-selected repo visible so it stays toggleable and the
+      // selection count stays accurate.
+      const fetchedNames = new Set(action.repos.map((r) => r.fullName.toLowerCase()));
+      const missingSelected = state.selectedRepos.filter((r) => !fetchedNames.has(r.fullName.toLowerCase()));
+      return { ...state, repos: [...action.repos, ...missingSelected], reposLoading: false };
     }
 
     case "FETCH_REPOS_ERROR": {
@@ -353,8 +359,10 @@ export function wizardReducer(state: WizardState, action: WizardAction): WizardS
     }
 
     case "SUBMIT_START": {
-      // Bug 4 fix: no guard on selectedContributors.length — submitting
-      // with zero contributors is a valid, intentional choice.
+      // Every board requires at least one contributor. The "no escape path"
+      // dead end (Bug 4) is resolved by BACK_TO_STEP_2 above, not by relaxing
+      // this guard.
+      if (state.selectedContributors.length === 0) return state;
       return { ...state, submitting: true, apiError: undefined };
     }
 

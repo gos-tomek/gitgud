@@ -240,9 +240,18 @@ describe("PAT validation (Bugs 2 & 3)", () => {
   });
 });
 
-describe("submission (Bug 4)", () => {
-  it("SUBMIT_START allows submitting from step 3 with zero selectedContributors", () => {
+describe("submission requires at least one contributor (Bug 4 reclassified)", () => {
+  it("SUBMIT_START is rejected from step 3 with zero selectedContributors", () => {
     const state = step3({ selectedContributors: [] });
+
+    const result = wizardReducer(state, { type: "SUBMIT_START" });
+
+    expect(result).toBe(state);
+    expect(result.submitting).toBe(false);
+  });
+
+  it("SUBMIT_START succeeds from step 3 once at least one contributor is selected", () => {
+    const state = step3({ selectedContributors: [COLLAB_A] });
 
     const result = wizardReducer(state, { type: "SUBMIT_START" });
 
@@ -252,7 +261,7 @@ describe("submission (Bug 4)", () => {
   });
 
   it("SUBMIT_ERROR stops submitting and records the error", () => {
-    const state = step3({ submitting: true });
+    const state = step3({ submitting: true, selectedContributors: [COLLAB_A] });
 
     const result = wizardReducer(state, { type: "SUBMIT_ERROR", message: "Board creation failed" });
 
@@ -300,6 +309,22 @@ describe("fetch lifecycles", () => {
     const error = wizardReducer(loading, { type: "FETCH_REPOS_ERROR", message: "Network error" });
     expect(error.reposLoading).toBe(false);
     expect(error.reposError).toBe("Network error");
+  });
+
+  it("FETCH_REPOS_SUCCESS keeps a previously-selected repo visible even when absent from the fetched list", () => {
+    const manuallyAdded: RepoItem = {
+      owner: "facebook",
+      name: "react",
+      fullName: "facebook/react",
+      private: false,
+      pushAccess: false,
+    };
+    const state = step2({ repos: [], selectedRepos: [manuallyAdded] });
+
+    const result = wizardReducer(state, { type: "FETCH_REPOS_SUCCESS", repos: [REPO_A] });
+
+    expect(result.repos).toEqual([REPO_A, manuallyAdded]);
+    expect(result.selectedRepos).toEqual([manuallyAdded]);
   });
 
   it("FETCH_COLLABORATORS_START/SUCCESS/ERROR update loading, data and error fields", () => {
