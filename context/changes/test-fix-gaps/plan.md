@@ -655,14 +655,14 @@ All migrations are additive:
 
 #### Automated
 
-- [x] 3.1 TypeScript compiles: `npm run lint`
-- [x] 3.2 Build succeeds: `npm run build`
-- [x] 3.3 No createBoard/addBoardContributors/BoardNameTakenError in src/
+- [x] 3.1 TypeScript compiles: `npm run lint` — a3f303c
+- [x] 3.2 Build succeeds: `npm run build` — a3f303c
+- [x] 3.3 No createBoard/addBoardContributors/BoardNameTakenError in src/ — a3f303c
 
 #### Manual
 
-- [x] 3.4 Dashboard page loads correctly
-- [x] 3.5 Board detail page loads correctly
+- [x] 3.4 Dashboard page loads correctly — a3f303c
+- [x] 3.5 Board detail page loads correctly — a3f303c
 
 ### Phase 4: API Test Updates
 

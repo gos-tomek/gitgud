@@ -98,7 +98,7 @@ export async function syncBoardGitHubData(
     .eq("board_id", boardId);
 
   if (reposError) throw reposError;
-  if (repos.length === 0) return { repos: 0, pullRequests: 0, reviews: 0, comments: 0 };
+  if (repos.length === 0) return { repos: 0, pullRequests: 0, reviews: 0, comments: 0, errors: [] };
 
   const octokit = await createGitHubClient(supabase, boardId);
 
