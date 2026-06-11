@@ -670,27 +670,27 @@ All migrations are additive:
 
 #### Automated
 
-- [x] 4.1 `npm test` passes — all hermetic and integration tests green
-- [x] 4.2 Zero "Known defect" comments in hermetic tests
-- [x] 4.3 pat-leak tests pass with Supabase running
+- [x] 4.1 `npm test` passes — all hermetic and integration tests green — 736453f
+- [x] 4.2 Zero "Known defect" comments in hermetic tests — 736453f
+- [x] 4.3 pat-leak tests pass with Supabase running — 736453f
 
 #### Manual
 
-- [x] 4.4 Review hermetic suite covers success, duplicate, failure, validation, auth cases
-- [x] 4.5 Review pat-leak suite: sentinel PAT absent from response and logs
+- [x] 4.4 Review hermetic suite covers success, duplicate, failure, validation, auth cases — 736453f
+- [x] 4.5 Review pat-leak suite: sentinel PAT absent from response and logs — 736453f
 
 ### Phase 5: Reducer Extraction + Unit Tests
 
 #### Automated
 
-- [ ] 5.1 `npm test -- tests/unit/wizard-reducer.test.ts` passes
-- [ ] 5.2 TypeScript compiles: `npm run lint`
-- [ ] 5.3 Reducer is a pure function (no side effects)
+- [x] 5.1 `npm test -- tests/unit/wizard-reducer.test.ts` passes
+- [x] 5.2 TypeScript compiles: `npm run lint`
+- [x] 5.3 Reducer is a pure function (no side effects)
 
 #### Manual
 
-- [ ] 5.4 Review reducer transitions match wizard flow
-- [ ] 5.5 Review bug fix assertions (each bug has at least one test)
+- [x] 5.4 Review reducer transitions match wizard flow
+- [x] 5.5 Review bug fix assertions (each bug has at least one test)
 
 ### Phase 6: Component Refactor
 
