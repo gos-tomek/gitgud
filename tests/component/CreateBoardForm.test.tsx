@@ -1,4 +1,5 @@
 // @vitest-environment happy-dom
+import "@testing-library/jest-dom/vitest";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
@@ -39,21 +40,21 @@ function installFetchMock(options: FetchMockOptions = {}) {
   const collaboratorResponses = options.collaboratorResponses ?? [{ collaborators: [COLLAB_A, COLLAB_B] }];
   let collaboratorCallCount = 0;
 
-  const fetchMock = vi.fn((input: string, _init?: RequestInit): Response => {
+  const fetchMock = vi.fn((input: string, _init?: RequestInit): Promise<Response> => {
     switch (input) {
       case "/api/github/validate-pat":
-        return jsonResponse({ login: "octocat", avatarUrl: COLLAB_A.avatarUrl });
+        return Promise.resolve(jsonResponse({ login: "octocat", avatarUrl: COLLAB_A.avatarUrl }));
       case "/api/boards/check-name":
-        return new Response(null, { status: 204 });
+        return Promise.resolve(new Response(null, { status: 204 }));
       case "/api/github/repos":
-        return jsonResponse({ repos: [REPO_A, REPO_B] });
+        return Promise.resolve(jsonResponse({ repos: [REPO_A, REPO_B] }));
       case "/api/github/collaborators": {
         const response = collaboratorResponses[Math.min(collaboratorCallCount, collaboratorResponses.length - 1)];
         collaboratorCallCount++;
-        return jsonResponse(response);
+        return Promise.resolve(jsonResponse(response));
       }
       case "/api/boards":
-        return jsonResponse({ id: "new-board-id" }, 201);
+        return Promise.resolve(jsonResponse({ id: "new-board-id" }, 201));
       default:
         throw new Error(`Unhandled fetch to ${input}`);
     }
