@@ -1,7 +1,6 @@
 import type { APIRoute } from "astro";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase";
-import { createBoard, BoardNameTakenError, addBoardContributors } from "@/lib/services/boards";
 import { GITHUB_TOKEN_ENCRYPTION_KEY } from "astro:env/server";
 import { logger } from "@/lib/logger";
 
@@ -56,57 +55,31 @@ export const POST: APIRoute = async (context) => {
     return json({ error: firstIssue?.message ?? "Invalid input" }, 400);
   }
 
-  try {
-    const { id: boardId } = await createBoard(supabase, user.id, parsed.data.name);
+  const result = await supabase.rpc("create_board_atomic", {
+    p_user_id: user.id,
+    p_name: parsed.data.name,
+    p_raw_token: parsed.data.pat,
+    p_encryption_key: GITHUB_TOKEN_ENCRYPTION_KEY,
+    p_repos: parsed.data.repos.map((r) => ({ owner: r.owner, name: r.name })),
+    p_contributors: parsed.data.contributors.map((c) => ({
+      github_id: c.githubId,
+      github_login: c.githubLogin,
+      avatar_url: c.avatarUrl ?? null,
+    })),
+  });
 
-    const { error: patError } = await supabase.rpc("set_board_github_pat", {
-      p_board_id: boardId,
-      p_raw_token: parsed.data.pat,
-      p_encryption_key: GITHUB_TOKEN_ENCRYPTION_KEY,
+  if (result.error) {
+    if (result.error.code === "23505") {
+      return json({ error: "You already have a board with that name" }, 409);
+    }
+    logger.error("[boards] create_board_atomic failed", {
+      boardName: parsed.data.name,
+      userId: user.id,
+      pgCode: result.error.code,
+      detail: result.error.message,
     });
-    if (patError) {
-      logger.error(`[boards] PAT storage failed for board ${boardId}: ${patError.message}`);
-      return json({ error: "Failed to store GitHub token. Please try again." }, 500);
-    }
-
-    const { error: reposError } = await supabase.from("github_repos").insert(
-      parsed.data.repos.map((r) => ({
-        board_id: boardId,
-        repo_owner: r.owner,
-        repo_name: r.name,
-        connected_by: user.id,
-      })),
-    );
-    if (reposError) {
-      logger.warn(`[boards] Repo linking failed for board ${boardId}: ${reposError.message}`);
-    }
-
-    try {
-      await addBoardContributors(
-        supabase,
-        boardId,
-        parsed.data.contributors.map((c) => ({
-          githubId: c.githubId,
-          githubLogin: c.githubLogin,
-          avatarUrl: c.avatarUrl ?? null,
-        })),
-      );
-    } catch (err) {
-      // Contributor insert failed — delete the board so the user can retry cleanly.
-      // ON DELETE CASCADE removes github_repos and the encrypted PAT automatically.
-      const { error: deleteError } = await supabase.from("boards").delete().eq("id", boardId);
-      if (deleteError) {
-        logger.error(`[boards] Cleanup delete failed for orphaned board ${boardId}: ${deleteError.message}`);
-      }
-      throw err;
-    }
-
-    return json({ id: boardId }, 201);
-  } catch (err) {
-    if (err instanceof BoardNameTakenError) {
-      return json({ error: err.message }, 409);
-    }
-    logger.error("[boards]", err);
-    return json({ error: "Something went wrong. Please try again." }, 500);
+    return json({ error: "Board creation failed. Please try again." }, 500);
   }
+
+  return json({ id: result.data as string }, 201);
 };

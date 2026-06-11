@@ -627,24 +627,24 @@ All migrations are additive:
 
 #### Automated
 
-- [x] 1.1 Migration applies cleanly: `npx supabase db reset`
-- [x] 1.2 `create_board_atomic` function exists in pg_proc
-- [x] 1.3 `set_board_github_pat` removed from pg_proc
-- [x] 1.4 `get_board_github_pat` still exists and works
+- [x] 1.1 Migration applies cleanly: `npx supabase db reset` — 4883af9
+- [x] 1.2 `create_board_atomic` function exists in pg_proc — 4883af9
+- [x] 1.3 `set_board_github_pat` removed from pg_proc — 4883af9
+- [x] 1.4 `get_board_github_pat` still exists and works — 4883af9
 
 #### Manual
 
-- [x] 1.5 Atomic creation via SQL editor with test data succeeds
-- [x] 1.6 Duplicate name returns 23505, no partial state
-- [x] 1.7 Wrong user ID returns 42501
+- [x] 1.5 Atomic creation via SQL editor with test data succeeds — 4883af9
+- [x] 1.6 Duplicate name returns 23505, no partial state — 4883af9
+- [x] 1.7 Wrong user ID returns 42501 — 4883af9
 
 ### Phase 2: Endpoint Rewrite
 
 #### Automated
 
-- [ ] 2.1 TypeScript compiles: `npm run lint`
-- [ ] 2.2 Build succeeds: `npm run build`
-- [ ] 2.3 No references to old service functions in index.ts
+- [x] 2.1 TypeScript compiles: `npm run lint`
+- [x] 2.2 Build succeeds: `npm run build`
+- [x] 2.3 No references to old service functions in index.ts
 
 #### Manual
 
