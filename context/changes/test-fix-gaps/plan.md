@@ -250,7 +250,9 @@ Rewrite hermetic tests for the new single-RPC contract. Update `pat-leak.test.ts
 - Generic RPC failure: `.rpc()` returns error → handler returns 500 with generic message
 - Zod validation failure: invalid payload → handler returns 400 with field errors
 - Unauthenticated: `auth.getUser()` returns null → handler returns 401
-- Empty repos/contributors: valid payload with empty arrays → handler calls `.rpc()` with empty JSONB arrays
+- Empty repos/contributors: invalid payload (`repos: []` / `contributors: []`) → handler returns 400 with the field-specific message (`"At least one repository is required"` / `"At least one contributor is required"`); `.rpc()` is never called
+
+> **Implementation-time correction**: the original wording of the last bullet was "valid payload with empty arrays → handler calls `.rpc()` with empty JSONB arrays". That contradicts the business rule (a board requires ≥1 repo and ≥1 contributor) and the existing `.min(1)` Zod constraints at `src/pages/api/boards/index.ts:28-29`, so empty arrays never reach `.rpc()`. The bullet above reflects the actual, correct, pre-existing 400 behavior (equivalent to H7 in the old suite). `index.ts` is unchanged; `create_board_atomic`'s `IF jsonb_array_length(...) > 0` guards remain defensive SQL-side code not exercised via the API.
 
 Mock structure: `vi.hoisted()` for mock variables, `vi.mock("@/lib/supabase")`, `vi.mock("astro:env/server")`. `makeContext` helper builds `APIContext` from a `Request`. `beforeEach` resets mocks and configures happy-path defaults.
 
@@ -668,14 +670,14 @@ All migrations are additive:
 
 #### Automated
 
-- [ ] 4.1 `npm test` passes — all hermetic and integration tests green
-- [ ] 4.2 Zero "Known defect" comments in hermetic tests
-- [ ] 4.3 pat-leak tests pass with Supabase running
+- [x] 4.1 `npm test` passes — all hermetic and integration tests green
+- [x] 4.2 Zero "Known defect" comments in hermetic tests
+- [x] 4.3 pat-leak tests pass with Supabase running
 
 #### Manual
 
-- [ ] 4.4 Review hermetic suite covers success, duplicate, failure, validation, auth cases
-- [ ] 4.5 Review pat-leak suite: sentinel PAT absent from response and logs
+- [x] 4.4 Review hermetic suite covers success, duplicate, failure, validation, auth cases
+- [x] 4.5 Review pat-leak suite: sentinel PAT absent from response and logs
 
 ### Phase 5: Reducer Extraction + Unit Tests
 

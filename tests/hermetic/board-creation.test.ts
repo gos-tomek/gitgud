@@ -15,27 +15,10 @@ const mockLogger = vi.hoisted(() => ({
 }));
 vi.mock("@/lib/logger", () => ({ logger: mockLogger }));
 
-// BoardNameTakenError must be re-declared here because index.ts uses `instanceof`
-// checks against the class exported from this mocked module.
-const mockBoardServices = vi.hoisted(() => ({
-  createBoard: vi.fn(),
-  addBoardContributors: vi.fn(),
-  BoardNameTakenError: class BoardNameTakenError extends Error {
-    constructor() {
-      super("You already have a board with that name");
-      this.name = "BoardNameTakenError";
-    }
-  },
-}));
-vi.mock("@/lib/services/boards", () => mockBoardServices);
-
 const mockSupabase = vi.hoisted(() => ({
   auth: { getUser: vi.fn() },
   rpc: vi.fn(),
-  from: vi.fn(),
 }));
-const mockRepoInsert = vi.hoisted(() => vi.fn());
-const mockDeleteEq = vi.hoisted(() => vi.fn());
 vi.mock("@/lib/supabase", () => ({ createClient: vi.fn(() => mockSupabase) }));
 
 const { POST } = await import("@/pages/api/boards/index");
@@ -68,107 +51,75 @@ describe("POST /api/boards (hermetic)", () => {
     vi.clearAllMocks();
 
     mockSupabase.auth.getUser.mockResolvedValue({ data: { user: { id: "user-1" } } });
-    mockSupabase.rpc.mockResolvedValue({ error: null });
-    mockSupabase.from.mockImplementation((table: string) => {
-      if (table === "github_repos") return { insert: mockRepoInsert };
-      if (table === "boards") return { delete: vi.fn(() => ({ eq: mockDeleteEq })) };
-      throw new Error(`Unexpected table: ${table}`);
-    });
-    mockRepoInsert.mockResolvedValue({ error: null });
-    mockDeleteEq.mockResolvedValue({ error: null });
-
-    mockBoardServices.createBoard.mockResolvedValue({ id: "board-1" });
-    mockBoardServices.addBoardContributors.mockResolvedValue(undefined);
+    mockSupabase.rpc.mockResolvedValue({ data: "board-1", error: null });
   });
 
-  it("H1: happy path - all 4 steps succeed returns 201 with board id", async () => {
+  it("happy path: rpc succeeds, returns 201 with board id, calls rpc with mapped args", async () => {
     const res = await POST(makeContext(validBody));
 
     expect(res.status).toBe(201);
     const body = (await res.json()) as { id: string };
     expect(body).toEqual({ id: "board-1" });
+    expect(mockSupabase.rpc).toHaveBeenCalledWith("create_board_atomic", {
+      p_user_id: "user-1",
+      p_name: "Test Board",
+      p_raw_token: "ghp_testtoken123",
+      p_encryption_key: "test-encryption-key",
+      p_repos: [{ owner: "octocat", name: "hello-world" }],
+      p_contributors: [{ github_id: 1, github_login: "octocat", avatar_url: "https://avatars.example/octocat.png" }],
+    });
   });
 
-  it("H2: step 1 fails (unique name, 23505) returns 409, no further calls", async () => {
-    mockBoardServices.createBoard.mockRejectedValueOnce(new mockBoardServices.BoardNameTakenError());
+  it("duplicate name: rpc returns 23505 returns 409 with the duplicate-name message", async () => {
+    mockSupabase.rpc.mockResolvedValueOnce({
+      data: null,
+      error: { code: "23505", message: "duplicate key value violates unique constraint" },
+    });
 
     const res = await POST(makeContext(validBody));
 
     expect(res.status).toBe(409);
     const body = (await res.json()) as { error: string };
     expect(body.error).toBe("You already have a board with that name");
-    expect(mockSupabase.rpc).not.toHaveBeenCalled();
-    expect(mockBoardServices.addBoardContributors).not.toHaveBeenCalled();
   });
 
-  it("H3: step 2 fails (PAT storage) returns 500, board not deleted", async () => {
-    mockSupabase.rpc.mockResolvedValueOnce({ error: { message: "permission denied" } });
+  it("generic rpc failure returns 500 with a generic message and logs the pg error detail", async () => {
+    mockSupabase.rpc.mockResolvedValueOnce({
+      data: null,
+      error: { code: "XX000", message: "internal error" },
+    });
 
     const res = await POST(makeContext(validBody));
 
     expect(res.status).toBe(500);
     const body = (await res.json()) as { error: string };
-    expect(body.error).toBe("Failed to store GitHub token. Please try again.");
-    // Known defect S3: PAT storage failure returns 500 without deleting the board
-    // created in step 1, orphaning it (blocks retry via the unique-name constraint).
-    expect(mockSupabase.from).not.toHaveBeenCalledWith("boards");
+    expect(body.error).toBe("Board creation failed. Please try again.");
+    expect(mockLogger.error).toHaveBeenCalledWith(
+      "[boards] create_board_atomic failed",
+      expect.objectContaining({ boardName: "Test Board", userId: "user-1", pgCode: "XX000", detail: "internal error" }),
+    );
   });
 
-  it("H4: step 3 fails (repo linking) returns 201, addBoardContributors still called", async () => {
-    mockRepoInsert.mockResolvedValueOnce({ error: { message: "constraint violation" } });
-
-    const res = await POST(makeContext(validBody));
-
-    expect(res.status).toBe(201);
-    const body = (await res.json()) as { id: string };
-    expect(body).toEqual({ id: "board-1" });
-    // Known defect S4: repo linking failure is logged as a warning and swallowed —
-    // the endpoint returns 201 even though the board has zero repos.
-    expect(mockBoardServices.addBoardContributors).toHaveBeenCalled();
-  });
-
-  it("H5: step 4 fails, cleanup succeeds - returns 500 and deletes the board by id", async () => {
-    mockBoardServices.addBoardContributors.mockRejectedValueOnce(new Error("insert failed"));
-
-    const res = await POST(makeContext(validBody));
-
-    expect(res.status).toBe(500);
-    const body = (await res.json()) as { error: string };
-    expect(body.error).toBe("Something went wrong. Please try again.");
-    expect(mockSupabase.from).toHaveBeenCalledWith("boards");
-    expect(mockDeleteEq).toHaveBeenCalledWith("id", "board-1");
-  });
-
-  it("H6: step 4 fails, cleanup also fails - returns 500 and logs the cleanup failure", async () => {
-    mockBoardServices.addBoardContributors.mockRejectedValueOnce(new Error("insert failed"));
-    mockDeleteEq.mockResolvedValueOnce({ error: { message: "delete denied" } });
-
-    const res = await POST(makeContext(validBody));
-
-    expect(res.status).toBe(500);
-    const body = (await res.json()) as { error: string };
-    expect(body.error).toBe("Something went wrong. Please try again.");
-    // Cleanup-of-cleanup failure orphans the board (S6) — the endpoint still returns
-    // 500, but the failure is recorded so it can be diagnosed from logs.
-    expect(mockLogger.error).toHaveBeenCalledWith(expect.stringContaining("Cleanup delete failed"));
-  });
-
-  describe("H7: validation - missing/invalid fields", () => {
+  describe("validation: missing/empty fields", () => {
     it.each<[string, CreateBoardBody, string]>([
       ["name", { ...validBody, name: "" }, "Board name is required"],
       ["pat", { ...validBody, pat: "" }, "GitHub token is required"],
       ["repos", { ...validBody, repos: [] }, "At least one repository is required"],
       ["contributors", { ...validBody, contributors: [] }, "At least one contributor is required"],
-    ])("H7 (%s): returns 400 with the field-specific message", async (_field, body, expectedMessage) => {
-      const res = await POST(makeContext(body));
+    ])(
+      "%s: returns 400 with the field-specific message, rpc is never called",
+      async (_field, body, expectedMessage) => {
+        const res = await POST(makeContext(body));
 
-      expect(res.status).toBe(400);
-      const json = (await res.json()) as { error: string };
-      expect(json.error).toBe(expectedMessage);
-    });
+        expect(res.status).toBe(400);
+        const json = (await res.json()) as { error: string };
+        expect(json.error).toBe(expectedMessage);
+        expect(mockSupabase.rpc).not.toHaveBeenCalled();
+      },
+    );
   });
 
-  it("H8: no session returns 401", async () => {
+  it("no session returns 401, rpc is never called", async () => {
     mockSupabase.auth.getUser.mockResolvedValueOnce({ data: { user: null } });
 
     const res = await POST(makeContext(validBody));
@@ -176,5 +127,6 @@ describe("POST /api/boards (hermetic)", () => {
     expect(res.status).toBe(401);
     const body = (await res.json()) as { error: string };
     expect(body.error).toBe("Unauthorized");
+    expect(mockSupabase.rpc).not.toHaveBeenCalled();
   });
 });

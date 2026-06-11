@@ -45,46 +45,35 @@ describe.skipIf(!canRun)("PAT non-leakage (Risk #2)", () => {
     contributorUserId = contributorResult.userId;
     contributorClient = contributorResult.client;
 
-    // 2. Create board owned by ownerUser (trigger auto-enrolls owner)
-    const { data: board, error: boardError } = await adminClient
-      .from("boards")
-      .insert({ name: `PAT Leak Test ${ts}`, owner_user_id: ownerUserId })
-      .select("id")
-      .single();
-    if (boardError) throw new Error(`Failed to create board: ${boardError.message}`);
-    ownerBoardId = board.id as string;
+    // 2. Create the board, store the sentinel PAT, and link a repo in one
+    //    atomic call. create_board_atomic is a SECURITY DEFINER function that
+    //    validates p_user_id = auth.uid() — it must be called as the owner,
+    //    not the admin service role (which has auth.uid() = null). The
+    //    boards_insert_owner_as_member trigger auto-enrolls the owner.
+    //    A repo is required so the sync endpoint gets past the early-exit guard
+    //    (syncBoardGitHubData returns early when repos.length === 0 without
+    //    ever decrypting the PAT, so we need at least one repo to reach the
+    //    GitHub API call that fails with an auth error).
+    const createResult = await ownerClient.rpc("create_board_atomic", {
+      p_user_id: ownerUserId,
+      p_name: `PAT Leak Test ${ts}`,
+      p_raw_token: TEST_PAT,
+      p_encryption_key: ENCRYPTION_KEY,
+      p_repos: [{ owner: "test-org", name: "test-repo-pat-leak" }],
+      p_contributors: [],
+    });
+    if (createResult.error) throw new Error(`Failed to create board: ${createResult.error.message}`);
+    ownerBoardId = createResult.data as string;
 
-    // 3. Add contributor as a board member (requires admin — owner-only by RLS)
+    // 3. Add contributor as a board member (requires admin — owner-only by RLS;
+    //    contributors aren't added via create_board_atomic)
     const { error: memberError } = await adminClient
       .from("board_members")
       .insert({ board_id: ownerBoardId, user_id: contributorUserId });
     if (memberError) throw new Error(`Failed to add contributor: ${memberError.message}`);
 
-    // 4. Seed a GitHub repo so the sync endpoint gets past the early-exit guard
-    //    (syncBoardGitHubData returns early when repos.length === 0 without
-    //    ever decrypting the PAT, so we need at least one repo to reach the
-    //    GitHub API call that fails with an auth error).
-    const { error: repoError } = await adminClient.from("github_repos").insert({
-      board_id: ownerBoardId,
-      repo_owner: "test-org",
-      repo_name: "test-repo-pat-leak",
-      connected_by: ownerUserId,
-    });
-    if (repoError) throw new Error(`Failed to create repo: ${repoError.message}`);
-
-    // 5. Store the sentinel PAT via the owner's authenticated client.
-    //    set_board_github_pat is a SECURITY DEFINER function that calls
-    //    is_board_owner() internally — it must be called as the owner, not
-    //    the admin service role (which has auth.uid() = null).
-    const { error: patError } = await ownerClient.rpc("set_board_github_pat", {
-      p_board_id: ownerBoardId,
-      p_raw_token: TEST_PAT,
-      p_encryption_key: ENCRYPTION_KEY,
-    });
-    if (patError) throw new Error(`Failed to store test PAT: ${patError.message}`);
-
-    // 6. Start the Astro dev server (reads GITHUB_TOKEN_ENCRYPTION_KEY from
-    //    .dev.vars, which must match ENCRYPTION_KEY used in step 5 above).
+    // 4. Start the Astro dev server (reads GITHUB_TOKEN_ENCRYPTION_KEY from
+    //    .dev.vars, which must match ENCRYPTION_KEY used in step 2 above).
     server = await startAstroServer(DEV_SERVER_PORT);
 
     ownerFetch = createAuthenticatedFetch(ownerClient, server.baseUrl);
