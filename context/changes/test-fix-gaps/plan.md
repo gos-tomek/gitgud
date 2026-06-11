@@ -697,17 +697,17 @@ All migrations are additive:
 
 #### Automated
 
-- [x] 6.1 TypeScript compiles: `npm run lint`
-- [x] 6.2 Build succeeds: `npm run build`
-- [x] 6.3 React Compiler lint rule passes
+- [x] 6.1 TypeScript compiles: `npm run lint` — f70960a
+- [x] 6.2 Build succeeds: `npm run build` — f70960a
+- [x] 6.3 React Compiler lint rule passes — f70960a
 
 #### Manual
 
-- [x] 6.4 Full wizard flow: step 1 → 2 → 3 → submit → redirect
-- [x] 6.5 Bug 1: back from step 3, change repos, return → fresh contributors
-- [x] 6.6 Bug 2: change PAT mid-validation → previous cancelled
-- [x] 6.7 Bug 3: limited-scope PAT → warnings displayed
-- [x] 6.8 Bug 4 (reclassified): repos with no collaborators → Create Board stays disabled; Back lets you pick different repos
+- [x] 6.4 Full wizard flow: step 1 → 2 → 3 → submit → redirect — f70960a
+- [x] 6.5 Bug 1: back from step 3, change repos, return → fresh contributors — f70960a
+- [x] 6.6 Bug 2: change PAT mid-validation → previous cancelled — f70960a
+- [x] 6.7 Bug 3: limited-scope PAT → warnings displayed — f70960a
+- [x] 6.8 Bug 4 (reclassified): repos with no collaborators → Create Board stays disabled; Back lets you pick different repos — f70960a
 
 ### Phase 7: Component Test Adaptation
 
