@@ -642,27 +642,27 @@ All migrations are additive:
 
 #### Automated
 
-- [x] 2.1 TypeScript compiles: `npm run lint`
-- [x] 2.2 Build succeeds: `npm run build`
-- [x] 2.3 No references to old service functions in index.ts
+- [x] 2.1 TypeScript compiles: `npm run lint` — ba63a51
+- [x] 2.2 Build succeeds: `npm run build` — ba63a51
+- [x] 2.3 No references to old service functions in index.ts — ba63a51
 
 #### Manual
 
-- [ ] 2.4 Create board via UI → 201, appears on dashboard
-- [ ] 2.5 Duplicate name via UI → error displayed
+- [x] 2.4 Create board via UI → 201, appears on dashboard — ba63a51
+- [x] 2.5 Duplicate name via UI → error displayed — ba63a51
 
 ### Phase 3: Dead Code Removal
 
 #### Automated
 
-- [ ] 3.1 TypeScript compiles: `npm run lint`
-- [ ] 3.2 Build succeeds: `npm run build`
-- [ ] 3.3 No createBoard/addBoardContributors/BoardNameTakenError in src/
+- [x] 3.1 TypeScript compiles: `npm run lint`
+- [x] 3.2 Build succeeds: `npm run build`
+- [x] 3.3 No createBoard/addBoardContributors/BoardNameTakenError in src/
 
 #### Manual
 
-- [ ] 3.4 Dashboard page loads correctly
-- [ ] 3.5 Board detail page loads correctly
+- [x] 3.4 Dashboard page loads correctly
+- [x] 3.5 Board detail page loads correctly
 
 ### Phase 4: API Test Updates
 

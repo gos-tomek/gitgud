@@ -23,29 +23,6 @@ function toUserBoard(row: BoardRow, userId: string): UserBoard {
   };
 }
 
-export class BoardNameTakenError extends Error {
-  constructor() {
-    super("You already have a board with that name");
-    this.name = "BoardNameTakenError";
-  }
-}
-
-export async function createBoard(supabase: SupabaseClient, userId: string, name: string): Promise<{ id: string }> {
-  const trimmed = name.trim();
-  const { data, error } = await supabase
-    .from("boards")
-    .insert({ name: trimmed, owner_user_id: userId })
-    .select("id")
-    .single();
-
-  if (error) {
-    if (error.code === "23505") throw new BoardNameTakenError();
-    throw error;
-  }
-
-  return { id: String(data.id) };
-}
-
 export async function getUserBoards(supabase: SupabaseClient, userId: string): Promise<UserBoard[]> {
   const { data, error } = await supabase
     .from("boards")
@@ -111,21 +88,4 @@ export async function getBoardContributors(supabase: SupabaseClient, boardId: st
     userId: row.user_id as string | null,
     addedAt: row.added_at as string,
   }));
-}
-
-export async function addBoardContributors(
-  supabase: SupabaseClient,
-  boardId: string,
-  contributors: { githubId: number; githubLogin: string; avatarUrl: string | null | undefined }[],
-): Promise<void> {
-  const { error } = await supabase.from("board_contributors").insert(
-    contributors.map((c) => ({
-      board_id: boardId,
-      github_id: c.githubId,
-      github_login: c.githubLogin,
-      avatar_url: c.avatarUrl ?? null,
-    })),
-  );
-
-  if (error) throw error;
 }
