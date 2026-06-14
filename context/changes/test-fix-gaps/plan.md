@@ -739,11 +739,11 @@ All migrations are additive:
 
 #### Automated
 
-- [x] 9.1 `npm test` passes — all test suites green
-- [x] 9.2 `npm run lint` passes
-- [x] 9.3 Zero "gap verification"/"known gap" comments in tests
+- [x] 9.1 `npm test` passes — all test suites green — cdae29d
+- [x] 9.2 `npm run lint` passes — cdae29d
+- [x] 9.3 Zero "gap verification"/"known gap" comments in tests — cdae29d
 
 #### Manual
 
-- [x] 9.4 Server output shows [REDACTED] for PAT patterns
-- [x] 9.5 Access-boundary test names have no "gap" language
+- [x] 9.4 Server output shows [REDACTED] for PAT patterns — cdae29d
+- [x] 9.5 Access-boundary test names have no "gap" language — cdae29d
