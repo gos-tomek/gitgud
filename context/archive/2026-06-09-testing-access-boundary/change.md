@@ -1,11 +1,11 @@
 ---
 change_id: testing-access-boundary
 title: Testing access boundary
-status: done
+status: archived
 created: 2026-06-09
-updated: 2026-06-09
+updated: 2026-06-14
 
-archived_at: null
+archived_at: 2026-06-14T12:45:50Z
 ---
 
 ## Notes
