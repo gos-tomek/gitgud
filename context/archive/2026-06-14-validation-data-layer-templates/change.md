@@ -1,10 +1,10 @@
 ---
 change_id: validation-data-layer-templates
 title: RLS regression and Zod validation test templates
-status: implemented
+status: archived
 created: 2026-06-14
 updated: 2026-06-14
-archived_at: null
+archived_at: 2026-06-14T13:25:43Z
 ---
 
 ## Notes
