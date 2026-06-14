@@ -6,7 +6,7 @@
 >
 > Refresh: re-run `/10x-test-plan --refresh` when stale (see §8).
 >
-> Last updated: 2026-06-09
+> Last updated: 2026-06-14
 
 ## 1. Strategy
 
@@ -77,7 +77,7 @@ orchestrator updates Status as artifacts appear on disk.
 | --- | --------------------------------- | --------------------------------------------------------------------------------------- | -------------------- | --------------------------------------------------------------- | ----------- | ---------------------------------------- |
 | 1   | Bootstrap + access boundary       | Install test runner; prove cross-board isolation and PAT non-leakage with real DB tests | #1, #2, #5           | integration (real Supabase)                                     | shipped     | context/changes/testing-access-boundary/ |
 | 2   | Board creation contract           | Prove wizard state machine and API orchestration handle happy + failure paths           | #3, #4               | component (vitest + testing-library), hermetic (stubbed client) | shipped     | context/changes/board-creation-contract/ |
-| 3   | Validation + data layer templates | RLS regression template for new tables; validation test template for API routes         | #5, #6               | integration (RLS per-table), unit (Zod schemas)                 | not started | —                                        |
+| 3   | Validation + data layer templates | RLS regression template for new tables; validation test template for API routes         | #5, #6               | integration (RLS per-table), unit (Zod schemas)                 | skipped — covered by Phase 1 + Phase 2 patterns | context/changes/validation-data-layer-templates/ |
 | 4   | Quality gates                     | Wire vitest into CI; set minimum signal floor; update project conventions               | cross-cutting        | CI gates                                                        | not started | —                                        |
 | 5   | Slice-ready contracts             | Cover deferred risks #7–#11 as their prerequisite slices ship                           | #7, #8, #9, #10, #11 | integration, hermetic                                           | not started | —                                        |
 
@@ -392,15 +392,29 @@ When a test asserts current (buggy) behavior rather than desired behavior, add a
 
 ### 6.4 Adding a unit test (Zod schema / pure function)
 
-TBD — see §3 Phase 3 for validation template and Zod schema patterns.
+**Reference implementation**: `tests/hermetic/board-creation.test.ts:118-135`
+
+Phase 3 (validation templates) was skipped — all 7 API routes already follow an identical
+`safeParse → 400` Zod wiring (see `context/changes/validation-data-layer-templates/research.md`).
+The hermetic test above is the validation template: an `it.each` over `[fieldName, mutatedBody,
+expectedMessage]` asserting 400 status, the Zod error message, and no downstream side-effect call.
+Copy this pattern for new routes. A dedicated pure-Zod unit-test layer is only worth adding if a
+future schema introduces `.refine()` or `.transform()` with custom logic.
 
 ### 6.5 Adding a test for a new API endpoint
 
-TBD — see §3 Phase 1 (integration) and Phase 3 (validation template).
+TBD — see §3 Phase 1 (integration) and §6.4 (validation template).
 
 ### 6.6 Adding an RLS test for a new migration
 
-TBD — see §3 Phase 3 for the per-table RLS regression template.
+**Reference implementation**: `tests/integration/access-boundary.test.ts`
+
+Phase 3 (RLS regression template) was skipped — §6.1 already documents the full pattern with
+per-operation RLS denial assertion shapes (see `context/changes/validation-data-layer-templates/research.md`).
+For a new table: add seed data to `seedTwoBoards()` (`tests/helpers/seed.ts`), then copy one test
+per policy-defined operation (SELECT/INSERT/UPDATE/DELETE) from `access-boundary.test.ts`, swapping
+the table name and columns. Follow the assertion shapes in §6.1's "RLS denial assertion patterns"
+table for the operation(s) the new table's policies define.
 
 ### 6.7 Per-rollout-phase notes
 
