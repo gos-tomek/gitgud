@@ -34,16 +34,18 @@ function jsonResponse(body: unknown, status = 200): Response {
 
 interface FetchMockOptions {
   collaboratorResponses?: { collaborators: (typeof COLLAB_A)[] }[];
+  validatePatResponse?: { login: string; avatarUrl?: string; warning?: string };
 }
 
 function installFetchMock(options: FetchMockOptions = {}) {
   const collaboratorResponses = options.collaboratorResponses ?? [{ collaborators: [COLLAB_A, COLLAB_B] }];
+  const validatePatResponse = options.validatePatResponse ?? { login: "octocat", avatarUrl: COLLAB_A.avatarUrl };
   let collaboratorCallCount = 0;
 
   const fetchMock = vi.fn((input: string, _init?: RequestInit): Promise<Response> => {
     switch (input) {
       case "/api/github/validate-pat":
-        return Promise.resolve(jsonResponse({ login: "octocat", avatarUrl: COLLAB_A.avatarUrl }));
+        return Promise.resolve(jsonResponse(validatePatResponse));
       case "/api/boards/check-name":
         return Promise.resolve(new Response(null, { status: 204 }));
       case "/api/github/repos":
@@ -230,7 +232,7 @@ describe("CreateBoardForm", () => {
     expect(secondBody.repos).toEqual([{ owner: REPO_A.owner, name: REPO_A.name }]);
   });
 
-  it("W6: keeps stale selectedContributors after the collaborator list changes (documents Bug 1)", async () => {
+  it("W6: clears selectedContributors after returning to Step 2 and changing the repo selection (Bug 1 fix)", async () => {
     installFetchMock({
       collaboratorResponses: [{ collaborators: [COLLAB_A, COLLAB_B] }, { collaborators: [COLLAB_A] }],
     });
@@ -252,11 +254,13 @@ describe("CreateBoardForm", () => {
     await goToStep3(user);
     await screen.findByText(`@${COLLAB_A.login}`);
 
-    // Known bug (Bug 1): handleBack/handleBackToStep2 never clear selectedContributors,
-    // so "monalisa" (selected during the first Step 3 visit) stays counted even though
-    // the refreshed collaborator list no longer contains them and they cannot be unchecked.
+    // Bug 1 fix: BACK_TO_STEP_2 clears selectedContributors, so the stale
+    // "monalisa" pick from the first Step 3 visit doesn't carry forward into
+    // the refreshed collaborator list, and Create Board is disabled again
+    // until a contributor from the new list is selected.
     expect(screen.queryByText(`@${COLLAB_B.login}`)).not.toBeInTheDocument();
-    expect(screen.getByText(/1 contributor selected/i)).toBeInTheDocument();
+    expect(screen.queryByText(/contributor.*selected/i)).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /create board/i })).toBeDisabled();
   });
 
   it("W7: disables Next on Step 2 when no repos are selected", async () => {
@@ -293,5 +297,17 @@ describe("CreateBoardForm", () => {
 
     expect(await screen.findByText(/No collaborators found/i)).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /create board/i })).toBeDisabled();
+  });
+
+  it("W10: displays PAT validation warnings returned by the API (Bug 3 fix)", async () => {
+    const WARNING = "Token is missing the read:org scope";
+    installFetchMock({ validatePatResponse: { login: "octocat", avatarUrl: COLLAB_A.avatarUrl, warning: WARNING } });
+    const user = userEvent.setup();
+    render(<CreateBoardForm />);
+
+    await user.type(screen.getByLabelText(/GitHub Personal Access Token/i), PAT);
+    await waitFor(() => expect(screen.getByText(/Connected as/i)).toBeInTheDocument(), { timeout: 2000 });
+
+    expect(screen.getByText(WARNING)).toBeInTheDocument();
   });
 });
