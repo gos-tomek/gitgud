@@ -457,13 +457,13 @@ Update test-plan.md (§3 status, §5 quality gates table), CLAUDE.md (commands, 
 
 #### Automated
 
-- [x] 5.1 `npm run lint` passes
-- [x] 5.2 test-plan.md §3/§5 updated consistently
-- [x] 5.3 CLAUDE.md mentions Lefthook, two CI jobs, four test directories
+- [x] 5.1 `npm run lint` passes — 1227dc3
+- [x] 5.2 test-plan.md §3/§5 updated consistently — 1227dc3
+- [x] 5.3 CLAUDE.md mentions Lefthook, two CI jobs, four test directories — 1227dc3
 
 #### Manual
 
-- [x] 5.4 Updated docs are accurate on review
+- [x] 5.4 Updated docs are accurate on review — 1227dc3
 - [ ] 5.5 Branch protection configured in GitHub UI
 - [ ] 5.6 PR shows required checks after protection is set
 

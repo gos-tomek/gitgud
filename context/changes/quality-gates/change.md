@@ -1,7 +1,7 @@
 ---
 change_id: quality-gates
 title: Wire vitest into CI and set minimum quality gates
-status: implementing
+status: implemented
 created: 2026-06-14
 updated: 2026-06-14
 archived_at: null
