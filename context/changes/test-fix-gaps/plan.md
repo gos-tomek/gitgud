@@ -726,14 +726,14 @@ All migrations are additive:
 
 #### Automated
 
-- [x] 8.1 Migration applies cleanly: `npx supabase db reset`
-- [x] 8.2 `npm test` passes — all integration tests green
-- [x] 8.3 Cross-board isolation tests unchanged and passing
+- [x] 8.1 Migration applies cleanly: `npx supabase db reset` — 3975550
+- [x] 8.2 `npm test` passes — all integration tests green — 3975550
+- [x] 8.3 Cross-board isolation tests unchanged and passing — 3975550
 
 #### Manual
 
-- [x] 8.4 Verify REVOKE in Supabase Studio privilege list
-- [ ] 8.5 Board creation via UI still succeeds
+- [x] 8.4 Verify REVOKE in Supabase Studio privilege list — 3975550
+- [x] 8.5 Board creation via UI still succeeds — 3975550
 
 ### Phase 9: Logger Redaction + Test Cleanup
 
