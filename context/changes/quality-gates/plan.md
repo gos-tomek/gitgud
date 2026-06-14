@@ -441,28 +441,30 @@ Update test-plan.md (§3 status, §5 quality gates table), CLAUDE.md (commands, 
 
 #### Automated
 
-- [x] 4.1 `ci.yml` is valid YAML
-- [x] 4.2 `deploy.yml` is valid YAML
-- [x] 4.3 CI validate job includes typecheck + non-integration tests
-- [x] 4.4 CI test-integration job includes supabase start + integration tests
-- [x] 4.5 Deploy pre-deploy-tests job runs before deploy-production
+- [x] 4.1 `ci.yml` is valid YAML — a442077
+- [x] 4.2 `deploy.yml` is valid YAML — a442077
+- [x] 4.3 CI validate job includes typecheck + non-integration tests — a442077
+- [x] 4.4 CI test-integration job includes supabase start + integration tests — a442077
+- [x] 4.5 Deploy pre-deploy-tests job runs before deploy-production — a442077
 
 #### Manual
 
-- [ ] 4.6 PR shows both validate and test-integration jobs
-- [ ] 4.7 test-integration starts Supabase and runs integration tests
+- [x] 4.6 PR shows both validate and test-integration jobs
+- [x] 4.7 test-integration starts Supabase and runs integration tests
 - [ ] 4.8 PR cannot merge if either job fails
 
 ### Phase 5: Update documentation and close Phase 4
 
 #### Automated
 
-- [ ] 5.1 `npm run lint` passes
-- [ ] 5.2 test-plan.md §3/§5 updated consistently
-- [ ] 5.3 CLAUDE.md mentions Lefthook, two CI jobs, four test directories
+- [x] 5.1 `npm run lint` passes
+- [x] 5.2 test-plan.md §3/§5 updated consistently
+- [x] 5.3 CLAUDE.md mentions Lefthook, two CI jobs, four test directories
 
 #### Manual
 
-- [ ] 5.4 Updated docs are accurate on review
+- [x] 5.4 Updated docs are accurate on review
 - [ ] 5.5 Branch protection configured in GitHub UI
 - [ ] 5.6 PR shows required checks after protection is set
+
+> **Known limitation (4.8, 5.5, 5.6):** Branch protection / required status checks cannot be configured on `gos-tomek/gitgud` because it is a private repository on the GitHub Free plan. Both `gh api repos/gos-tomek/gitgud/branches/main/protection` and `.../rulesets` return `403 Upgrade to GitHub Pro or make this repository public to enable this feature`, even though `gh api repos/gos-tomek/gitgud --jq '.permissions'` confirms `admin: true` (verified 2026-06-14). These three items stay `[ ]` until the repo is upgraded to GitHub Pro/Team or made public — tracked as a follow-up outside this change, not a blocker for closing Phase 5.

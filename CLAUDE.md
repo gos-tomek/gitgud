@@ -14,12 +14,13 @@ This file provides guidance to AI Agent when working with code in this repositor
 - `npm run dev` — start dev server (Cloudflare workerd runtime)
 - `npm run build` — production build (SSR via `@astrojs/cloudflare`)
 - `npm run preview` — preview production build
-- `npm test` — run integration test suite (requires local Supabase — see Testing below)
+- `npm test` — run all tests (unit, component, hermetic, integration; integration tests require local Supabase — see Testing below)
+- `npm run test:typecheck` — type-check test files (`tsc --project tests/tsconfig.json --noEmit`; the root `tsconfig.json` excludes `tests/`, so this is the only typecheck that covers them)
 - `npm run lint` — ESLint with type-checked rules
 - `npm run lint:fix` — auto-fix lint issues
 - `npm run format` — Prettier (includes prettier-plugin-astro + prettier-plugin-tailwindcss)
 
-Pre-commit hooks: husky + lint-staged runs `eslint --fix` on `*.{ts,tsx,astro}` and `prettier --write` on `*.{json,css,md}`.
+Pre-commit hooks (Lefthook, parallel): `eslint --fix` on staged `*.{ts,tsx,astro}`, `prettier --write` on staged `*.{json,css,md}`, `tsc --noEmit` (src), `tsc --noEmit --project tests/tsconfig.json` (tests), and `vitest run --exclude 'tests/integration/**'`.
 
 Prettier config: `printWidth: 120`, `semi: true`, `singleQuote: false`, `trailingComma: "all"`. Do not wrap lines at 80 chars.
 
@@ -65,11 +66,16 @@ Full server-side rendering (`output: "server"` in astro.config.mjs). All routes 
 
 ## CI
 
-GitHub Actions workflow (`.github/workflows/ci.yml`) runs lint + build on every push and PR to master. Requires `SUPABASE_URL` and `SUPABASE_KEY` repository secrets for the build step.
+GitHub Actions runs two required jobs on every PR to `main` (`.github/workflows/ci.yml`):
+
+- `validate` — lint, typecheck (`npx tsc --noEmit` for src, `npm run test:typecheck` for tests), non-integration tests (`vitest run --exclude 'tests/integration/**'`), build, and `wrangler deploy --dry-run`. Requires `SUPABASE_URL` and `SUPABASE_KEY` repository secrets for the build step.
+- `test-integration` — starts a local Supabase instance (`supabase/setup-cli@v2` + `supabase start`) and runs `vitest run tests/integration/`.
+
+On push to `main`, `.github/workflows/deploy.yml` runs a `pre-deploy-tests` job (typecheck + non-integration tests) before `deploy-production`.
 
 ## Testing
 
-- Test runner: Vitest 4.x. Tests live in `tests/integration/`.
+- Test runner: Vitest 4.x. Tests live in `tests/unit/`, `tests/component/`, `tests/hermetic/`, and `tests/integration/`.
 - Integration tests run against a real local Supabase instance — start it with `npx supabase start` before running `npm test`. Tests skip automatically with a clear message if Supabase is unreachable.
 - Helpers in `tests/helpers/`: `supabase.ts` (admin client + user factory), `setup.ts` (availability guard), `seed.ts` (two-board fixture), `astro-server.ts` (dev server lifecycle), `auth-fetch.ts` (cookie-based authenticated fetch).
 - For patterns — two-client pattern, RLS denial assertion shapes, server output capture — see `context/foundation/test-plan.md §6.1`.
