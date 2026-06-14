@@ -1,10 +1,10 @@
 ---
 change_id: test-fix-gaps
 title: Test fix gaps
-status: impl_reviewed
+status: archived
 created: 2026-06-11
 updated: 2026-06-14
-archived_at: null
+archived_at: 2026-06-14T12:38:43Z
 ---
 
 ## Notes
