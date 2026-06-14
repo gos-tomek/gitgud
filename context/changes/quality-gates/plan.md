@@ -430,22 +430,22 @@ Update test-plan.md (§3 status, §5 quality gates table), CLAUDE.md (commands, 
 
 #### Automated
 
-- [x] 3.1 `.claude/settings.json` is valid JSON with 2 PostToolUse hooks
-- [x] 3.2 `tsc --noEmit` does not appear in `.claude/settings.json`
+- [x] 3.1 `.claude/settings.json` is valid JSON with 2 PostToolUse hooks — e4b8e3a
+- [x] 3.2 `tsc --noEmit` does not appear in `.claude/settings.json` — e4b8e3a
 
 #### Manual
 
-- [x] 3.3 File edit completes PostToolUse in ~15-17s
+- [x] 3.3 File edit completes PostToolUse in ~15-17s — e4b8e3a
 
 ### Phase 4: Wire vitest into CI
 
 #### Automated
 
-- [ ] 4.1 `ci.yml` is valid YAML
-- [ ] 4.2 `deploy.yml` is valid YAML
-- [ ] 4.3 CI validate job includes typecheck + non-integration tests
-- [ ] 4.4 CI test-integration job includes supabase start + integration tests
-- [ ] 4.5 Deploy pre-deploy-tests job runs before deploy-production
+- [x] 4.1 `ci.yml` is valid YAML
+- [x] 4.2 `deploy.yml` is valid YAML
+- [x] 4.3 CI validate job includes typecheck + non-integration tests
+- [x] 4.4 CI test-integration job includes supabase start + integration tests
+- [x] 4.5 Deploy pre-deploy-tests job runs before deploy-production
 
 #### Manual
 
