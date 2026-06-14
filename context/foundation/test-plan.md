@@ -73,13 +73,13 @@ Each row is a discrete rollout phase that will open its own change folder
 via `/10x-new`. Status moves left-to-right through the values below; the
 orchestrator updates Status as artifacts appear on disk.
 
-| #   | Phase name                        | Goal (one line)                                                                         | Risks covered        | Test types                                                      | Status      | Change folder                            |
-| --- | --------------------------------- | --------------------------------------------------------------------------------------- | -------------------- | --------------------------------------------------------------- | ----------- | ---------------------------------------- |
-| 1   | Bootstrap + access boundary       | Install test runner; prove cross-board isolation and PAT non-leakage with real DB tests | #1, #2, #5           | integration (real Supabase)                                     | shipped     | context/changes/testing-access-boundary/ |
-| 2   | Board creation contract           | Prove wizard state machine and API orchestration handle happy + failure paths           | #3, #4               | component (vitest + testing-library), hermetic (stubbed client) | shipped     | context/changes/board-creation-contract/ |
+| #   | Phase name                        | Goal (one line)                                                                         | Risks covered        | Test types                                                      | Status                                          | Change folder                                    |
+| --- | --------------------------------- | --------------------------------------------------------------------------------------- | -------------------- | --------------------------------------------------------------- | ----------------------------------------------- | ------------------------------------------------ |
+| 1   | Bootstrap + access boundary       | Install test runner; prove cross-board isolation and PAT non-leakage with real DB tests | #1, #2, #5           | integration (real Supabase)                                     | shipped                                         | context/changes/testing-access-boundary/         |
+| 2   | Board creation contract           | Prove wizard state machine and API orchestration handle happy + failure paths           | #3, #4               | component (vitest + testing-library), hermetic (stubbed client) | shipped                                         | context/changes/board-creation-contract/         |
 | 3   | Validation + data layer templates | RLS regression template for new tables; validation test template for API routes         | #5, #6               | integration (RLS per-table), unit (Zod schemas)                 | skipped — covered by Phase 1 + Phase 2 patterns | context/changes/validation-data-layer-templates/ |
-| 4   | Quality gates                     | Wire vitest into CI; set minimum signal floor; update project conventions               | cross-cutting        | CI gates                                                        | not started | —                                        |
-| 5   | Slice-ready contracts             | Cover deferred risks #7–#11 as their prerequisite slices ship                           | #7, #8, #9, #10, #11 | integration, hermetic                                           | not started | —                                        |
+| 4   | Quality gates                     | Wire vitest into CI; set minimum signal floor; update project conventions               | cross-cutting        | CI gates                                                        | shipped                                         | context/changes/quality-gates/                   |
+| 5   | Slice-ready contracts             | Cover deferred risks #7–#11 as their prerequisite slices ship                           | #7, #8, #9, #10, #11 | integration, hermetic                                           | not started                                     | —                                                |
 
 ## 4. Stack
 
@@ -102,13 +102,13 @@ Test-base profile: **none** — no test runner config, no test files. Phase 1 bo
 
 ## 5. Quality Gates
 
-| Gate               | Where      | Required?                 | Catches                                       |
-| ------------------ | ---------- | ------------------------- | --------------------------------------------- |
-| lint + typecheck   | local + CI | required (wired)          | syntactic / type drift                        |
-| build              | local + CI | required (wired)          | SSR compilation, import resolution            |
-| unit + integration | local + CI | required after §3 Phase 1 | logic regressions, access boundary violations |
-| component tests    | local + CI | required after §3 Phase 2 | wizard state machine regressions              |
-| pre-commit (husky) | local      | required (wired)          | eslint --fix + prettier on staged files       |
+| Gate                           | Where                                                                                                     | Required?        | Catches                                                                                  |
+| ------------------------------ | --------------------------------------------------------------------------------------------------------- | ---------------- | ---------------------------------------------------------------------------------------- |
+| lint + typecheck (src + tests) | pre-commit (lefthook) + CI (`validate`, `pre-deploy-tests`)                                               | required (wired) | syntactic / type drift — including test-file narrowing errors (`tsc` ×2: src + tests)    |
+| build                          | CI (`validate`, `deploy-production`)                                                                      | required (wired) | SSR compilation, import resolution                                                       |
+| unit + integration tests       | local (lefthook: non-integration) + CI `validate` (non-integration) + CI `test-integration` (integration) | required (wired) | logic regressions, access boundary violations                                            |
+| component + hermetic tests     | local (lefthook) + CI (`validate`)                                                                        | required (wired) | wizard state machine regressions, hermetic API contract drift                            |
+| pre-commit (lefthook)          | local                                                                                                     | required (wired) | eslint --fix + prettier (staged files), `tsc` ×2 (src + tests), vitest (non-integration) |
 
 ## 6. Cookbook Patterns
 

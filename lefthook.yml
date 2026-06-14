@@ -1,0 +1,17 @@
+pre-commit:
+  parallel: true
+  commands:
+    eslint:
+      glob: "*.{ts,tsx,astro}"
+      run: npx eslint --fix {staged_files}
+      stage_fixed: true
+    prettier:
+      glob: "*.{json,css,md}"
+      run: npx prettier --write {staged_files}
+      stage_fixed: true
+    typecheck-src:
+      run: npx tsc --noEmit
+    typecheck-tests:
+      run: npx tsc --noEmit --project tests/tsconfig.json
+    test:
+      run: npx vitest run --exclude 'tests/integration/**'

@@ -14,7 +14,31 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  pre-deploy-tests:
+    runs-on: ubuntu-latest
+    env:
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: npm
+
+      - run: npm ci
+
+      - run: npx astro sync
+
+      - run: npm run test:typecheck
+
+      - run: npx tsc --noEmit
+
+      - run: npx vitest run --exclude 'tests/integration/**'
+
   deploy-production:
+    needs: [pre-deploy-tests]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
