@@ -5,6 +5,12 @@
 -- Any failure — including a 23505 unique violation on boards_owner_name_unique —
 -- rolls back the entire transaction, eliminating the orphaned-board (S3/S6) and
 -- silently-dropped-repos (S4) defects.
+--
+-- NULL/empty input: p_name and p_raw_token are not NULL/empty-checked here.
+-- POST /api/boards validates both with Zod (.min(1)) before calling this RPC,
+-- and EXECUTE is granted only to `authenticated`. A NULL p_repos/p_contributors
+-- is treated as "nothing to insert" by the jsonb_array_length guards below —
+-- intentional, not a defect.
 
 CREATE FUNCTION public.create_board_atomic(
   p_user_id        uuid,

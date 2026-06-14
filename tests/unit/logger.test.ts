@@ -46,4 +46,16 @@ describe("logger redaction (Risk #2)", () => {
     logger.error(err);
     expect(mockConsola.error).toHaveBeenCalledWith(err);
   });
+
+  it("redacts a token passed as a positional rest argument", () => {
+    const pat = `ghp_${"a".repeat(36)}`;
+    logger.error("Failed", pat);
+    expect(mockConsola.error).toHaveBeenCalledWith("Failed", "[REDACTED]");
+  });
+
+  it("passes structured object rest arguments through unchanged", () => {
+    const meta = { boardName: "foo", userId: "u1", pgCode: "23505" };
+    logger.error("Failed", meta);
+    expect(mockConsola.error).toHaveBeenCalledWith("Failed", meta);
+  });
 });

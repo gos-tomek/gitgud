@@ -17,7 +17,7 @@ type LogMethod = (message: unknown, ...args: unknown[]) => void;
 
 function wrap(method: "info" | "warn" | "error" | "debug"): LogMethod {
   return (message, ...args) => {
-    consola[method](redact(message), ...args);
+    consola[method](redact(message), ...args.map(redact));
   };
 }
 

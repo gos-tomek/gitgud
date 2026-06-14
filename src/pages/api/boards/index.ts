@@ -55,31 +55,36 @@ export const POST: APIRoute = async (context) => {
     return json({ error: firstIssue?.message ?? "Invalid input" }, 400);
   }
 
-  const result = await supabase.rpc("create_board_atomic", {
-    p_user_id: user.id,
-    p_name: parsed.data.name,
-    p_raw_token: parsed.data.pat,
-    p_encryption_key: GITHUB_TOKEN_ENCRYPTION_KEY,
-    p_repos: parsed.data.repos.map((r) => ({ owner: r.owner, name: r.name })),
-    p_contributors: parsed.data.contributors.map((c) => ({
-      github_id: c.githubId,
-      github_login: c.githubLogin,
-      avatar_url: c.avatarUrl ?? null,
-    })),
-  });
-
-  if (result.error) {
-    if (result.error.code === "23505") {
-      return json({ error: "You already have a board with that name" }, 409);
-    }
-    logger.error("[boards] create_board_atomic failed", {
-      boardName: parsed.data.name,
-      userId: user.id,
-      pgCode: result.error.code,
-      detail: result.error.message,
+  try {
+    const result = await supabase.rpc("create_board_atomic", {
+      p_user_id: user.id,
+      p_name: parsed.data.name,
+      p_raw_token: parsed.data.pat,
+      p_encryption_key: GITHUB_TOKEN_ENCRYPTION_KEY,
+      p_repos: parsed.data.repos.map((r) => ({ owner: r.owner, name: r.name })),
+      p_contributors: parsed.data.contributors.map((c) => ({
+        github_id: c.githubId,
+        github_login: c.githubLogin,
+        avatar_url: c.avatarUrl ?? null,
+      })),
     });
+
+    if (result.error) {
+      if (result.error.code === "23505") {
+        return json({ error: "You already have a board with that name" }, 409);
+      }
+      logger.error("[boards] create_board_atomic failed", {
+        boardName: parsed.data.name,
+        userId: user.id,
+        pgCode: result.error.code,
+        detail: result.error.message,
+      });
+      return json({ error: "Board creation failed. Please try again." }, 500);
+    }
+
+    return json({ id: result.data as string }, 201);
+  } catch (err) {
+    logger.error("[boards] create_board_atomic threw", { boardName: parsed.data.name, userId: user.id }, err);
     return json({ error: "Board creation failed. Please try again." }, 500);
   }
-
-  return json({ id: result.data as string }, 201);
 };

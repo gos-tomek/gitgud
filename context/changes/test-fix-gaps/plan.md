@@ -80,6 +80,8 @@ Compensation logic is inconsistent:
 
 PR 1 and PR 2 are independent — either can ship first. PR 3 is fully independent of both.
 
+> **Implementation-time deviation** (impl review F5, 2026-06-14): all 9 phases (14 commits) shipped on a single branch, `change/test-fix-gaps-api`, instead of three separate branches/PRs. Splitting after the fact would mean cherry-picking 14 interdependent commits with interleaved `plan.md` progress updates — high risk of error for little benefit at this stage, since all phases are complete and tested. The phases remain logically independent in the commit history (one phase per commit), so reviewers can scope their review per phase/PR boundary even within the single PR.
+
 ## Critical Implementation Details
 
 ### Timing & lifecycle
@@ -598,12 +600,20 @@ The exported `logger` object exposes `info`, `warn`, `error`, `debug` methods ma
 
 All migrations are additive:
 - Phase 1: `CREATE FUNCTION create_board_atomic` + `DROP FUNCTION set_board_github_pat` — safe because the only production caller (POST /api/boards) is updated in the same PR
+  - **Accepted deviation from CLAUDE.md's expand/contract DROP rule** (impl review F1, 2026-06-14): the rule exists so `wrangler rollback` can restore a working Worker without a matching DB rollback. Here, a Worker rollback would already break board creation regardless of whether `set_board_github_pat` exists — the reverted POST /api/boards handler expects the old 4-step flow, not the `create_board_atomic` RPC signature. Re-creating `set_board_github_pat` in a follow-up migration would add maintenance debt for a rollback path that stays broken either way. Risk accepted; revisit only if an external caller (Edge Function, cron) outside this repo turns out to depend on `set_board_github_pat`.
 - Phase 8: `REVOKE ALL` + `GRANT` — changes privileges but not schema; fully reversible
 
 ### Rollback strategy:
 
 - Phase 1: If the RPC has issues, revert the endpoint to the 4-step approach and re-create `set_board_github_pat` via a new migration
 - Phase 8: Reversible by running the inverse GRANTs (though this would re-open the convention violation)
+
+## Addenda
+
+- **Pre-existing tsc fixes** (impl review F6, 2026-06-14, commit `b40258c`): two files outside the plan's "Changes Required" lists were touched to unblock the edit hook, which fails on any tsc error in the project:
+  - `astro.config.mjs` — Astro 6.3.7 removed the `sessionDrivers.null()` helper; replaced with `{ entrypoint: "unstorage/drivers/null" }` to preserve the existing session KV-binding suppression (from `f0a0143`).
+  - `src/lib/services/github-sync.ts` — an early-return `SyncResult` was missing the required `errors: []` field. Added to satisfy the type.
+  Both are pre-existing defects unrelated to this change's scope, fixed as a prerequisite for editing other files in the same commit/PR.
 
 ## References
 

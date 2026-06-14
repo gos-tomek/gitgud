@@ -100,6 +100,21 @@ describe("POST /api/boards (hermetic)", () => {
     );
   });
 
+  it("rpc throws (e.g. network error) returns 500 with a generic message and logs", async () => {
+    mockSupabase.rpc.mockRejectedValueOnce(new Error("network timeout"));
+
+    const res = await POST(makeContext(validBody));
+
+    expect(res.status).toBe(500);
+    const body = (await res.json()) as { error: string };
+    expect(body.error).toBe("Board creation failed. Please try again.");
+    expect(mockLogger.error).toHaveBeenCalledWith(
+      "[boards] create_board_atomic threw",
+      expect.objectContaining({ boardName: "Test Board", userId: "user-1" }),
+      expect.any(Error),
+    );
+  });
+
   describe("validation: missing/empty fields", () => {
     it.each<[string, CreateBoardBody, string]>([
       ["name", { ...validBody, name: "" }, "Board name is required"],
