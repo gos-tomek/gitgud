@@ -417,25 +417,25 @@ Update test-plan.md (§3 status, §5 quality gates table), CLAUDE.md (commands, 
 
 #### Automated
 
-- [x] 2.1 `npm ci` installs lefthook and runs `lefthook install`
-- [x] 2.2 `npx lefthook run pre-commit` passes all 5 commands
-- [x] 2.3 husky and lint-staged absent from dependencies
-- [x] 2.4 `.husky/` directory does not exist
+- [x] 2.1 `npm ci` installs lefthook and runs `lefthook install` — 8d81ea0
+- [x] 2.2 `npx lefthook run pre-commit` passes all 5 commands — 8d81ea0
+- [x] 2.3 husky and lint-staged absent from dependencies — 8d81ea0
+- [x] 2.4 `.husky/` directory does not exist — 8d81ea0
 
 #### Manual
 
-- [x] 2.5 Test commit triggers lefthook with parallel checks
+- [x] 2.5 Test commit triggers lefthook with parallel checks — 8d81ea0
 
 ### Phase 3: Scope PostToolUse hooks
 
 #### Automated
 
-- [ ] 3.1 `.claude/settings.json` is valid JSON with 2 PostToolUse hooks
-- [ ] 3.2 `tsc --noEmit` does not appear in `.claude/settings.json`
+- [x] 3.1 `.claude/settings.json` is valid JSON with 2 PostToolUse hooks
+- [x] 3.2 `tsc --noEmit` does not appear in `.claude/settings.json`
 
 #### Manual
 
-- [ ] 3.3 File edit completes PostToolUse in ~15-17s
+- [x] 3.3 File edit completes PostToolUse in ~15-17s
 
 ### Phase 4: Wire vitest into CI
 
