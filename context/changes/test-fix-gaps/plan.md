@@ -713,14 +713,14 @@ All migrations are additive:
 
 #### Automated
 
-- [x] 7.1 `npm test -- tests/component/CreateBoardForm.test.tsx` passes
-- [x] 7.2 Zero "Known bug"/"Known defect" comments in file
-- [x] 7.3 `npm run lint` passes
+- [x] 7.1 `npm test -- tests/component/CreateBoardForm.test.tsx` passes — 996065f
+- [x] 7.2 Zero "Known bug"/"Known defect" comments in file — 996065f
+- [x] 7.3 `npm run lint` passes — 996065f
 
 #### Manual
 
-- [x] 7.4 Each bug fix has at least one regression test
-- [x] 7.5 Test count ≥ original W1-W9
+- [x] 7.4 Each bug fix has at least one regression test — 996065f
+- [x] 7.5 Test count ≥ original W1-W9 — 996065f
 
 ### Phase 8: REVOKE ALL Migration
 
