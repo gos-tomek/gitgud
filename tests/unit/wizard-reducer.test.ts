@@ -44,7 +44,7 @@ const VALID_PAT: PatValidation = {
 };
 
 function step1(overrides: Partial<Extract<WizardState, { step: 1 }>> = {}): Extract<WizardState, { step: 1 }> {
-  return { ...initialState, ...overrides };
+  return { ...(initialState as Extract<WizardState, { step: 1 }>), ...overrides };
 }
 
 function step2(overrides: Partial<Extract<WizardState, { step: 2 }>> = {}): Extract<WizardState, { step: 2 }> {
@@ -84,6 +84,14 @@ function step3(overrides: Partial<Extract<WizardState, { step: 3 }>> = {}): Extr
     contributorFilter: "",
     ...overrides,
   };
+}
+
+function assertStep2(state: WizardState): asserts state is Extract<WizardState, { step: 2 }> {
+  if (state.step !== 2) throw new Error("expected step 2");
+}
+
+function assertStep3(state: WizardState): asserts state is Extract<WizardState, { step: 3 }> {
+  if (state.step !== 3) throw new Error("expected step 3");
 }
 
 describe("initialState", () => {
@@ -299,14 +307,17 @@ describe("repo and contributor selection", () => {
 describe("fetch lifecycles", () => {
   it("FETCH_REPOS_START/SUCCESS/ERROR update loading, data and error fields", () => {
     const loading = wizardReducer(step2({ reposError: "stale error" }), { type: "FETCH_REPOS_START" });
+    assertStep2(loading);
     expect(loading.reposLoading).toBe(true);
     expect(loading.reposError).toBeUndefined();
 
     const success = wizardReducer(loading, { type: "FETCH_REPOS_SUCCESS", repos: [REPO_A] });
+    assertStep2(success);
     expect(success.reposLoading).toBe(false);
     expect(success.repos).toEqual([REPO_A]);
 
     const error = wizardReducer(loading, { type: "FETCH_REPOS_ERROR", message: "Network error" });
+    assertStep2(error);
     expect(error.reposLoading).toBe(false);
     expect(error.reposError).toBe("Network error");
   });
@@ -322,6 +333,7 @@ describe("fetch lifecycles", () => {
     const state = step2({ repos: [], selectedRepos: [manuallyAdded] });
 
     const result = wizardReducer(state, { type: "FETCH_REPOS_SUCCESS", repos: [REPO_A] });
+    assertStep2(result);
 
     expect(result.repos).toEqual([REPO_A, manuallyAdded]);
     expect(result.selectedRepos).toEqual([manuallyAdded]);
@@ -329,14 +341,17 @@ describe("fetch lifecycles", () => {
 
   it("FETCH_COLLABORATORS_START/SUCCESS/ERROR update loading, data and error fields", () => {
     const loading = wizardReducer(step3({ collaboratorsError: "stale error" }), { type: "FETCH_COLLABORATORS_START" });
+    assertStep3(loading);
     expect(loading.collaboratorsLoading).toBe(true);
     expect(loading.collaboratorsError).toBeUndefined();
 
     const success = wizardReducer(loading, { type: "FETCH_COLLABORATORS_SUCCESS", collaborators: [COLLAB_A] });
+    assertStep3(success);
     expect(success.collaboratorsLoading).toBe(false);
     expect(success.collaborators).toEqual([COLLAB_A]);
 
     const error = wizardReducer(loading, { type: "FETCH_COLLABORATORS_ERROR", message: "Network error" });
+    assertStep3(error);
     expect(error.collaboratorsLoading).toBe(false);
     expect(error.collaboratorsError).toBe("Network error");
   });
