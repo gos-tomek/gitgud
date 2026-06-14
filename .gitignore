@@ -33,3 +33,6 @@ pnpm-debug.log*
 
 # jetbrains setting folder
 .idea/
+
+# lefthook local overrides
+.lefthook-local.yml

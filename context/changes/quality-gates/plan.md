@@ -126,6 +126,7 @@ Replace the current husky + lint-staged setup with Lefthook. The current pre-com
 **Intent**: Create a Lefthook config that replicates the current lint-staged tasks plus adds tsc (both projects) and vitest (non-integration). All commands run in parallel.
 
 **Contract**: The config must define a `pre-commit` hook with `parallel: true` and these commands:
+
 - `eslint`: glob `*.{ts,tsx,astro}`, run `npx eslint --fix {staged_files}`, `stage_fixed: true`
 - `prettier`: glob `*.{json,css,md}`, run `npx prettier --write {staged_files}`, `stage_fixed: true`
 - `typecheck-src`: run `npx tsc --noEmit` (project-wide, cannot be file-scoped)
@@ -216,6 +217,7 @@ Add tests to both CI pipelines: a two-job structure on PRs (validate + test-inte
 **Intent**: Add typecheck (src + tests) and non-integration vitest run to the existing `validate` job, between lint and build steps.
 
 **Contract**: Add three steps after `npm run lint`:
+
 - `npm run test:typecheck` (tsc on test files)
 - `npx tsc --noEmit` (tsc on src files — currently implicit in build, but making it explicit gives a clearer error)
 - `npx vitest run --exclude 'tests/integration/**'` (unit + component + hermetic tests)
@@ -227,6 +229,7 @@ Add tests to both CI pipelines: a two-job structure on PRs (validate + test-inte
 **Intent**: Add a separate required job that starts a local Supabase instance and runs integration tests. Uses `supabase/setup-cli@v2` (already used in `deploy.yml`) and `npx supabase start` to bootstrap Supabase in Docker on the runner.
 
 **Contract**: New job `test-integration` that:
+
 - Runs on `ubuntu-latest`
 - Checks out code, sets up Node 24, runs `npm ci`
 - Installs Supabase CLI via `supabase/setup-cli@v2`
@@ -243,6 +246,7 @@ The test helpers (`tests/helpers/supabase.ts`) already default to these values, 
 **Intent**: Add a `pre-deploy-tests` job that runs non-integration tests before the deploy job. The deploy job depends on it via `needs:`.
 
 **Contract**: New job `pre-deploy-tests` before `deploy-production`:
+
 - Runs on `ubuntu-latest`
 - Checks out code, sets up Node 24, runs `npm ci`, `npx astro sync`
 - Runs `npm run test:typecheck`, `npx tsc --noEmit`, `npx vitest run --exclude 'tests/integration/**'`
@@ -292,6 +296,7 @@ Update test-plan.md (§3 status, §5 quality gates table), CLAUDE.md (commands, 
 **Intent**: Update the quality gates table to reflect the new three-tier model and tooling.
 
 **Contract**: Update the §5 table (lines 105-111) to reflect:
+
 - `pre-commit (lefthook)` replaces `pre-commit (husky)` — now catches eslint + prettier + tsc (src + tests) + vitest (non-integration)
 - `unit + integration` row: update "Where" to clarify CI has two jobs (non-integration in validate, integration in test-integration)
 - Add a row for `component + hermetic tests` if not already distinct
@@ -303,6 +308,7 @@ Update test-plan.md (§3 status, §5 quality gates table), CLAUDE.md (commands, 
 **Intent**: Update the pre-commit hooks description (line 22) and add `npm run test:typecheck` to commands.
 
 **Contract**:
+
 - Line 17: update `npm test` description — it runs all tests, not just integration
 - Line 22: change from "husky + lint-staged runs `eslint --fix` on `*.{ts,tsx,astro}` and `prettier --write` on `*.{json,css,md}`" to describe Lefthook with all 5 parallel commands (eslint, prettier, tsc × 2, vitest non-integration)
 - Add `npm run test:typecheck` command to the list
@@ -403,22 +409,22 @@ Update test-plan.md (§3 status, §5 quality gates table), CLAUDE.md (commands, 
 
 #### Automated
 
-- [x] 1.1 `npm run test:typecheck` exits 0
-- [x] 1.2 `tsc --noEmit` exits 0
-- [x] 1.3 `npm test` passes
+- [x] 1.1 `npm run test:typecheck` exits 0 — af7cbdd
+- [x] 1.2 `tsc --noEmit` exits 0 — af7cbdd
+- [x] 1.3 `npm test` passes — af7cbdd
 
 ### Phase 2: Migrate pre-commit to Lefthook
 
 #### Automated
 
-- [ ] 2.1 `npm ci` installs lefthook and runs `lefthook install`
-- [ ] 2.2 `npx lefthook run pre-commit` passes all 5 commands
-- [ ] 2.3 husky and lint-staged absent from dependencies
-- [ ] 2.4 `.husky/` directory does not exist
+- [x] 2.1 `npm ci` installs lefthook and runs `lefthook install`
+- [x] 2.2 `npx lefthook run pre-commit` passes all 5 commands
+- [x] 2.3 husky and lint-staged absent from dependencies
+- [x] 2.4 `.husky/` directory does not exist
 
 #### Manual
 
-- [ ] 2.5 Test commit triggers lefthook with parallel checks
+- [x] 2.5 Test commit triggers lefthook with parallel checks
 
 ### Phase 3: Scope PostToolUse hooks
 
