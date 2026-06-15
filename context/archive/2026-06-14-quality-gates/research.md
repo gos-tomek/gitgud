@@ -47,23 +47,24 @@ The test strategy needs a clear three-tier model: fast file-scoped checks post-e
 
 #### Comparison table
 
-| Feature | Husky + lint-staged | Lefthook | simple-git-hooks + nano-staged |
-|---|---|---|---|
-| Language | Node.js | Go (single binary) | Node.js |
-| npm weekly downloads | Husky: ~29M, lint-staged: ~8M | ~2.4M | ~523K |
-| GitHub stars | Husky: 35K + lint-staged: 15K | 8.1K | 1.7K |
-| Install size | Husky: 6.4KB + lint-staged: ~147KB + deps | npm wrapper: 26.5KB (Go binary separate) | 12.7KB + 52KB |
-| Dependencies | Husky: 0, lint-staged: several | 0 (Go binary) | 0 each |
-| **Parallel execution** | No — sequential | **Yes — default** | No |
-| **Built-in staged-file filtering** | No (needs lint-staged) | **Yes** — `{staged_files}` + glob | No (needs nano-staged) |
-| Auto re-stage fixed files | Via lint-staged | Built-in: `stage_fixed: true` | Via nano-staged |
-| Config format | Shell scripts + JSON/JS | Single YAML file | JSON in package.json |
-| Multiple commands per hook | Via lint-staged | Native — unlimited | One command per hook |
-| Last release | Husky: Jan 2025 (9.1.7) | May 2026 (2.1.9) — very active | Jul 2025 (2.13.1) |
+| Feature                            | Husky + lint-staged                       | Lefthook                                 | simple-git-hooks + nano-staged |
+| ---------------------------------- | ----------------------------------------- | ---------------------------------------- | ------------------------------ |
+| Language                           | Node.js                                   | Go (single binary)                       | Node.js                        |
+| npm weekly downloads               | Husky: ~29M, lint-staged: ~8M             | ~2.4M                                    | ~523K                          |
+| GitHub stars                       | Husky: 35K + lint-staged: 15K             | 8.1K                                     | 1.7K                           |
+| Install size                       | Husky: 6.4KB + lint-staged: ~147KB + deps | npm wrapper: 26.5KB (Go binary separate) | 12.7KB + 52KB                  |
+| Dependencies                       | Husky: 0, lint-staged: several            | 0 (Go binary)                            | 0 each                         |
+| **Parallel execution**             | No — sequential                           | **Yes — default**                        | No                             |
+| **Built-in staged-file filtering** | No (needs lint-staged)                    | **Yes** — `{staged_files}` + glob        | No (needs nano-staged)         |
+| Auto re-stage fixed files          | Via lint-staged                           | Built-in: `stage_fixed: true`            | Via nano-staged                |
+| Config format                      | Shell scripts + JSON/JS                   | Single YAML file                         | JSON in package.json           |
+| Multiple commands per hook         | Via lint-staged                           | Native — unlimited                       | One command per hook           |
+| Last release                       | Husky: Jan 2025 (9.1.7)                   | May 2026 (2.1.9) — very active           | Jul 2025 (2.13.1)              |
 
 #### Recommendation
 
 **Lefthook** is the best fit. Key advantages for this project:
+
 - **Parallel execution** cuts pre-commit time from `max(eslint) + max(tsc)` → `max(eslint, tsc)` — roughly halving wall time
 - **Built-in staged-file filtering** eliminates the lint-staged dependency
 - **Single `lefthook.yml`** replaces `.husky/pre-commit` + `lint-staged` config in `package.json`
@@ -96,16 +97,16 @@ pre-commit:
 
 #### Current state
 
-| Stage | Trigger | What runs | Time | Config location |
-|---|---|---|---|---|
-| **Post-edit** (Claude hook) | Every `Write`/`Edit` tool call | `eslint --fix .` (whole project) | **44s** | `.claude/settings.json` |
-| | | `tsc --noEmit` | **17s** | `.claude/settings.json` |
-| | | `vitest related "$FILE" --run` | **~2s** | `.claude/settings.json` |
-| **Pre-commit** (husky) | `git commit` | `lint-staged` (eslint --fix + prettier on staged files) | ~15–20s | `.husky/pre-commit` + `package.json` |
-| **CI** (GitHub Actions) | PR to main | `npm run lint` (eslint whole project) | ? | `.github/workflows/ci.yml` |
-| | | `npm run build` (astro build — includes tsc) | ? | `.github/workflows/ci.yml` |
-| | | `wrangler deploy --dry-run` | ? | `.github/workflows/ci.yml` |
-| **CI** (missing) | — | `npm test` (vitest) | **not wired** | — |
+| Stage                       | Trigger                        | What runs                                               | Time          | Config location                      |
+| --------------------------- | ------------------------------ | ------------------------------------------------------- | ------------- | ------------------------------------ |
+| **Post-edit** (Claude hook) | Every `Write`/`Edit` tool call | `eslint --fix .` (whole project)                        | **44s**       | `.claude/settings.json`              |
+|                             |                                | `tsc --noEmit`                                          | **17s**       | `.claude/settings.json`              |
+|                             |                                | `vitest related "$FILE" --run`                          | **~2s**       | `.claude/settings.json`              |
+| **Pre-commit** (husky)      | `git commit`                   | `lint-staged` (eslint --fix + prettier on staged files) | ~15–20s       | `.husky/pre-commit` + `package.json` |
+| **CI** (GitHub Actions)     | PR to main                     | `npm run lint` (eslint whole project)                   | ?             | `.github/workflows/ci.yml`           |
+|                             |                                | `npm run build` (astro build — includes tsc)            | ?             | `.github/workflows/ci.yml`           |
+|                             |                                | `wrangler deploy --dry-run`                             | ?             | `.github/workflows/ci.yml`           |
+| **CI** (missing)            | —                              | `npm test` (vitest)                                     | **not wired** | —                                    |
 
 #### Problems with current state
 
@@ -120,11 +121,11 @@ pre-commit:
 > Integration tests run only in CI. Rationale: they need local Supabase, are slower, and the
 > `checkSupabase` skip guard makes them a no-op for devs without Supabase running — false safety.
 
-| Stage | What runs | Vitest scope | Est. time |
-|---|---|---|---|
-| **Post-edit** (Claude hook) | `eslint --fix "$FILE" --quiet` + `vitest related "$FILE" --run` | Related tests only (any type; integration auto-skips without Supabase) | ~17s |
-| **Pre-commit** (Lefthook, parallel) | `eslint --fix {staged_files}` + `prettier --write {staged_files}` + `tsc --noEmit` + `tsc --noEmit --project tests/tsconfig.json` + `vitest run --exclude 'tests/integration/**'` | component + hermetic + unit | ~25s |
-| **CI** (GitHub Actions) | `npm run lint` + `npm run build` + `npm run test:typecheck` + `npm test` + `wrangler deploy --dry-run` | **All tests** including integration (with Supabase service container or skip-if-unavailable) | full |
+| Stage                               | What runs                                                                                                                                                                         | Vitest scope                                                                                 | Est. time |
+| ----------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------- | --------- |
+| **Post-edit** (Claude hook)         | `eslint --fix "$FILE" --quiet` + `vitest related "$FILE" --run`                                                                                                                   | Related tests only (any type; integration auto-skips without Supabase)                       | ~17s      |
+| **Pre-commit** (Lefthook, parallel) | `eslint --fix {staged_files}` + `prettier --write {staged_files}` + `tsc --noEmit` + `tsc --noEmit --project tests/tsconfig.json` + `vitest run --exclude 'tests/integration/**'` | component + hermetic + unit                                                                  | ~25s      |
+| **CI** (GitHub Actions)             | `npm run lint` + `npm run build` + `npm run test:typecheck` + `npm test` + `wrangler deploy --dry-run`                                                                            | **All tests** including integration (with Supabase service container or skip-if-unavailable) | full      |
 
 > **Critical gap found during research**: root `tsconfig.json` has `"exclude": ["dist", "tests"]`.
 > A bare `tsc --noEmit` never type-checks test files. Without an explicit
@@ -133,6 +134,7 @@ pre-commit:
 > but does not typecheck, eslint's type-checked rules also use the root tsconfig that excludes tests.
 
 **What each tier catches that the previous one doesn't:**
+
 - Post-edit → immediate feedback on the file you just touched (lint errors, related test regressions)
 - Pre-commit → type errors in **src/ and tests/** (`tsc` × 2 projects), cross-file regressions in component/hermetic/unit tests, formatting
 - CI → integration tests (RLS, access boundary, PAT leakage), full-project lint, production build
@@ -141,18 +143,19 @@ pre-commit:
 
 Measured on the current codebase (46 source files, 12 test files):
 
-| Command | Scope | Wall time | Notes |
-|---|---|---|---|
-| `npx eslint --fix . --quiet` | Whole project | **44.2s** | Current PostToolUse config |
-| `npx eslint --fix src/pages/dashboard.astro --quiet` | Single .astro file | **15.5s** | Type-checked rules require full project parse |
-| `npx eslint --fix src/lib/supabase.ts --quiet` | Single .ts file | **13.4s** | Same parser startup cost |
-| `npx tsc --noEmit` | Whole project (src/) | **17.5s** | Cannot be file-scoped |
-| `npx tsc --noEmit --project tests/tsconfig.json` | Test files only | **7.4s** | Has pre-existing type errors (exit code 2) |
-| `npx vitest related <file> --run` | Related tests only | **~1.7s** | Fast — already file-scoped |
+| Command                                              | Scope                | Wall time | Notes                                         |
+| ---------------------------------------------------- | -------------------- | --------- | --------------------------------------------- |
+| `npx eslint --fix . --quiet`                         | Whole project        | **44.2s** | Current PostToolUse config                    |
+| `npx eslint --fix src/pages/dashboard.astro --quiet` | Single .astro file   | **15.5s** | Type-checked rules require full project parse |
+| `npx eslint --fix src/lib/supabase.ts --quiet`       | Single .ts file      | **13.4s** | Same parser startup cost                      |
+| `npx tsc --noEmit`                                   | Whole project (src/) | **17.5s** | Cannot be file-scoped                         |
+| `npx tsc --noEmit --project tests/tsconfig.json`     | Test files only      | **7.4s**  | Has pre-existing type errors (exit code 2)    |
+| `npx vitest related <file> --run`                    | Related tests only   | **~1.7s** | Fast — already file-scoped                    |
 
 **Key insight**: Single-file eslint (13–15s) is still slow because `strictTypeChecked` rules require the TypeScript project service to parse the entire project graph before linting even one file. The 3× speedup vs whole-project (44s) comes from skipping the lint/fix phase on other files, not from avoiding the parse.
 
 **Options to reduce eslint single-file time further:**
+
 - Disable `projectService` for PostToolUse-only runs (loses type-checked rules — not recommended)
 - Use `TIMING=1 npx eslint` to identify which rules are slowest and consider disabling the most expensive ones in a PostToolUse-specific config
 - Accept 13–15s as the floor for type-aware linting and focus optimization on eliminating redundant runs

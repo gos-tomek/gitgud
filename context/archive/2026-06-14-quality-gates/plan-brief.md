@@ -18,20 +18,21 @@ CI blocks merges via two required jobs (validate + test-integration). Deploys ru
 
 ## Key Decisions Made
 
-| Decision | Choice | Why (1 sentence) | Source |
-| --- | --- | --- | --- |
-| CI integration test strategy | Separate required job with Supabase | Integration tests need a real DB; separating them keeps the validate job fast | Plan |
-| CI trigger for tests on push to main | Non-integration tests only, as deploy gate | Full integration suite already ran on the PR; re-running would add 90s+ for no new signal | Plan |
-| Pre-commit tooling | Migrate to Lefthook | Parallel execution halves wall time; built-in staged-file filtering replaces lint-staged | Research |
-| Pre-commit test scope | Non-integration only | Integration tests need Supabase, skip guard makes them a no-op without it — false safety | Research |
-| PostToolUse eslint scope | File-scoped (`eslint --fix "$FILE"`) | 3× faster; cross-file issues caught at pre-commit (Lefthook) | Plan |
-| PostToolUse tsc | Removed | Covered by Lefthook pre-commit (tsc × 2 in parallel) | Plan |
-| Test type errors | Fix in this change | Unblocks the tsc gate from day one; mechanical narrowing fix, not logic change | Plan |
-| Merge blocking | Branch protection (manual GitHub UI step) | Cannot be configured via code in the repo | Plan |
+| Decision                             | Choice                                     | Why (1 sentence)                                                                          | Source   |
+| ------------------------------------ | ------------------------------------------ | ----------------------------------------------------------------------------------------- | -------- |
+| CI integration test strategy         | Separate required job with Supabase        | Integration tests need a real DB; separating them keeps the validate job fast             | Plan     |
+| CI trigger for tests on push to main | Non-integration tests only, as deploy gate | Full integration suite already ran on the PR; re-running would add 90s+ for no new signal | Plan     |
+| Pre-commit tooling                   | Migrate to Lefthook                        | Parallel execution halves wall time; built-in staged-file filtering replaces lint-staged  | Research |
+| Pre-commit test scope                | Non-integration only                       | Integration tests need Supabase, skip guard makes them a no-op without it — false safety  | Research |
+| PostToolUse eslint scope             | File-scoped (`eslint --fix "$FILE"`)       | 3× faster; cross-file issues caught at pre-commit (Lefthook)                              | Plan     |
+| PostToolUse tsc                      | Removed                                    | Covered by Lefthook pre-commit (tsc × 2 in parallel)                                      | Plan     |
+| Test type errors                     | Fix in this change                         | Unblocks the tsc gate from day one; mechanical narrowing fix, not logic change            | Plan     |
+| Merge blocking                       | Branch protection (manual GitHub UI step)  | Cannot be configured via code in the repo                                                 | Plan     |
 
 ## Scope
 
 **In scope:**
+
 - Fix 13 type errors in `wizard-reducer.test.ts`
 - Migrate husky+lint-staged → Lefthook with 5 parallel pre-commit tasks
 - Scope PostToolUse eslint to edited file, remove tsc hook
@@ -41,6 +42,7 @@ CI blocks merges via two required jobs (validate + test-integration). Deploys ru
 - Update CLAUDE.md, test-plan.md §3/§5, change.md
 
 **Out of scope:**
+
 - Supabase service container in `validate` job
 - Integration tests on push to main
 - eslint config changes or disabling type-checked rules
@@ -65,13 +67,13 @@ vitest related "$FILE"      prettier {staged_files}    test-integration: supabas
 
 ## Phases at a Glance
 
-| Phase | What it delivers | Key risk |
-| --- | --- | --- |
-| 1. Fix test type errors | `tsc --project tests/tsconfig.json` passes | None — mechanical narrowing fixes |
-| 2. Migrate to Lefthook | Parallel pre-commit with 5 quality gates | Lefthook install hook must survive `npm ci` |
-| 3. Scope PostToolUse hooks | 3.5× faster per-edit feedback (61s → 17s) | Cross-file lint issues delayed to pre-commit |
-| 4. Wire vitest into CI | Two required CI jobs + deploy test gate | `supabase start` in GitHub Actions runner needs Docker |
-| 5. Update documentation | CLAUDE.md, test-plan.md, change.md consistent | None — documentation only |
+| Phase                      | What it delivers                              | Key risk                                               |
+| -------------------------- | --------------------------------------------- | ------------------------------------------------------ |
+| 1. Fix test type errors    | `tsc --project tests/tsconfig.json` passes    | None — mechanical narrowing fixes                      |
+| 2. Migrate to Lefthook     | Parallel pre-commit with 5 quality gates      | Lefthook install hook must survive `npm ci`            |
+| 3. Scope PostToolUse hooks | 3.5× faster per-edit feedback (61s → 17s)     | Cross-file lint issues delayed to pre-commit           |
+| 4. Wire vitest into CI     | Two required CI jobs + deploy test gate       | `supabase start` in GitHub Actions runner needs Docker |
+| 5. Update documentation    | CLAUDE.md, test-plan.md, change.md consistent | None — documentation only                              |
 
 **Prerequisites:** All existing tests pass; Docker available on GitHub Actions runners (ubuntu-latest includes it)
 **Estimated effort:** ~2-3 sessions across 5 phases
