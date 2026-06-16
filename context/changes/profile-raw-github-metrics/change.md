@@ -1,7 +1,7 @@
 ---
 change_id: profile-raw-github-metrics
 title: Profile raw github metrics
-status: implementing
+status: implemented
 created: 2026-06-15
 updated: 2026-06-16
 

@@ -551,15 +551,15 @@ Update the board detail page to include navigation tabs (Impact / Activity / Set
 
 #### Automated
 
-- [x] 4.1 Type checking passes: `npx tsc --noEmit` and `npm run test:typecheck`
-- [x] 4.2 Linting passes: `npm run lint`
-- [x] 4.3 Build succeeds: `npm run build`
-- [x] 4.4 Existing board tests still pass
+- [x] 4.1 Type checking passes: `npx tsc --noEmit` and `npm run test:typecheck` — b13bdde
+- [x] 4.2 Linting passes: `npm run lint` — b13bdde
+- [x] 4.3 Build succeeds: `npm run build` — b13bdde
+- [x] 4.4 Existing board tests still pass — b13bdde
 
 #### Manual
 
-- [x] 4.5 Board detail page shows nav tabs; contributors link to impact pages
-- [x] 4.6 Impact page shows nav tabs with "Impact" active
-- [x] 4.7 Activity and Settings stubs render correctly
-- [x] 4.8 Navigation between all board sub-pages works
-- [x] 4.9 No regressions in existing board detail functionality
+- [x] 4.5 Board detail page shows nav tabs; contributors link to impact pages — b13bdde
+- [x] 4.6 Impact page shows nav tabs with "Impact" active — b13bdde
+- [x] 4.7 Activity and Settings stubs render correctly — b13bdde
+- [x] 4.8 Navigation between all board sub-pages works — b13bdde
+- [x] 4.9 No regressions in existing board detail functionality — b13bdde
