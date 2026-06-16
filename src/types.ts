@@ -32,6 +32,9 @@ export interface GitHubPullRequest {
   updatedAt: string;
   mergedAt: string | null;
   fetchedAt: string;
+  additions: number | null;
+  deletions: number | null;
+  changedFiles: number | null;
 }
 
 export interface GitHubReview {
@@ -66,4 +69,5 @@ export interface GitHubReviewComment {
   createdAt: string;
   updatedAt: string;
   fetchedAt: string;
+  inReplyToId: number | null;
 }

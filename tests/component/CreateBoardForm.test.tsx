@@ -46,7 +46,7 @@ function installFetchMock(options: FetchMockOptions = {}) {
     switch (input) {
       case "/api/github/validate-pat":
         return Promise.resolve(jsonResponse(validatePatResponse));
-      case "/api/boards/check-name":
+      case "/api/board/check-name":
         return Promise.resolve(new Response(null, { status: 204 }));
       case "/api/github/repos":
         return Promise.resolve(jsonResponse({ repos: [REPO_A, REPO_B] }));
@@ -55,7 +55,7 @@ function installFetchMock(options: FetchMockOptions = {}) {
         collaboratorCallCount++;
         return Promise.resolve(jsonResponse(response));
       }
-      case "/api/boards":
+      case "/api/board":
         return Promise.resolve(jsonResponse({ id: "new-board-id" }, 201));
       default:
         throw new Error(`Unhandled fetch to ${input}`);
@@ -147,10 +147,10 @@ describe("CreateBoardForm", () => {
     await user.click(screen.getByRole("button", { name: /create board/i }));
 
     await waitFor(() => {
-      expect(fetchMock).toHaveBeenCalledWith("/api/boards", expect.objectContaining({ method: "POST" }));
+      expect(fetchMock).toHaveBeenCalledWith("/api/board", expect.objectContaining({ method: "POST" }));
     });
 
-    const call = fetchMock.mock.calls.find(([url]) => url === "/api/boards");
+    const call = fetchMock.mock.calls.find(([url]) => url === "/api/board");
     const body = JSON.parse((call?.[1]?.body as string | undefined) ?? "{}") as {
       name: string;
       pat: string;
@@ -169,7 +169,7 @@ describe("CreateBoardForm", () => {
     ]);
 
     await waitFor(() => {
-      expect(window.location.href).toBe("/boards/new-board-id");
+      expect(window.location.href).toBe("/board/new-board-id");
     });
   });
 

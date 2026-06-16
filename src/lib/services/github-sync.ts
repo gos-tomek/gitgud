@@ -17,6 +17,7 @@ export interface SyncResult {
 }
 
 type PrItem = Awaited<ReturnType<Octokit["rest"]["pulls"]["list"]>>["data"][number];
+type PrDetailItem = Awaited<ReturnType<Octokit["rest"]["pulls"]["get"]>>["data"];
 type ReviewItem = Awaited<ReturnType<Octokit["rest"]["pulls"]["listReviews"]>>["data"][number];
 type CommentItem = Awaited<ReturnType<Octokit["rest"]["pulls"]["listReviewComments"]>>["data"][number];
 
@@ -66,6 +67,14 @@ async function upsertReviews(supabase: SupabaseClient, prId: number, reviews: Re
   if (error) throw error;
 }
 
+async function updatePullRequestSize(supabase: SupabaseClient, prId: number, detail: PrDetailItem): Promise<void> {
+  const { error } = await supabase
+    .from("github_pull_requests")
+    .update({ additions: detail.additions, deletions: detail.deletions, changed_files: detail.changed_files })
+    .eq("id", prId);
+  if (error) throw error;
+}
+
 async function upsertComments(supabase: SupabaseClient, prId: number, comments: CommentItem[]): Promise<void> {
   if (comments.length === 0) return;
   const now = new Date().toISOString();
@@ -79,6 +88,7 @@ async function upsertComments(supabase: SupabaseClient, prId: number, comments: 
     path: c.path,
     position_line: (c.line as number | null) ?? null,
     position_side: (c.side as string | null) ?? null,
+    in_reply_to_id: c.in_reply_to_id ?? null,
     created_at: c.created_at,
     updated_at: c.updated_at,
     fetched_at: now,
@@ -134,7 +144,8 @@ export async function syncBoardGitHubData(
 
     for (const pr of cappedPrs) {
       try {
-        const [reviews, comments] = await Promise.all([
+        const [prDetail, reviews, comments] = await Promise.all([
+          octokit.rest.pulls.get({ owner, repo: repoName, pull_number: pr.number }),
           octokit.paginate(octokit.rest.pulls.listReviews, {
             owner,
             repo: repoName,
@@ -149,6 +160,7 @@ export async function syncBoardGitHubData(
           }),
         ]);
 
+        await updatePullRequestSize(supabase, pr.id, prDetail.data);
         await upsertReviews(supabase, pr.id, reviews);
         await upsertComments(supabase, pr.id, comments);
 

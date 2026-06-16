@@ -21,7 +21,7 @@ const mockSupabase = vi.hoisted(() => ({
 }));
 vi.mock("@/lib/supabase", () => ({ createClient: vi.fn(() => mockSupabase) }));
 
-const { POST } = await import("@/pages/api/boards/index");
+const { POST } = await import("@/pages/api/board/index");
 
 interface CreateBoardBody {
   name: string;
@@ -38,7 +38,7 @@ const validBody: CreateBoardBody = {
 };
 
 function makeContext(body: unknown): APIContext {
-  const request = new Request("http://localhost/api/boards", {
+  const request = new Request("http://localhost/api/board", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
@@ -46,7 +46,7 @@ function makeContext(body: unknown): APIContext {
   return { request, cookies: {} } as unknown as APIContext;
 }
 
-describe("POST /api/boards (hermetic)", () => {
+describe("POST /api/board (hermetic)", () => {
   beforeEach(() => {
     vi.clearAllMocks();
 
