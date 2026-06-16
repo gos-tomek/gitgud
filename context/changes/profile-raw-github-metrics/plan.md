@@ -527,39 +527,39 @@ Update the board detail page to include navigation tabs (Impact / Activity / Set
 
 #### Automated
 
-- [x] 3.1 Type checking passes: `npx tsc --noEmit` and `npm run test:typecheck`
-- [x] 3.2 Linting passes: `npm run lint`
-- [x] 3.3 Build succeeds: `npm run build`
-- [x] 3.4 Component tests pass
-- [x] 3.5 React Compiler lint rule passes
+- [x] 3.1 Type checking passes: `npx tsc --noEmit` and `npm run test:typecheck` — 6a18a4b
+- [x] 3.2 Linting passes: `npm run lint` — 6a18a4b
+- [x] 3.3 Build succeeds: `npm run build` — 6a18a4b
+- [x] 3.4 Component tests pass — 6a18a4b
+- [x] 3.5 React Compiler lint rule passes — 6a18a4b
 
 #### Manual
 
-- [x] 3.6 Full page renders with real data at `/board/[id]/impact/[login]/90d`
-- [x] 3.7 All 20 metrics display correct values
-- [x] 3.8 Period selector changes URL and refetches sections
-- [x] 3.9 Loading skeletons show during API calls
-- [x] 3.10 Empty states render for no-activity contributors
-- [x] 3.11 Activity chart tooltips and legend work
-- [x] 3.12 Heatmap hover shows date + count
-- [x] 3.13 PR table tabs (authored/reviewed) switch correctly
-- [x] 3.14 Sync indicator shows correct time; refresh works
-- [x] 3.15 Thread quality section has purple visual treatment
-- [x] 3.16 Data parity: IC self-view matches EM view
+- [x] 3.6 Full page renders with real data at `/board/[id]/impact/[login]/90d` — 6a18a4b
+- [x] 3.7 All 20 metrics display correct values — 6a18a4b
+- [x] 3.8 Period selector changes URL and refetches sections — 6a18a4b
+- [x] 3.9 Loading skeletons show during API calls — 6a18a4b
+- [x] 3.10 Empty states render for no-activity contributors — 6a18a4b
+- [x] 3.11 Activity chart tooltips and legend work — 6a18a4b
+- [x] 3.12 Heatmap hover shows date + count — 6a18a4b
+- [x] 3.13 PR table tabs (authored/reviewed) switch correctly — 6a18a4b
+- [x] 3.14 Sync indicator shows correct time; refresh works — 6a18a4b
+- [x] 3.15 Thread quality section has purple visual treatment — 6a18a4b
+- [x] 3.16 Data parity: IC self-view matches EM view — 6a18a4b
 
 ### Phase 4: Board Navigation Integration
 
 #### Automated
 
-- [ ] 4.1 Type checking passes: `npx tsc --noEmit` and `npm run test:typecheck`
-- [ ] 4.2 Linting passes: `npm run lint`
-- [ ] 4.3 Build succeeds: `npm run build`
-- [ ] 4.4 Existing board tests still pass
+- [x] 4.1 Type checking passes: `npx tsc --noEmit` and `npm run test:typecheck`
+- [x] 4.2 Linting passes: `npm run lint`
+- [x] 4.3 Build succeeds: `npm run build`
+- [x] 4.4 Existing board tests still pass
 
 #### Manual
 
-- [ ] 4.5 Board detail page shows nav tabs; contributors link to impact pages
-- [ ] 4.6 Impact page shows nav tabs with "Impact" active
-- [ ] 4.7 Activity and Settings stubs render correctly
-- [ ] 4.8 Navigation between all board sub-pages works
-- [ ] 4.9 No regressions in existing board detail functionality
+- [x] 4.5 Board detail page shows nav tabs; contributors link to impact pages
+- [x] 4.6 Impact page shows nav tabs with "Impact" active
+- [x] 4.7 Activity and Settings stubs render correctly
+- [x] 4.8 Navigation between all board sub-pages works
+- [x] 4.9 No regressions in existing board detail functionality

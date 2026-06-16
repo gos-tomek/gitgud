@@ -1,9 +1,11 @@
 ---
 import Layout from "@/layouts/Layout.astro";
 import { createClient } from "@/lib/supabase";
-import { getBoardWithRole, getBoardContributors } from "@/lib/services/boards";
+import { getBoardWithRole, getBoardContributors, getUserBoards } from "@/lib/services/boards";
 import { isValidPeriodSlug } from "@/lib/date-range";
 import ImpactView from "@/components/impact/ImpactView";
+import BoardTopbar from "@/components/BoardTopbar.astro";
+import BoardNav from "@/components/BoardNav.astro";
 
 const { user } = Astro.locals;
 const { id, githubLogin, dateRange: dateRangeParam } = Astro.params;
@@ -22,7 +24,11 @@ if (!board) {
   return Astro.redirect("/dashboard");
 }
 
-const contributors = await getBoardContributors(supabase, board.id).catch(() => []);
+const [contributors, boards] = await Promise.all([
+  getBoardContributors(supabase, board.id).catch(() => []),
+  getUserBoards(supabase, user.id).catch(() => []),
+]);
+
 const contributor = contributors.find((c) => c.githubLogin === githubLogin);
 if (!contributor) {
   return Astro.redirect(`/board/${id}`);
@@ -30,10 +36,14 @@ if (!contributor) {
 
 const rawPeriod: string = typeof dateRangeParam === "string" ? dateRangeParam : "90d";
 const period = isValidPeriodSlug(rawPeriod) ? rawPeriod : "90d";
+
+const userInitial = user.email?.[0]?.toUpperCase() ?? "?";
 ---
 
 <Layout title={`${contributor.githubLogin} — ${board.name}`}>
   <div class="bg-cosmic min-h-screen text-white">
+    <BoardTopbar board={board} boards={boards} userInitial={userInitial} />
+    <BoardNav boardId={board.id} />
     <ImpactView
       client:only="react"
       boardId={board.id}
@@ -43,6 +53,7 @@ const period = isValidPeriodSlug(rawPeriod) ? rawPeriod : "90d";
         githubLogin: contributor.githubLogin,
         avatarUrl: contributor.avatarUrl,
       }}
+      contributors={contributors.map((c) => ({ githubLogin: c.githubLogin, avatarUrl: c.avatarUrl }))}
     />
   </div>
 </Layout>

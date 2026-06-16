@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import type { ImpactSummary, AuthorMetrics, ReviewerMetrics, ActivityData, PeriodSlug } from "@/types";
 import { PeriodSelector } from "./PeriodSelector";
 import { SyncIndicator } from "./SyncIndicator";
@@ -40,7 +40,7 @@ async function fetchSection<T>(
   }
 }
 
-interface Contributor {
+interface ContributorInfo {
   githubLogin: string;
   avatarUrl: string | null;
 }
@@ -49,10 +49,127 @@ interface Props {
   boardId: string;
   githubLogin: string;
   period: PeriodSlug;
-  contributor: Contributor;
+  contributor: ContributorInfo;
+  contributors: ContributorInfo[];
 }
 
-export default function ImpactView({ boardId, githubLogin, period: initialPeriod, contributor }: Props) {
+function ContributorAvatar({ c, size = "md" }: { c: ContributorInfo; size?: "sm" | "md" | "lg" }) {
+  const dim = size === "lg" ? "h-12 w-12" : size === "sm" ? "h-6 w-6 text-[10px]" : "h-8 w-8 text-xs";
+  return c.avatarUrl ? (
+    <img src={c.avatarUrl} alt={c.githubLogin} className={`${dim} rounded-full`} />
+  ) : (
+    <div className={`${dim} flex items-center justify-center rounded-full bg-purple-600 font-bold text-white`}>
+      {c.githubLogin[0].toUpperCase()}
+    </div>
+  );
+}
+
+function ContributorSelector({
+  current,
+  contributors,
+  boardId,
+  period,
+}: {
+  current: ContributorInfo;
+  contributors: ContributorInfo[];
+  boardId: string;
+  period: PeriodSlug;
+}) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    function onClickOutside(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    }
+    document.addEventListener("mousedown", onClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", onClickOutside);
+    };
+  }, [open]);
+
+  function navigate(login: string) {
+    window.location.assign(`/board/${boardId}/impact/${login}/${period}`);
+  }
+
+  if (contributors.length <= 1) {
+    return (
+      <div className="flex items-center gap-2">
+        <ContributorAvatar c={current} size="lg" />
+        <div>
+          <h1 className="text-xl font-bold text-white">@{current.githubLogin}</h1>
+          <a
+            href={`https://github.com/${current.githubLogin}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-xs text-blue-100/50 hover:text-white"
+          >
+            github.com/{current.githubLogin}
+          </a>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div ref={ref} className="relative">
+      <button
+        onClick={() => {
+          setOpen((o) => !o);
+        }}
+        className="flex items-center gap-2.5 rounded-lg px-2 py-1.5 transition-colors hover:bg-white/10"
+      >
+        <ContributorAvatar c={current} size="lg" />
+        <div className="text-left">
+          <div className="flex items-center gap-1.5">
+            <h1 className="text-xl font-bold text-white">@{current.githubLogin}</h1>
+            <svg className="h-4 w-4 text-white/40" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 9l-7 7-7-7" />
+            </svg>
+          </div>
+          <a
+            href={`https://github.com/${current.githubLogin}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={(e) => {
+              e.stopPropagation();
+            }}
+            className="text-xs text-blue-100/50 hover:text-white"
+          >
+            github.com/{current.githubLogin}
+          </a>
+        </div>
+      </button>
+
+      {open && (
+        <div className="absolute top-full left-0 z-50 mt-1.5 w-64 overflow-hidden rounded-xl border border-white/10 bg-gray-950 py-1.5 shadow-2xl">
+          {contributors.map((c) => (
+            <button
+              key={c.githubLogin}
+              onClick={() => {
+                navigate(c.githubLogin);
+              }}
+              className="flex w-full items-center gap-2.5 px-3 py-2 text-left text-sm transition-colors hover:bg-white/5"
+            >
+              <ContributorAvatar c={c} size="sm" />
+              <span className={c.githubLogin === current.githubLogin ? "font-semibold text-white" : "text-white/70"}>
+                @{c.githubLogin}
+              </span>
+              {c.githubLogin === current.githubLogin && (
+                <svg className="ml-auto h-4 w-4 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
+                </svg>
+              )}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+export default function ImpactView({ boardId, githubLogin, period: initialPeriod, contributor, contributors }: Props) {
   const [period, setPeriod] = useState<PeriodSlug>(initialPeriod);
   const [fetchKey, setFetchKey] = useState(0);
   const [summary, setSummary] = useState<SectionState<ImpactSummary>>(idle());
@@ -90,24 +207,7 @@ export default function ImpactView({ boardId, githubLogin, period: initialPeriod
     <div className="mx-auto max-w-6xl space-y-6 px-4 py-6">
       {/* header */}
       <div className="flex flex-wrap items-start justify-between gap-4">
-        <div className="flex items-center gap-3">
-          {contributor.avatarUrl ? (
-            <img src={contributor.avatarUrl} alt={contributor.githubLogin} className="h-12 w-12 rounded-full" />
-          ) : (
-            <div className="h-12 w-12 rounded-full bg-white/10" />
-          )}
-          <div>
-            <h1 className="text-xl font-bold text-white">@{contributor.githubLogin}</h1>
-            <a
-              href={`https://github.com/${contributor.githubLogin}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-xs text-blue-100/50 hover:text-white"
-            >
-              github.com/{contributor.githubLogin}
-            </a>
-          </div>
-        </div>
+        <ContributorSelector current={contributor} contributors={contributors} boardId={boardId} period={period} />
         <div className="flex flex-wrap items-center gap-3">
           <SyncIndicator
             lastSyncedAt={summary.data?.lastSyncedAt ?? null}
