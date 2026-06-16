@@ -491,37 +491,37 @@ Update the board detail page to include navigation tabs (Impact / Activity / Set
 
 #### Automated
 
-- [x] 1.1 Migration applies cleanly: `npx supabase db reset`
-- [x] 1.2 Existing tests pass: `npm test`
-- [x] 1.3 Type checking passes: `npx tsc --noEmit` and `npm run test:typecheck`
-- [x] 1.4 Linting passes: `npm run lint`
-- [x] 1.5 Build succeeds: `npm run build`
-- [x] 1.6 After sync, new columns are populated in DB
+- [x] 1.1 Migration applies cleanly: `npx supabase db reset` — 034fa6d
+- [x] 1.2 Existing tests pass: `npm test` — 034fa6d
+- [x] 1.3 Type checking passes: `npx tsc --noEmit` and `npm run test:typecheck` — 034fa6d
+- [x] 1.4 Linting passes: `npm run lint` — 034fa6d
+- [x] 1.5 Build succeeds: `npm run build` — 034fa6d
+- [x] 1.6 After sync, new columns are populated in DB — 034fa6d
 
 #### Manual
 
-- [x] 1.7 Synced PRs have non-null additions/deletions/changed_files
-- [x] 1.8 Synced comments have correct in_reply_to_id (NULL for roots, non-null for replies)
-- [x] 1.9 `/board/[id]` route renders correctly after rename
-- [x] 1.10 Dashboard links use `/board/` prefix
+- [x] 1.7 Synced PRs have non-null additions/deletions/changed_files — 034fa6d
+- [x] 1.8 Synced comments have correct in_reply_to_id (NULL for roots, non-null for replies) — 034fa6d
+- [x] 1.9 `/board/[id]` route renders correctly after rename — 034fa6d
+- [x] 1.10 Dashboard links use `/board/` prefix — 034fa6d
 
 ### Phase 2: Impact Metrics Service + API
 
 #### Automated
 
-- [ ] 2.1 Type checking passes: `npx tsc --noEmit` and `npm run test:typecheck`
-- [ ] 2.2 Linting passes: `npm run lint`
-- [ ] 2.3 Build succeeds: `npm run build`
-- [ ] 2.4 Unit tests for date-range.ts pass
-- [ ] 2.5 Unit tests for impact-metrics.ts pass
-- [ ] 2.6 API endpoint tests pass (auth, 404, invalid period)
+- [x] 2.1 Type checking passes: `npx tsc --noEmit` and `npm run test:typecheck`
+- [x] 2.2 Linting passes: `npm run lint`
+- [x] 2.3 Build succeeds: `npm run build`
+- [x] 2.4 Unit tests for date-range.ts pass
+- [x] 2.5 Unit tests for impact-metrics.ts pass
+- [x] 2.6 API endpoint tests pass (auth, 404, invalid period)
 
 #### Manual
 
-- [ ] 2.7 Summary endpoint returns correct KPI values with real data
-- [ ] 2.8 Delta percentages are sensible
-- [ ] 2.9 Thread metrics return non-null for contributors with comments
-- [ ] 2.10 Empty response for contributors with no activity in period
+- [x] 2.7 Summary endpoint returns correct KPI values with real data
+- [x] 2.8 Delta percentages are sensible
+- [x] 2.9 Thread metrics return non-null for contributors with comments
+- [x] 2.10 Empty response for contributors with no activity in period
 
 ### Phase 3: Impact Page UI
 
