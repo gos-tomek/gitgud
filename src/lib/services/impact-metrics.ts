@@ -183,13 +183,14 @@ export async function getImpactSummary(
       }
     }
 
-    // Reviews in period
+    // Reviews in period — exclude reviews on own PRs (same guard as getReviewerMetrics)
     let reviewCount = 0;
     const reviewedPrIds = new Set<number>();
     const firstReviewByPr = new Map<number, string>();
     for (const r of allReviews) {
       if (start && r.submitted_at < startIso) continue;
       if (r.submitted_at > endIso) continue;
+      if (prMap.get(r.pull_request_id)?.authorGithubId === githubId) continue;
       reviewCount++;
       const prId = r.pull_request_id;
       reviewedPrIds.add(prId);
@@ -206,12 +207,13 @@ export async function getImpactSummary(
       if (h >= 0) pickupTimesHours.push(h);
     }
 
-    // Root comments (threads started) in period
+    // Root comments (threads started) in period — exclude comments on own PRs
     let threadCount = 0;
     const threadPrIds = new Set<number>();
     for (const c of allRootComments) {
       if (start && c.created_at < startIso) continue;
       if (c.created_at > endIso) continue;
+      if (prMap.get(c.pull_request_id)?.authorGithubId === githubId) continue;
       threadCount++;
       threadPrIds.add(c.pull_request_id);
     }
@@ -311,6 +313,26 @@ export async function getAuthorMetrics(
   const deletions = prs.map((p) => p.deletions).filter((n): n is number => n !== null);
   const changedFiles = prs.map((p) => p.changed_files).filter((n): n is number => n !== null);
 
+  const linesChanged = prs
+    .filter((p) => p.additions !== null || p.deletions !== null)
+    .map((p) => (p.additions ?? 0) + (p.deletions ?? 0))
+    .sort((a, b) => a - b);
+
+  const sizeBuckets =
+    linesChanged.length > 0
+      ? linesChanged.reduce(
+          (acc, n) => {
+            if (n <= 10) acc.xs++;
+            else if (n <= 50) acc.s++;
+            else if (n <= 200) acc.m++;
+            else if (n <= 500) acc.l++;
+            else acc.xl++;
+            return acc;
+          },
+          { xs: 0, s: 0, m: 0, l: 0, xl: 0 },
+        )
+      : null;
+
   const mergeTimesHours = prs
     .filter((p): p is typeof p & { merged_at: string } => p.merged_at !== null)
     .map((p) => (new Date(p.merged_at).getTime() - new Date(p.created_at).getTime()) / 3_600_000)
@@ -332,6 +354,8 @@ export async function getAuthorMetrics(
         [...deletions].sort((a, b) => a - b),
         50,
       ),
+      medianChangedLines: percentile(linesChanged, 50),
+      sizeBuckets,
     },
     timeToMerge: {
       p50: percentile(mergeTimesHours, 50),
@@ -351,6 +375,8 @@ function emptyAuthorMetrics(): AuthorMetrics {
       totalChangedFiles: null,
       medianAdditions: null,
       medianDeletions: null,
+      medianChangedLines: null,
+      sizeBuckets: null,
     },
     timeToMerge: { p50: null, p75: null, p90: null },
   };
@@ -757,7 +783,7 @@ export async function getActivityData(
   const authoredInPeriod = allPrs
     .filter((p) => p.author_github_id === githubId && p.created_at >= periodStartIso && p.created_at <= endIso)
     .sort((a, b) => b.updated_at.localeCompare(a.updated_at))
-    .slice(0, 20);
+    .slice(0, 10);
 
   // Fetch root comments by ALL commenters on authored PRs (for thread count)
   const authoredIds = authoredInPeriod.map((p) => p.id);
@@ -803,7 +829,7 @@ export async function getActivityData(
     .map((prId) => prMap.get(prId))
     .filter((p): p is PrDb => p !== undefined && p.author_github_id !== githubId)
     .sort((a, b) => b.updated_at.localeCompare(a.updated_at))
-    .slice(0, 20)
+    .slice(0, 10)
     .map((p) => {
       const repoInfo = repoOwnerRepoMap.get(p.repo_id);
       const timeToMergeHours = p.merged_at

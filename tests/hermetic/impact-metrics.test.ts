@@ -77,16 +77,20 @@ describe("getImpactSummary (hermetic)", () => {
   it("happy path: counts PRs/reviews/threads and computes KPI values correctly", async () => {
     const client = makeMockClient({
       github_repos: { data: repos, error: null },
-      github_pull_requests: { data: [basePr], error: null },
+      // basePr is authored by GITHUB_ID; reviews/threads must be on a *different* person's PR
+      github_pull_requests: {
+        data: [basePr, { ...basePr, id: 2, author_github_id: 99, author_login: "bob" }],
+        error: null,
+      },
       github_reviews: {
-        data: [{ id: 10, pull_request_id: 1, reviewer_github_id: GITHUB_ID, state: "APPROVED", submitted_at: D28 }],
+        data: [{ id: 10, pull_request_id: 2, reviewer_github_id: GITHUB_ID, state: "APPROVED", submitted_at: D28 }],
         error: null,
       },
       github_review_comments: {
         data: [
           {
             id: 100,
-            pull_request_id: 1,
+            pull_request_id: 2,
             commenter_github_id: GITHUB_ID,
             in_reply_to_id: null,
             path: "src/a.ts",

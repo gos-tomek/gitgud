@@ -509,43 +509,43 @@ Update the board detail page to include navigation tabs (Impact / Activity / Set
 
 #### Automated
 
-- [x] 2.1 Type checking passes: `npx tsc --noEmit` and `npm run test:typecheck`
-- [x] 2.2 Linting passes: `npm run lint`
-- [x] 2.3 Build succeeds: `npm run build`
-- [x] 2.4 Unit tests for date-range.ts pass
-- [x] 2.5 Unit tests for impact-metrics.ts pass
-- [x] 2.6 API endpoint tests pass (auth, 404, invalid period)
+- [x] 2.1 Type checking passes: `npx tsc --noEmit` and `npm run test:typecheck` — 5c68a85
+- [x] 2.2 Linting passes: `npm run lint` — 5c68a85
+- [x] 2.3 Build succeeds: `npm run build` — 5c68a85
+- [x] 2.4 Unit tests for date-range.ts pass — 5c68a85
+- [x] 2.5 Unit tests for impact-metrics.ts pass — 5c68a85
+- [x] 2.6 API endpoint tests pass (auth, 404, invalid period) — 5c68a85
 
 #### Manual
 
-- [x] 2.7 Summary endpoint returns correct KPI values with real data
-- [x] 2.8 Delta percentages are sensible
-- [x] 2.9 Thread metrics return non-null for contributors with comments
-- [x] 2.10 Empty response for contributors with no activity in period
+- [x] 2.7 Summary endpoint returns correct KPI values with real data — 5c68a85
+- [x] 2.8 Delta percentages are sensible — 5c68a85
+- [x] 2.9 Thread metrics return non-null for contributors with comments — 5c68a85
+- [x] 2.10 Empty response for contributors with no activity in period — 5c68a85
 
 ### Phase 3: Impact Page UI
 
 #### Automated
 
-- [ ] 3.1 Type checking passes: `npx tsc --noEmit` and `npm run test:typecheck`
-- [ ] 3.2 Linting passes: `npm run lint`
-- [ ] 3.3 Build succeeds: `npm run build`
-- [ ] 3.4 Component tests pass
-- [ ] 3.5 React Compiler lint rule passes
+- [x] 3.1 Type checking passes: `npx tsc --noEmit` and `npm run test:typecheck`
+- [x] 3.2 Linting passes: `npm run lint`
+- [x] 3.3 Build succeeds: `npm run build`
+- [x] 3.4 Component tests pass
+- [x] 3.5 React Compiler lint rule passes
 
 #### Manual
 
-- [ ] 3.6 Full page renders with real data at `/board/[id]/impact/[login]/90d`
-- [ ] 3.7 All 20 metrics display correct values
-- [ ] 3.8 Period selector changes URL and refetches sections
-- [ ] 3.9 Loading skeletons show during API calls
-- [ ] 3.10 Empty states render for no-activity contributors
-- [ ] 3.11 Activity chart tooltips and legend work
-- [ ] 3.12 Heatmap hover shows date + count
-- [ ] 3.13 PR table tabs (authored/reviewed) switch correctly
-- [ ] 3.14 Sync indicator shows correct time; refresh works
-- [ ] 3.15 Thread quality section has purple visual treatment
-- [ ] 3.16 Data parity: IC self-view matches EM view
+- [x] 3.6 Full page renders with real data at `/board/[id]/impact/[login]/90d`
+- [x] 3.7 All 20 metrics display correct values
+- [x] 3.8 Period selector changes URL and refetches sections
+- [x] 3.9 Loading skeletons show during API calls
+- [x] 3.10 Empty states render for no-activity contributors
+- [x] 3.11 Activity chart tooltips and legend work
+- [x] 3.12 Heatmap hover shows date + count
+- [x] 3.13 PR table tabs (authored/reviewed) switch correctly
+- [x] 3.14 Sync indicator shows correct time; refresh works
+- [x] 3.15 Thread quality section has purple visual treatment
+- [x] 3.16 Data parity: IC self-view matches EM view
 
 ### Phase 4: Board Navigation Integration
 

@@ -111,6 +111,8 @@ export interface AuthorMetrics {
     totalChangedFiles: number | null;
     medianAdditions: number | null;
     medianDeletions: number | null;
+    medianChangedLines: number | null;
+    sizeBuckets: { xs: number; s: number; m: number; l: number; xl: number } | null;
   };
   timeToMerge: {
     p50: number | null;

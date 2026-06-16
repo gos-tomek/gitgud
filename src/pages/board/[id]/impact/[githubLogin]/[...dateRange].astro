@@ -1,0 +1,48 @@
+---
+import Layout from "@/layouts/Layout.astro";
+import { createClient } from "@/lib/supabase";
+import { getBoardWithRole, getBoardContributors } from "@/lib/services/boards";
+import { isValidPeriodSlug } from "@/lib/date-range";
+import ImpactView from "@/components/impact/ImpactView";
+
+const { user } = Astro.locals;
+const { id, githubLogin, dateRange: dateRangeParam } = Astro.params;
+
+if (!user) {
+  return Astro.redirect("/auth/signin");
+}
+
+const supabase = createClient(Astro.request.headers, Astro.cookies);
+if (!supabase || !id || !githubLogin) {
+  return Astro.redirect("/dashboard");
+}
+
+const board = await getBoardWithRole(supabase, id, user.id).catch(() => null);
+if (!board) {
+  return Astro.redirect("/dashboard");
+}
+
+const contributors = await getBoardContributors(supabase, board.id).catch(() => []);
+const contributor = contributors.find((c) => c.githubLogin === githubLogin);
+if (!contributor) {
+  return Astro.redirect(`/board/${id}`);
+}
+
+const rawPeriod: string = typeof dateRangeParam === "string" ? dateRangeParam : "90d";
+const period = isValidPeriodSlug(rawPeriod) ? rawPeriod : "90d";
+---
+
+<Layout title={`${contributor.githubLogin} — ${board.name}`}>
+  <div class="bg-cosmic min-h-screen text-white">
+    <ImpactView
+      client:only="react"
+      boardId={board.id}
+      githubLogin={contributor.githubLogin}
+      period={period}
+      contributor={{
+        githubLogin: contributor.githubLogin,
+        avatarUrl: contributor.avatarUrl,
+      }}
+    />
+  </div>
+</Layout>
