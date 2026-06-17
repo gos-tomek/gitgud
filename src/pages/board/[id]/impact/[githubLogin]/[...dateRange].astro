@@ -34,6 +34,17 @@ if (!contributor) {
   return Astro.redirect(`/board/${id}`);
 }
 
+// Non-supervisors can only view their own contributor profile, never switch to others.
+// Currently a no-op: board_contributors.user_id isn't linked yet (F-04), so no
+// non-owner board member exists to trigger this branch — kept as a forward-compatible guard.
+const ownContributor = board.role !== "supervisor" ? contributors.find((c) => c.userId === user.id) : null;
+if (board.role !== "supervisor" && ownContributor?.githubLogin !== githubLogin) {
+  return Astro.redirect(ownContributor ? `/board/${id}/impact/${ownContributor.githubLogin}` : `/board/${id}`);
+}
+
+const visibleContributors =
+  board.role === "supervisor" ? contributors : contributors.filter((c) => c.userId === user.id);
+
 const rawPeriod: string = typeof dateRangeParam === "string" ? dateRangeParam : "90d";
 const period = isValidPeriodSlug(rawPeriod) ? rawPeriod : "90d";
 
@@ -53,7 +64,7 @@ const userInitial = user.email?.[0]?.toUpperCase() ?? "?";
         githubLogin: contributor.githubLogin,
         avatarUrl: contributor.avatarUrl,
       }}
-      contributors={contributors.map((c) => ({ githubLogin: c.githubLogin, avatarUrl: c.avatarUrl }))}
+      contributors={visibleContributors.map((c) => ({ githubLogin: c.githubLogin, avatarUrl: c.avatarUrl }))}
     />
   </div>
 </Layout>

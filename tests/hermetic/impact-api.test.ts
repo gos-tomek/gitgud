@@ -10,7 +10,10 @@ vi.mock("astro:env/server", () => ({
 const mockLogger = vi.hoisted(() => ({ error: vi.fn(), warn: vi.fn(), info: vi.fn() }));
 vi.mock("@/lib/logger", () => ({ logger: mockLogger }));
 
-// Supabase mock — board_contributors query is the only DB call the guard layer makes.
+// Supabase mock — two tables are queried: "boards" (getBoardWithRole) and
+// "board_contributors" (own-contributor guard + target-contributor lookup).
+// Default board row makes the authenticated user the owner ("supervisor"),
+// which skips the own-contributor guard branch and keeps existing tests unaffected.
 const mockContributorResult = vi.hoisted(() => ({ data: { github_id: 42 }, error: null }));
 const mockBuilder = vi.hoisted(() => {
   const b: Record<string, ReturnType<typeof vi.fn>> = {
@@ -23,9 +26,27 @@ const mockBuilder = vi.hoisted(() => {
   b.maybeSingle.mockResolvedValue(mockContributorResult);
   return b;
 });
+const mockBoardRow = vi.hoisted(() => ({
+  id: "00000000-0000-0000-0000-000000000001",
+  name: "Board",
+  owner_user_id: "user-1",
+  created_at: "2025-01-01T00:00:00.000Z",
+  updated_at: "2025-01-01T00:00:00.000Z",
+}));
+const mockBoardBuilder = vi.hoisted(() => {
+  const b: Record<string, ReturnType<typeof vi.fn>> = {
+    select: vi.fn(),
+    eq: vi.fn(),
+    maybeSingle: vi.fn(),
+  };
+  b.select.mockReturnValue(b);
+  b.eq.mockReturnValue(b);
+  b.maybeSingle.mockResolvedValue({ data: mockBoardRow, error: null });
+  return b;
+});
 const mockSupabase = vi.hoisted(() => ({
   auth: { getUser: vi.fn() },
-  from: vi.fn().mockReturnValue(mockBuilder),
+  from: vi.fn().mockImplementation((table: string) => (table === "boards" ? mockBoardBuilder : mockBuilder)),
 }));
 vi.mock("@/lib/supabase", () => ({ createClient: vi.fn(() => mockSupabase) }));
 
@@ -72,10 +93,13 @@ describe("Impact API guard layer (hermetic)", () => {
     // Restore defaults after clearAllMocks
     (createClient as ReturnType<typeof vi.fn>).mockReturnValue(mockSupabase);
     mockSupabase.auth.getUser.mockResolvedValue({ data: { user: { id: "user-1" } } });
-    mockSupabase.from.mockReturnValue(mockBuilder);
+    mockSupabase.from.mockImplementation((table: string) => (table === "boards" ? mockBoardBuilder : mockBuilder));
     mockBuilder.select.mockReturnValue(mockBuilder);
     mockBuilder.eq.mockReturnValue(mockBuilder);
     mockBuilder.maybeSingle.mockResolvedValue({ data: { github_id: 42 }, error: null });
+    mockBoardBuilder.select.mockReturnValue(mockBoardBuilder);
+    mockBoardBuilder.eq.mockReturnValue(mockBoardBuilder);
+    mockBoardBuilder.maybeSingle.mockResolvedValue({ data: mockBoardRow, error: null });
     (getImpactSummary as ReturnType<typeof vi.fn>).mockResolvedValue(mockSummaryData);
   });
 
@@ -135,6 +159,15 @@ describe("Impact API guard layer (hermetic)", () => {
 
   // ── 404 ──────────────────────────────────────────────────────────────────────
 
+  it("summary: 404 when board not found", async () => {
+    mockBoardBuilder.maybeSingle.mockResolvedValue({ data: null, error: null });
+    const ctx = makeContext({ boardId: VALID_BOARD_ID, login: VALID_LOGIN });
+    const res = await summaryGET(ctx);
+    expect(res.status).toBe(404);
+    const body = (await res.json()) as { error: string };
+    expect(body.error).toBe("Board not found");
+  });
+
   it.each([
     ["summary", summaryGET],
     ["author", authorGET],
@@ -147,6 +180,34 @@ describe("Impact API guard layer (hermetic)", () => {
     expect(res.status).toBe(404);
     const body = (await res.json()) as { error: string };
     expect(body.error).toBe("Contributor not found");
+  });
+
+  // ── 403 non-supervisor role guard ─────────────────────────────────────────────
+
+  it("summary: 403 when a non-supervisor requests another contributor's profile", async () => {
+    mockBoardBuilder.maybeSingle.mockResolvedValue({
+      data: { ...mockBoardRow, owner_user_id: "owner-2" },
+      error: null,
+    });
+    mockBuilder.maybeSingle.mockResolvedValueOnce({ data: { github_login: "bob" }, error: null });
+    const ctx = makeContext({ boardId: VALID_BOARD_ID, login: VALID_LOGIN });
+    const res = await summaryGET(ctx);
+    expect(res.status).toBe(403);
+    const body = (await res.json()) as { error: string };
+    expect(body.error).toBe("Forbidden");
+  });
+
+  it("summary: 200 when a non-supervisor requests their own profile", async () => {
+    mockBoardBuilder.maybeSingle.mockResolvedValue({
+      data: { ...mockBoardRow, owner_user_id: "owner-2" },
+      error: null,
+    });
+    mockBuilder.maybeSingle
+      .mockResolvedValueOnce({ data: { github_login: VALID_LOGIN }, error: null })
+      .mockResolvedValueOnce({ data: { github_id: 42 }, error: null });
+    const ctx = makeContext({ boardId: VALID_BOARD_ID, login: VALID_LOGIN });
+    const res = await summaryGET(ctx);
+    expect(res.status).toBe(200);
   });
 
   // ── 500 DB error ──────────────────────────────────────────────────────────────

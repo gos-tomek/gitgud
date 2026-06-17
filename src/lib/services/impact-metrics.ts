@@ -133,22 +133,19 @@ export async function getImpactSummary(
   const earliestIso = earliestStart?.toISOString() ?? "1970-01-01T00:00:00.000Z";
   const endIso = dateRange.end.toISOString();
 
-  let reviewsQ = supabase
-    .from("github_reviews")
-    .select("id,pull_request_id,submitted_at")
-    .in("pull_request_id", boardPrIds)
-    .eq("reviewer_github_id", githubId)
-    .lte("submitted_at", endIso);
-  if (earliestStart) reviewsQ = reviewsQ.gte("submitted_at", earliestIso);
+  const reviewsQ = supabase.rpc("get_board_reviews_for_reviewer", {
+    p_repo_ids: repoIds,
+    p_reviewer_github_id: githubId,
+    p_start: earliestStart ? earliestIso : null,
+    p_end: endIso,
+  });
 
-  let commentsQ = supabase
-    .from("github_review_comments")
-    .select("id,pull_request_id,created_at")
-    .in("pull_request_id", boardPrIds)
-    .eq("commenter_github_id", githubId)
-    .is("in_reply_to_id", null)
-    .lte("created_at", endIso);
-  if (earliestStart) commentsQ = commentsQ.gte("created_at", earliestIso);
+  const commentsQ = supabase.rpc("get_board_root_comments_for_commenter", {
+    p_repo_ids: repoIds,
+    p_commenter_github_id: githubId,
+    p_start: earliestStart ? earliestIso : null,
+    p_end: endIso,
+  });
 
   const [reviewsResult, commentsResult] = await Promise.all([reviewsQ, commentsQ]);
   if (reviewsResult.error) throw reviewsResult.error;
@@ -403,18 +400,15 @@ export async function getReviewerMetrics(
   const startIso = dateRange.start?.toISOString() ?? "1970-01-01T00:00:00.000Z";
   const endIso = dateRange.end.toISOString();
 
-  let reviewsQ = supabase
-    .from("github_reviews")
-    .select("id,pull_request_id,state,submitted_at")
-    .in("pull_request_id", boardPrIds)
-    .eq("reviewer_github_id", githubId)
-    .lte("submitted_at", endIso);
-  if (dateRange.start) reviewsQ = reviewsQ.gte("submitted_at", startIso);
+  const reviewsResult = await supabase.rpc("get_board_reviews_for_reviewer", {
+    p_repo_ids: repoIds,
+    p_reviewer_github_id: githubId,
+    p_start: dateRange.start ? startIso : null,
+    p_end: endIso,
+  });
+  if (reviewsResult.error) throw reviewsResult.error;
 
-  const { data: reviewData, error: reviewsError } = await reviewsQ;
-  if (reviewsError) throw reviewsError;
-
-  const reviews = reviewData as ReviewDb[];
+  const reviews = reviewsResult.data as ReviewDb[];
 
   const verdicts = { approved: 0, changesRequested: 0, commented: 0, dismissed: 0 };
   const reviewedPrIds = new Set<number>();
@@ -649,22 +643,19 @@ export async function getActivityData(
   if (boardPrIds.length === 0) return emptyActivityData();
 
   // Reviews and root comments for the contributor (covering heatmap range)
-  let reviewsQ = supabase
-    .from("github_reviews")
-    .select("id,pull_request_id,submitted_at")
-    .in("pull_request_id", boardPrIds)
-    .eq("reviewer_github_id", githubId)
-    .lte("submitted_at", endIso);
-  if (effectiveStart) reviewsQ = reviewsQ.gte("submitted_at", effectiveStartIso);
+  const reviewsQ = supabase.rpc("get_board_reviews_for_reviewer", {
+    p_repo_ids: repoIds,
+    p_reviewer_github_id: githubId,
+    p_start: effectiveStart ? effectiveStartIso : null,
+    p_end: endIso,
+  });
 
-  let commentsQ = supabase
-    .from("github_review_comments")
-    .select("id,pull_request_id,created_at")
-    .in("pull_request_id", boardPrIds)
-    .eq("commenter_github_id", githubId)
-    .is("in_reply_to_id", null)
-    .lte("created_at", endIso);
-  if (effectiveStart) commentsQ = commentsQ.gte("created_at", effectiveStartIso);
+  const commentsQ = supabase.rpc("get_board_root_comments_for_commenter", {
+    p_repo_ids: repoIds,
+    p_commenter_github_id: githubId,
+    p_start: effectiveStart ? effectiveStartIso : null,
+    p_end: endIso,
+  });
 
   // Board contributors for avatar lookup
   const contributorsQ = supabase.from("board_contributors").select("github_login,avatar_url").eq("board_id", boardId);

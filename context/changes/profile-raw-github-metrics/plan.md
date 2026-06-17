@@ -101,6 +101,8 @@ Extend the DB schema with 4 columns needed for thread metrics and PR size, updat
 
 **Contract**: In `upsertPullRequests` (~line 29), add `additions`, `deletions`, `changed_files` to the mapped object from the Octokit PR response fields of the same names. In `upsertComments` (~line 69), add `in_reply_to_id` from `c.in_reply_to_id`. Both are simple field additions to the existing upsert objects.
 
+> **Addendum (implementation deviation, flagged in impl-review F3)**: The list-PRs Octokit endpoint used by `upsertPullRequests` does not actually return `additions`/`deletions`/`changed_files` — those fields are only present on the single-PR detail endpoint (`pulls.get`). Implementation adds a separate `updatePullRequestSize` function (`src/lib/services/github-sync.ts:70-76`) that calls `pulls.get` per PR to backfill these 3 fields after the list-based upsert, instead of including them directly in the `upsertPullRequests` mapper as originally planned. The plan's assumption about field availability on the list endpoint was incorrect; no other behavior changes.
+
 #### 3. TypeScript type updates
 
 **File**: `src/types.ts`
@@ -412,6 +414,8 @@ Update the board detail page to include navigation tabs (Impact / Activity / Set
 **Intent**: Placeholder pages so the nav tabs link to real routes instead of dead links.
 
 **Contract**: Minimal Astro pages with board nav + "Coming soon" message. Protected routes (require auth + board membership).
+
+> **Addendum (unplanned addition, flagged in impl-review F4)**: `src/pages/board/[id]/impact/index.astro` was added but not described above. `BoardNav`'s Impact tab links to `/board/[id]/impact`, which has no contributor/date-range segment and would otherwise 404. This index route redirects to the first contributor's impact page (or to `/board/[id]/settings` if the board has no contributors yet). Reasonable scope addition needed to make the nav tab actually resolve; no other behavior change.
 
 ### Success Criteria:
 

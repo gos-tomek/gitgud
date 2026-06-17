@@ -16,9 +16,20 @@ function makeBuilder(result: { data: unknown[] | null; error: null | { message: 
   return self;
 }
 
+// RPCs replace direct .in("pull_request_id", boardPrIds) queries on these tables —
+// route them back to the same canned table data the tests already supply.
+const RPC_TABLE: Record<string, string> = {
+  get_board_reviews_for_reviewer: "github_reviews",
+  get_board_root_comments_for_commenter: "github_review_comments",
+};
+
 function makeMockClient(tables: Record<string, { data: unknown[]; error: null }>) {
   return {
     from: vi.fn().mockImplementation((table: string) => makeBuilder(tables[table] ?? { data: [], error: null })),
+    rpc: vi.fn().mockImplementation((fn: string) => {
+      const table = RPC_TABLE[fn];
+      return Promise.resolve(table ? (tables[table] ?? { data: [], error: null }) : { data: [], error: null });
+    }),
     auth: { getUser: vi.fn().mockResolvedValue({ data: { user: { id: "user-1" } } }) },
   };
 }

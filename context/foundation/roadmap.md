@@ -127,6 +127,7 @@ Foundations below assume these are present and do NOT re-scaffold them.
   - Multiple GitHub accounts: a developer might have personal and work accounts. If they link the wrong one, the match fails silently. — Owner: user. Block: no.
 - **Risk:** First OAuth integration — requires GitHub OAuth app creation, Supabase provider config, callback route, `linkIdentity` flow, and a database trigger for auto-matching `board_contributors`. Moderate complexity but well-documented by Supabase. Research complete in `context/changes/invite-and-join-board/research.md`.
 - **Status:** proposed
+- **Missing functionality (surfaced by S-04 impl review, F2):** S-04 added a board-role guard restricting non-supervisors to their own contributor profile, but it's currently a no-op — `board_contributors.user_id` stays unpopulated until F-04 ships, so no non-owner board member exists yet to exercise that branch. The review also flagged that contributors should be able to see who their board's supervisor is, but the owner's display identity isn't surfaced anywhere in `UserBoard`/`BoardTopbar` today; this is unimplemented and likely depends on the `auth.users.id` ↔ GitHub identity bridge F-04 introduces.
 
 ## Slices
 
