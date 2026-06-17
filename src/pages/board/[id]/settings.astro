@@ -1,0 +1,79 @@
+---
+import Layout from "@/layouts/Layout.astro";
+import { createClient } from "@/lib/supabase";
+import { getBoardWithRole, getBoardRepos, getBoardContributors, getUserBoards } from "@/lib/services/boards";
+import BoardTopbar from "@/components/BoardTopbar.astro";
+import BoardNav from "@/components/BoardNav.astro";
+
+const { user } = Astro.locals;
+const { id } = Astro.params;
+
+const supabase = createClient(Astro.request.headers, Astro.cookies);
+const board = supabase && user && id ? await getBoardWithRole(supabase, id, user.id).catch(() => null) : null;
+
+if (!board) {
+  return Astro.redirect("/dashboard");
+}
+
+const [repos, contributors, boards] = await Promise.all([
+  supabase ? getBoardRepos(supabase, board.id).catch(() => []) : [],
+  supabase ? getBoardContributors(supabase, board.id).catch(() => []) : [],
+  supabase && user ? getUserBoards(supabase, user.id).catch(() => []) : [],
+]);
+
+const userInitial = user?.email?.[0]?.toUpperCase() ?? "?";
+---
+
+<Layout title={`Settings — ${board.name}`}>
+  <div class="bg-cosmic min-h-screen text-white">
+    <BoardTopbar board={board} boards={boards} userInitial={userInitial} />
+    <BoardNav boardId={board.id} />
+
+    <div class="mx-auto max-w-6xl space-y-4 p-4">
+      <div class="rounded-lg border border-white/10 bg-white/5 px-4 py-3">
+        <p class="text-xs font-semibold tracking-wide text-blue-100/40 uppercase">Linked repositories</p>
+        {
+          repos.length === 0 ? (
+            <p class="mt-1 text-sm text-blue-100/50 italic">No repositories linked</p>
+          ) : (
+            <ul class="mt-2 space-y-1">
+              {repos.map((repo) => (
+                <li class="font-mono text-sm text-blue-100/80">
+                  {repo.repoOwner}/{repo.repoName}
+                </li>
+              ))}
+            </ul>
+          )
+        }
+      </div>
+
+      <div class="rounded-lg border border-white/10 bg-white/5 px-4 py-3">
+        <p class="text-xs font-semibold tracking-wide text-blue-100/40 uppercase">Contributors</p>
+        {
+          contributors.length === 0 ? (
+            <p class="mt-1 text-sm text-blue-100/50 italic">No contributors yet</p>
+          ) : (
+            <ul class="mt-2 space-y-1">
+              {contributors.map((contributor) => (
+                <li>
+                  <a
+                    href={`/board/${board.id}/impact/${contributor.githubLogin}/90d`}
+                    class="flex items-center gap-2 rounded-md px-2 py-1.5 transition-colors hover:bg-white/5"
+                  >
+                    {contributor.avatarUrl ? (
+                      <img src={contributor.avatarUrl} alt={contributor.githubLogin} class="h-6 w-6 rounded-full" />
+                    ) : (
+                      <div class="h-6 w-6 rounded-full bg-white/10" />
+                    )}
+                    <span class="font-mono text-sm text-blue-100/80">@{contributor.githubLogin}</span>
+                    <span class="ml-auto text-xs text-blue-100/30">→</span>
+                  </a>
+                </li>
+              ))}
+            </ul>
+          )
+        }
+      </div>
+    </div>
+  </div>
+</Layout>

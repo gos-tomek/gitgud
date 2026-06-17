@@ -3,7 +3,7 @@ project: GitGud
 version: 1
 status: draft
 created: 2026-05-27
-updated: 2026-06-02
+updated: 2026-06-17
 prd_version: 1
 main_goal: market-feedback
 top_blocker: skills
@@ -36,7 +36,7 @@ Mentoring, code-review quality, and unblocking — the "glue work" that keeps en
 | S-02 | link-board-to-github-org       | link a board to a GitHub org so its activity feeds the board                                  | S-01, F-02       | FR-002, US-01                                                                 | done     |
 | F-04 | link-github-account            | (foundation) link GitGud account with GitHub via OAuth                                        | —                | Access Control                                                                | proposed |
 | S-03 | invite-and-join-board          | invite ICs by email; IC joins via invite link                                                 | S-01, F-01, S-02 | FR-003, FR-004, FR-005, FR-014, FR-015                                        | done     |
-| S-04 | profile-raw-github-metrics     | view a contribution profile: PRs, reviews, comment counts                                     | F-02, S-02, S-03 | FR-006, FR-008, FR-009, FR-010, FR-011, NFR progressive-load, NFR data-parity | proposed |
+| S-04 | profile-raw-github-metrics     | view a contribution profile: PRs, reviews, comment counts                                     | F-02, S-02, S-03 | FR-006, FR-008, FR-009, FR-010, FR-011, NFR progressive-load, NFR data-parity | done     |
 | S-05 | profile-classified-comments    | see own review comments broken down by semantic category                                      | F-03, F-04, S-04 | FR-012, Business Logic, NFR accuracy-floor, NFR data-parity                   | blocked  |
 | S-06 | em-switch-ic-dropdown          | switch between ICs on a board without a full page reload                                      | S-04             | FR-007, US-01                                                                 | proposed |
 | S-07 | flag-classification-inaccurate | flag a comment's assigned category as inaccurate                                              | S-05             | FR-013                                                                        | blocked  |
@@ -127,6 +127,7 @@ Foundations below assume these are present and do NOT re-scaffold them.
   - Multiple GitHub accounts: a developer might have personal and work accounts. If they link the wrong one, the match fails silently. — Owner: user. Block: no.
 - **Risk:** First OAuth integration — requires GitHub OAuth app creation, Supabase provider config, callback route, `linkIdentity` flow, and a database trigger for auto-matching `board_contributors`. Moderate complexity but well-documented by Supabase. Research complete in `context/changes/invite-and-join-board/research.md`.
 - **Status:** proposed
+- **Missing functionality (surfaced by S-04 impl review, F2):** S-04 added a board-role guard restricting non-supervisors to their own contributor profile, but it's currently a no-op — `board_contributors.user_id` stays unpopulated until F-04 ships, so no non-owner board member exists yet to exercise that branch. The review also flagged that contributors should be able to see who their board's supervisor is, but the owner's display identity isn't surfaced anywhere in `UserBoard`/`BoardTopbar` today; this is unimplemented and likely depends on the `auth.users.id` ↔ GitHub identity bridge F-04 introduces.
 
 ## Slices
 
@@ -179,7 +180,7 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **Unknowns:**
   - Empty-state copy when an IC has no GitHub activity in the period (US-01 acceptance criterion) — Owner: user. Block: no.
 - **Risk:** First user-visible payoff of the GitHub ingestion. Progressive-load NFR means the view must not block on full data; respect it from the start.
-- **Status:** proposed
+- **Status:** done
 
 ### S-05: Contribution profile shows semantically classified comments
 

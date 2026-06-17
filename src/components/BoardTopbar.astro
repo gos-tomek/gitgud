@@ -1,0 +1,130 @@
+---
+import type { UserBoard } from "@/types";
+
+interface Props {
+  board: UserBoard;
+  boards: UserBoard[];
+  userInitial: string;
+}
+
+const { board, boards, userInitial } = Astro.props;
+
+function initials(name: string) {
+  return name
+    .split(/\s+/)
+    .slice(0, 2)
+    .map((w) => w[0])
+    .join("")
+    .toUpperCase();
+}
+---
+
+<header class="sticky top-0 z-20 border-b border-white/10 bg-black/60 backdrop-blur-md">
+  <div class="mx-auto flex h-14 max-w-6xl items-center justify-between gap-4 px-4">
+    <!-- left: logo + separator + board switcher -->
+    <div class="flex items-center gap-2">
+      <a href="/dashboard" class="flex items-center gap-1.5 text-white/70 hover:text-white">
+        <div class="flex h-7 w-7 items-center justify-center rounded-md bg-white text-sm font-black text-black">g</div>
+        <span class="text-sm font-semibold text-white">GitGud</span>
+      </a>
+      <span class="text-white/20">/</span>
+
+      <!-- board switcher (CSS-only details/summary) -->
+      <details class="group relative">
+        <summary
+          class="flex cursor-pointer list-none items-center gap-1.5 rounded-lg px-2 py-1.5 text-sm font-medium text-white select-none hover:bg-white/10"
+        >
+          <div
+            class="flex h-6 w-6 shrink-0 items-center justify-center rounded bg-purple-600 text-[10px] font-bold text-white"
+          >
+            {initials(board.name)}
+          </div>
+          <span>{board.name}</span>
+          <svg class="h-3.5 w-3.5 text-white/40" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"></path>
+          </svg>
+        </summary>
+
+        <div
+          class="absolute top-full left-0 z-50 mt-1.5 w-72 overflow-hidden rounded-xl border border-white/10 bg-gray-950 py-1.5 shadow-2xl"
+        >
+          <p class="px-3 py-1 text-[11px] font-semibold tracking-widest text-white/30 uppercase">Switch board</p>
+          {
+            boards.map((b) => (
+              <a
+                href={`/board/${b.id}`}
+                class:list={[
+                  "flex items-center gap-2.5 px-3 py-2 text-sm transition-colors hover:bg-white/5",
+                  b.id === board.id ? "text-white" : "text-white/60",
+                ]}
+              >
+                <div class="flex h-7 w-7 shrink-0 items-center justify-center rounded bg-purple-600 text-[10px] font-bold text-white">
+                  {initials(b.name)}
+                </div>
+                <div class="min-w-0 flex-1">
+                  <p class="truncate font-medium">{b.name}</p>
+                  <p class="text-[11px] text-white/40">{b.role === "supervisor" ? "Supervisor" : "Contributor"}</p>
+                </div>
+                {b.id === board.id && (
+                  <svg class="h-4 w-4 shrink-0 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7" />
+                  </svg>
+                )}
+              </a>
+            ))
+          }
+          <div class="mx-3 my-1 border-t border-white/10"></div>
+          <a
+            href="/board/new"
+            class="flex items-center gap-2 px-3 py-2 text-sm text-white/40 transition-colors hover:bg-white/5 hover:text-white/70"
+          >
+            + Create new board
+          </a>
+        </div>
+      </details>
+    </div>
+
+    <!-- right: user avatar with dropdown -->
+    <details class="relative">
+      <summary
+        class="flex h-8 w-8 cursor-pointer list-none items-center justify-center rounded-full bg-purple-600 text-sm font-semibold text-white select-none hover:bg-purple-500"
+      >
+        {userInitial}
+      </summary>
+
+      <div
+        class="absolute top-full right-0 z-50 mt-1.5 w-48 overflow-hidden rounded-xl border border-white/10 bg-gray-950 py-1.5 shadow-2xl"
+      >
+        <a
+          href="/profile/settings"
+          class="flex items-center gap-2 px-3 py-2 text-sm text-white/70 transition-colors hover:bg-white/5 hover:text-white"
+        >
+          <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
+          </svg>
+          Profile settings
+        </a>
+        <div class="mx-3 my-1 border-t border-white/10"></div>
+        <form method="POST" action="/api/auth/signout">
+          <button
+            type="submit"
+            class="flex w-full items-center gap-2 px-3 py-2 text-sm text-white/70 transition-colors hover:bg-white/5 hover:text-white"
+          >
+            <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path>
+            </svg>
+            Sign out
+          </button>
+        </form>
+      </div>
+    </details>
+  </div>
+</header>

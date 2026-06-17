@@ -1,0 +1,70 @@
+---
+import Layout from "@/layouts/Layout.astro";
+import { createClient } from "@/lib/supabase";
+import { getBoardWithRole, getBoardContributors, getUserBoards } from "@/lib/services/boards";
+import { isValidPeriodSlug } from "@/lib/date-range";
+import ImpactView from "@/components/impact/ImpactView";
+import BoardTopbar from "@/components/BoardTopbar.astro";
+import BoardNav from "@/components/BoardNav.astro";
+
+const { user } = Astro.locals;
+const { id, githubLogin, dateRange: dateRangeParam } = Astro.params;
+
+if (!user) {
+  return Astro.redirect("/auth/signin");
+}
+
+const supabase = createClient(Astro.request.headers, Astro.cookies);
+if (!supabase || !id || !githubLogin) {
+  return Astro.redirect("/dashboard");
+}
+
+const board = await getBoardWithRole(supabase, id, user.id).catch(() => null);
+if (!board) {
+  return Astro.redirect("/dashboard");
+}
+
+const [contributors, boards] = await Promise.all([
+  getBoardContributors(supabase, board.id).catch(() => []),
+  getUserBoards(supabase, user.id).catch(() => []),
+]);
+
+const contributor = contributors.find((c) => c.githubLogin === githubLogin);
+if (!contributor) {
+  return Astro.redirect(`/board/${id}`);
+}
+
+// Non-supervisors can only view their own contributor profile, never switch to others.
+// Currently a no-op: board_contributors.user_id isn't linked yet (F-04), so no
+// non-owner board member exists to trigger this branch — kept as a forward-compatible guard.
+const ownContributor = board.role !== "supervisor" ? contributors.find((c) => c.userId === user.id) : null;
+if (board.role !== "supervisor" && ownContributor?.githubLogin !== githubLogin) {
+  return Astro.redirect(ownContributor ? `/board/${id}/impact/${ownContributor.githubLogin}` : `/board/${id}`);
+}
+
+const visibleContributors =
+  board.role === "supervisor" ? contributors : contributors.filter((c) => c.userId === user.id);
+
+const rawPeriod: string = typeof dateRangeParam === "string" ? dateRangeParam : "90d";
+const period = isValidPeriodSlug(rawPeriod) ? rawPeriod : "90d";
+
+const userInitial = user.email?.[0]?.toUpperCase() ?? "?";
+---
+
+<Layout title={`${contributor.githubLogin} — ${board.name}`}>
+  <div class="bg-cosmic min-h-screen text-white">
+    <BoardTopbar board={board} boards={boards} userInitial={userInitial} />
+    <BoardNav boardId={board.id} />
+    <ImpactView
+      client:only="react"
+      boardId={board.id}
+      githubLogin={contributor.githubLogin}
+      period={period}
+      contributor={{
+        githubLogin: contributor.githubLogin,
+        avatarUrl: contributor.avatarUrl,
+      }}
+      contributors={visibleContributors.map((c) => ({ githubLogin: c.githubLogin, avatarUrl: c.avatarUrl }))}
+    />
+  </div>
+</Layout>

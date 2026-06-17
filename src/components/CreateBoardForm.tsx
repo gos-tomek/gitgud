@@ -126,7 +126,7 @@ export default function CreateBoardForm() {
     const pat = state.pat;
     dispatch({ type: "SET_CHECKING_NAME", checking: true });
     try {
-      const res = await fetch("/api/boards/check-name", {
+      const res = await fetch("/api/board/check-name", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name: state.name.trim() }),
@@ -220,7 +220,7 @@ export default function CreateBoardForm() {
     if (state.step !== 3) return;
     dispatch({ type: "SUBMIT_START" });
     try {
-      const res = await fetch("/api/boards", {
+      const res = await fetch("/api/board", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -239,7 +239,7 @@ export default function CreateBoardForm() {
         dispatch({ type: "SUBMIT_ERROR", message: data.error ?? "Something went wrong. Please try again." });
         return;
       }
-      window.location.href = `/boards/${data.id}`;
+      window.location.href = `/board/${data.id}`;
     } catch {
       dispatch({ type: "SUBMIT_ERROR", message: "Network error. Please try again." });
     }
