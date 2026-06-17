@@ -1,11 +1,11 @@
 ---
 change_id: profile-raw-github-metrics
 title: Profile raw github metrics
-status: impl_reviewed
+status: archived
 created: 2026-06-15
-updated: 2026-06-16
+updated: 2026-06-17
 
-archived_at: null
+archived_at: 2026-06-17T19:58:37Z
 ---
 
 ## Notes
