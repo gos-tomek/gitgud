@@ -4,11 +4,17 @@ declare namespace App {
   }
 }
 
-interface Env {
-  ASSETS: Fetcher;
-  AI: Ai;
-  CLASSIFICATION_BATCH: Workflow<{ boardId: string }>;
-  SUPABASE_URL: string;
-  SUPABASE_KEY: string;
-  GITHUB_TOKEN_ENCRYPTION_KEY: string;
+// `import { env } from "cloudflare:workers"` is typed as `Cloudflare.Env` (declaration-merged
+// here), not the bare global `Env` below — both must declare the same bindings.
+declare namespace Cloudflare {
+  interface Env {
+    ASSETS: Fetcher;
+    AI: Ai;
+    CLASSIFICATION_BATCH: Workflow<{ boardId: string }>;
+    SUPABASE_URL: string;
+    SUPABASE_KEY: string;
+    GITHUB_TOKEN_ENCRYPTION_KEY: string;
+  }
 }
+
+type Env = Cloudflare.Env;

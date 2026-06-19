@@ -452,28 +452,28 @@ Refactor the manual sync endpoint to trigger the Workflow instead of running syn
 
 #### Automated
 
-- [x] 2.1 Migration applies cleanly: `npx supabase db reset`
-- [x] 2.2 Type checking passes: `npx tsc --noEmit`
-- [x] 2.3 Lint passes: `npm run lint`
+- [x] 2.1 Migration applies cleanly: `npx supabase db reset` — 817b8d1
+- [x] 2.2 Type checking passes: `npx tsc --noEmit` — 817b8d1
+- [x] 2.3 Lint passes: `npm run lint` — 817b8d1
 
 #### Manual
 
-- [x] 2.4 `thread_classifications` table visible in Supabase Studio with correct columns
-- [x] 2.5 RLS test: non-member cannot SELECT rows
+- [x] 2.4 `thread_classifications` table visible in Supabase Studio with correct columns — 817b8d1
+- [x] 2.5 RLS test: non-member cannot SELECT rows — 817b8d1
 
 ### Phase 3: Classification Service
 
 #### Automated
 
-- [ ] 3.1 Type checking passes: `npx tsc --noEmit`
-- [ ] 3.2 Lint passes: `npm run lint`
-- [ ] 3.3 Unit tests pass for `isBotComment()`
-- [ ] 3.4 Unit tests pass for `assembleThreadPayload()`
-- [ ] 3.5 Unit tests pass for response parsing / zod validation
+- [x] 3.1 Type checking passes: `npx tsc --noEmit`
+- [x] 3.2 Lint passes: `npm run lint`
+- [x] 3.3 Unit tests pass for `isBotComment()`
+- [x] 3.4 Unit tests pass for `assembleThreadPayload()`
+- [x] 3.5 Unit tests pass for response parsing / zod validation
 
 #### Manual
 
-- [ ] 3.6 Test `classifyThreads()` against Workers AI with real comments — valid results returned
+- [x] 3.6 Test `classifyThreads()` against Workers AI with real comments — valid results returned
 
 ### Phase 4: Workflow Implementation
 
