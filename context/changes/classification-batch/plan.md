@@ -438,28 +438,28 @@ Refactor the manual sync endpoint to trigger the Workflow instead of running syn
 
 #### Automated
 
-- [x] 1.1 `npm run build` succeeds with new entrypoint
-- [x] 1.2 `npm run dev` starts correctly
-- [x] 1.3 Type checking passes: `npx tsc --noEmit`
-- [x] 1.4 `npx wrangler deploy --dry-run` succeeds
+- [x] 1.1 `npm run build` succeeds with new entrypoint — 63e0667
+- [x] 1.2 `npm run dev` starts correctly — 63e0667
+- [x] 1.3 Type checking passes: `npx tsc --noEmit` — 63e0667
+- [x] 1.4 `npx wrangler deploy --dry-run` succeeds — 63e0667
 
 #### Manual
 
-- [x] 1.5 Astro SSR pages serve correctly in dev
+- [x] 1.5 Astro SSR pages serve correctly in dev — 63e0667
 - [ ] 1.6 Cron Trigger fires at scheduled time (after deploy)
 
 ### Phase 2: Database Schema
 
 #### Automated
 
-- [ ] 2.1 Migration applies cleanly: `npx supabase db reset`
-- [ ] 2.2 Type checking passes: `npx tsc --noEmit`
-- [ ] 2.3 Lint passes: `npm run lint`
+- [x] 2.1 Migration applies cleanly: `npx supabase db reset`
+- [x] 2.2 Type checking passes: `npx tsc --noEmit`
+- [x] 2.3 Lint passes: `npm run lint`
 
 #### Manual
 
-- [ ] 2.4 `thread_classifications` table visible in Supabase Studio with correct columns
-- [ ] 2.5 RLS test: non-member cannot SELECT rows
+- [x] 2.4 `thread_classifications` table visible in Supabase Studio with correct columns
+- [x] 2.5 RLS test: non-member cannot SELECT rows
 
 ### Phase 3: Classification Service
 
