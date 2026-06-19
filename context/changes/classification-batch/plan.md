@@ -416,6 +416,7 @@ Refactor the manual sync endpoint to trigger the Workflow instead of running syn
 3. **Service role key requirement**. The Workflow may need `SUPABASE_SERVICE_KEY` (service role, bypasses RLS) to insert classifications, since it doesn't run as an authenticated user. This is a new secret to manage.
 4. **`astro:env` vs `cloudflare:workers` coexistence**. Both import patterns must work in the same codebase. The Workflow code path must never import from `astro:env/server`; the Astro route code path continues to use it. Mixing them in the same module will fail.
 5. **Knowledge direction accuracy**. This axis is experimental — LLM cannot reliably infer seniority. Data will be stored but not surfaced in UI until validated.
+6. **DOM lib / `@cloudflare/workers-types` global type conflict (deferred)**. Root `tsconfig.json` loads `@cloudflare/workers-types` globally via `compilerOptions.types`, while TypeScript also defaults in the DOM lib (needed by client-side React components for `window`/`document`/`HTMLElement`). Both declare incompatible global `Response`/`Body` (and ~80 other) types; `skipLibCheck: true` hides the resulting duplicate-identifier conflict instead of resolving it — confirmed empirically: setting `skipLibCheck: false` surfaces ~869 errors project-wide. This causes a cold `tsc --noEmit` build and `typescript-eslint`'s `projectService` (incremental, tsserver-style resolution) to resolve `Response.json()`'s return type differently (`unknown` vs `any`), producing false-positive `@typescript-eslint/no-unnecessary-type-assertion` errors on `(await res.json()) as T` patterns in client components. Worked around with targeted `eslint-disable-next-line` comments in `src/components/CreateBoardForm.tsx` (pre-existing file, unrelated to this change) — removing the assertions instead breaks the authoritative `tsc` build with `TS18046`. Cloudflare's own templates exclude `"dom"` from `lib` when using `workers-types`, but that's not viable project-wide since client components genuinely need DOM types. The real fix requires splitting into two TypeScript programs (separate tsconfig for client vs. Worker-context files), touching `package.json` scripts, the CI `validate` job, and the Lefthook pre-commit hook — out of scope for this change. **Relevant to Phase 4/5**: today only `src/worker.ts` and `src/env.d.ts` reference Workers ambient globals; Phase 4 (Workflow steps) and Phase 5 (API route dispatching the Workflow via `env` bindings) will grow this footprint, making the tsconfig split increasingly worth revisiting. `skipLibCheck` stays `true` (unchanged) — flipping it blocks the entire build until the split is done.
 
 ## References
 
@@ -465,15 +466,15 @@ Refactor the manual sync endpoint to trigger the Workflow instead of running syn
 
 #### Automated
 
-- [x] 3.1 Type checking passes: `npx tsc --noEmit`
-- [x] 3.2 Lint passes: `npm run lint`
-- [x] 3.3 Unit tests pass for `isBotComment()`
-- [x] 3.4 Unit tests pass for `assembleThreadPayload()`
-- [x] 3.5 Unit tests pass for response parsing / zod validation
+- [x] 3.1 Type checking passes: `npx tsc --noEmit` — 187189a
+- [x] 3.2 Lint passes: `npm run lint` — 187189a
+- [x] 3.3 Unit tests pass for `isBotComment()` — 187189a
+- [x] 3.4 Unit tests pass for `assembleThreadPayload()` — 187189a
+- [x] 3.5 Unit tests pass for response parsing / zod validation — 187189a
 
 #### Manual
 
-- [x] 3.6 Test `classifyThreads()` against Workers AI with real comments — valid results returned
+- [x] 3.6 Test `classifyThreads()` against Workers AI with real comments — valid results returned — 187189a
 
 ### Phase 4: Workflow Implementation
 
