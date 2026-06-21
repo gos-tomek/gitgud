@@ -1,6 +1,6 @@
 import { z } from "zod";
 import type { createClient } from "@/lib/supabase";
-import type { IntentCategory, TechnicalDomain, KnowledgeDirection } from "@/types";
+import type { IntentCategory, TechnicalDomain } from "@/types";
 import { logger } from "@/lib/logger";
 
 type SupabaseClient = NonNullable<ReturnType<typeof createClient>>;
@@ -54,6 +54,7 @@ export interface PrMeta {
 export type ThreadCommentRole = "pr-author" | "reviewer" | "other";
 
 export interface ThreadPayload {
+  thread_id: number;
   prTitle: string;
   isInline: boolean;
   path: string | null;
@@ -79,6 +80,7 @@ export function assembleThreadPayload(
   };
 
   return {
+    thread_id: rootComment.id,
     prTitle: prMeta.title,
     isInline: rootComment.path !== null,
     path: rootComment.path,
@@ -87,25 +89,38 @@ export function assembleThreadPayload(
   };
 }
 
-const ClassificationOutputSchema = z.object({
-  intent: z.enum(["mentoring", "architecture", "bug-catch", "nitpick", "unblocking", "question"]),
+// Wire schema for one item of the batched classification response. "unknown" is a valid intent
+// (CI/process noise, unclassifiable) but deliberately not a valid domain — there is no DB row to
+// store a thread under an "unknown" domain, so a domain vote that lands there is treated as a
+// classification failure for that thread (see classifyBatch) rather than a real category.
+const ClassificationItemSchema = z.object({
+  thread_id: z.number(),
+  intent: z.enum([
+    "mentoring",
+    "architecture",
+    "bug-catch",
+    "nitpick",
+    "unblocking",
+    "question",
+    "praise",
+    "joke",
+    "self-review",
+    "unknown",
+  ]),
   domain: z.enum(["functional", "refactoring", "documentation", "discussion", "false-positive"]),
-  constructive: z.boolean(),
-  knowledge_direction: z.enum(["mentoring-down", "peer-exchange", "challenge-up", "self-clarification"]),
-  confidence: z.number().min(0).max(1),
 });
 
-export type ClassificationOutput = z.infer<typeof ClassificationOutputSchema>;
+export type ClassificationItem = z.infer<typeof ClassificationItemSchema>;
 
-export function parseClassificationOutput(raw: unknown): ClassificationOutput {
-  return ClassificationOutputSchema.parse(raw);
+export function parseClassificationItem(raw: unknown): ClassificationItem {
+  return ClassificationItemSchema.parse(raw);
 }
 
 // Some Workers AI models wrap JSON output in markdown code fences (```json ... ```) despite
-// response_format: json_object. Slice out the {...} body before JSON.parse.
-export function extractJsonObject(text: string): string {
-  const start = text.indexOf("{");
-  const end = text.lastIndexOf("}");
+// response_format: json_object. Slice out the [...] body before JSON.parse.
+export function extractJsonArray(text: string): string {
+  const start = text.indexOf("[");
+  const end = text.lastIndexOf("]");
   if (start === -1 || end === -1 || end < start) return text;
   return text.slice(start, end + 1);
 }
@@ -115,68 +130,89 @@ export interface ClassificationResult {
   pull_request_id: number;
   intent: IntentCategory;
   domain: TechnicalDomain;
-  constructive: boolean;
-  knowledge_direction: KnowledgeDirection;
-  confidence: number;
   model_id: string;
 }
 
-export const CLASSIFICATION_SYSTEM_PROMPT = `You classify code review discussion threads from GitHub pull requests.
+// Validated empirically against ~100 real threads (with manual ground truth on a curated
+// hard/ambiguous subset) across multiple A/B/C rounds — batch size, override-rule placement, and
+// prompt length were each independently tested; this is the structure and wording that held up.
+export const CLASSIFICATION_SYSTEM_PROMPT = `You are a JSON-only classifier for GitHub code review threads. Output ONLY a raw JSON array — no markdown, no preamble, no text outside the array.
 
-You will receive a JSON payload describing one thread: the PR title, whether the thread is anchored to a specific line of code (inline) or general, the file path and diff hunk (if inline), and the thread's comments in chronological order with author roles (pr-author, reviewer, other).
+Each thread's intent is anchored on its FIRST comment (the root). Later replies are context only — a long or technical reply does not override what the root was clearly about, unless it reveals the root meant something else entirely.
 
-Classify the THREAD as a whole — not individual comments — on 4 independent axes. If the thread evolves (e.g. starts as a question, becomes a bug report), classify by the DOMINANT intent that drove the discussion. Return JSON only, matching this exact schema:
+Input: a JSON array of threads.
 
-{
-  "intent": "mentoring" | "architecture" | "bug-catch" | "nitpick" | "unblocking" | "question",
-  "domain": "functional" | "refactoring" | "documentation" | "discussion" | "false-positive",
-  "constructive": true | false,
-  "knowledge_direction": "mentoring-down" | "peer-exchange" | "challenge-up" | "self-clarification",
-  "confidence": 0.0-1.0
+Output: a JSON array, same order, thread_id copied exactly:
+[{"thread_id":<copied>,"intent":"...","domain":"..."}]
+
+intent: mentoring | architecture | bug-catch | nitpick | unblocking | question | praise | joke | self-review | unknown
+domain: functional | refactoring | documentation | discussion | false-positive
+
+## OVERRIDE RULES — check in this order; stop at the first match
+
+1. ALL comments in the thread are from "pr-author" (including a single comment with no reviewer reply) -> self-review, regardless of content, even if it reads like a detailed explanation.
+2. (else) Any comment contains a \`\`\`suggestion block -> bug-catch, however minor the edit.
+3. (else) A comment cross-references elsewhere ("same here"/"same above") AND adds a description of the problem or fix -> bug-catch. A bare "same here"/"+1"/"ditto" with no elaboration is NOT covered here — see SPECIAL CASES.
+
+## INTENT (when no override applies) — each with its deciding test
+
+- mentoring: explains a concept, convention, or WHY, aimed at the author's growth. Test: would this comment exist if the author were a principal engineer? If no -> mentoring.
+- architecture: structural/component/API/data-flow change, OR a FIRM objection to duplicating existing functionality ("don't recreate this" — even hedged: "90% sure"). Test: does it object outright with no escape clause? If the comment explicitly allows keeping the current code anyway ("otherwise it's fine to leave it") -> mentoring instead, not architecture.
+- bug-catch: asserts a concrete defect, wrong behavior, or broken/incorrect link — a claim that something IS currently wrong, not just a suggestion. (Most threads land here via override rules 2-3 above.)
+- nitpick: trivial style/naming/formatting, in prose. Tests would pass identically either way. A "nit:"-labeled comment that actually asks for real engineering work (extract a function, add tests) is unblocking, not nitpick — judge by scope, not the label.
+- unblocking: a concrete next step in prose, for an issue NOT asserted as broken by this comment itself.
+- question: MUST be grammatically interrogative ("?", or "why/how/is/are/does/can/isn't it"). A hedge ("I think...") without question form is NOT a question — judge by form, not tone.
+- praise: approval or thanks, no code change requested. Only counts when said BY the reviewer — a pr-author's thanks in a reply does not count as praise.
+- joke: humor or banter with no review substance, only when humor is the entire comment.
+- unknown: CI/bot noise, merge/process logistics, or genuinely unclassifiable. Not for merely borderline cases — pick the closer real category instead.
+
+## DOMAIN (what area the concern targets, independent of intent)
+
+functional (correctness, bugs, security) | refactoring (code quality, no behavior change) | documentation (comments/docs/README) | discussion (questions, design, praise) | false-positive (concern conclusively withdrawn/refuted — only if the thread demonstrably shows this)
+
+## SPECIAL CASES
+
+- Bare "LGTM"/"+1"/"ditto"/"same here" with no elaboration, or a thumbs-up: {"intent":"praise","domain":"discussion"}
+- Bot-generated noise (CI status, linter output, coverage report): {"intent":"unknown","domain":"functional"}
+
+Output ONLY the raw JSON array, nothing else.`;
+
+// Validated empirically: 4 threads/call balances call volume against output-concentration loss
+// (larger batches measurably degraded accuracy). 3 independent repeats per batch + majority vote
+// smooths per-call noise; ties or every-repeat failure fall back to "unknown" below.
+const CLASSIFICATION_BATCH_INPUT_SIZE = 4;
+const CLASSIFICATION_VOTE_REPEATS = 3;
+
+// AI Gateway intermittently 504s on longer (multi-item-batch) completions — observed empirically
+// to be transient backend congestion, not a deterministic failure.
+const CLASSIFICATION_MAX_RETRY_ATTEMPTS = 5;
+const CLASSIFICATION_RETRY_DELAY_MS = 1000;
+
+const VALID_DOMAINS = new Set<TechnicalDomain>([
+  "functional",
+  "refactoring",
+  "documentation",
+  "discussion",
+  "false-positive",
+]);
+function isValidDomain(value: string): value is TechnicalDomain {
+  return VALID_DOMAINS.has(value as TechnicalDomain);
 }
 
-## Intent (pick the single best fit)
-
-- mentoring: The reviewer is teaching, explaining a concept, sharing institutional knowledge, or explaining WHY a pattern exists, aimed at the PR author's growth. e.g. "in our codebase we do X because…", explanations of design patterns with rationale.
-- architecture: The reviewer proposes changes to system structure, component boundaries, API surface, data flow, or design patterns. Addresses HOW the system is organized, not a specific bug or style issue. e.g. "this should be extracted to a separate service", "consider the strategy pattern here".
-- bug-catch: The reviewer identifies a concrete defect, logic error, missing edge case, race condition, or security issue — they ASSERT something is wrong or will break. e.g. "this will NPE when input is null", "this SQL is injectable".
-- nitpick: Style, formatting, naming, import ordering, or trivial cleanliness issues that don't affect behavior. The code would pass all tests identically either way. e.g. "nit: rename to camelCase".
-- unblocking: A concrete, actionable solution to move the PR forward right now — a code suggestion or specific fix. Purpose is to resolve the issue NOW, not to teach or critique. e.g. inline code suggestions, "you can fix this by…".
-- question: A genuine question seeking to understand the author's reasoning or clarify an ambiguous choice. Does NOT assert a defect. e.g. "why did you choose X over Y?", "is this intentional?".
-
-Disambiguation:
-- mentoring vs architecture: would this comment exist if the PR author were a principal engineer? Yes -> architecture. No (exists because the author is learning) -> mentoring.
-- bug-catch vs question: does the comment assert something is wrong? -> bug-catch. Does it seek to understand? -> question.
-- unblocking vs mentoring: does it contain a concrete code change or specific next step? -> unblocking. Does it explain a principle? -> mentoring.
-- nitpick vs architecture: would the code pass all tests identically regardless of approach? -> nitpick. Would it change how components interact? -> architecture.
-
-## Domain (top-level category only)
-
-- functional: bugs, logic errors, resource management, timing/concurrency, interface/API misuse, input validation, security. Concern is CORRECTNESS.
-- refactoring: alternative implementations, naming, structure, formatting. Concern is CODE QUALITY without changing behavior.
-- documentation: inline comments, docstrings, README, changelog. Concern is whether the code is EXPLAINED.
-- discussion: questions, design deliberation, praise, high-level architectural debate. Concern is UNDERSTANDING and DECISION-MAKING.
-- false-positive: the reviewer's concern was conclusively refuted by another participant with evidence, and the reviewer withdrew or was overruled. Only use when the thread demonstrably shows this; otherwise classify by the reviewer's original intent.
-
-## Constructive (boolean)
-
-- true: the comment provides at least one of: concrete evidence of a problem, an alternative approach or code suggestion, or an actionable next step. It moves the PR forward.
-- false: the comment raises an objection WITHOUT evidence, alternative, or actionable direction — vague criticism, unfounded concerns, or repetition of points already made. Note: praise ("great approach!") is non-constructive by this definition but is NOT harmful — non-constructive does not mean negative.
-
-## Knowledge direction (experimental — best-effort from linguistic signals only, never infer from usernames or metadata)
-
-- mentoring-down: a more experienced participant teaches or guides the other. Explanatory tone, references to past decisions, longer explanations of concepts the author likely doesn't know.
-- peer-exchange: both participants appear to have similar expertise. Balanced discussion, collaborative problem-solving.
-- challenge-up: a participant questions or proposes an alternative to an established decision or pattern. "Have we considered…?", disagreement with the status quo.
-- self-clarification: the reviewer asks for their own understanding, not teaching or challenging. Genuine uncertainty, no position yet formed.
-
-## Confidence
-
-Reflects YOUR certainty about the intent classification specifically (not the other axes). 0.0 = pure guess, 1.0 = unambiguous.
-
-## Special case
-
-If the thread is a single "LGTM" or approval with no substantive content, classify as intent:"nitpick", domain:"discussion", constructive:false, knowledge_direction:"peer-exchange", confidence:0.9.`;
+function majorityVote(votes: string[]): string {
+  const counts = new Map<string, number>();
+  for (const v of votes) counts.set(v, (counts.get(v) ?? 0) + 1);
+  let best: string | undefined;
+  let bestCount = 0;
+  for (const [value, count] of counts) {
+    if (count > bestCount) {
+      best = value;
+      bestCount = count;
+    }
+  }
+  // 2 of 3 votes agree -> use it. Otherwise (3-way tie, or every repeat failed) -> "unknown".
+  return best !== undefined && bestCount >= 2 ? best : "unknown";
+}
 
 // Structural subset of the Workers AI `Ai` binding actually used here. Defined locally (instead
 // of importing the ambient `Ai` type from @cloudflare/workers-types) so this module — and any
@@ -220,57 +256,128 @@ export async function classifyThreads(
   if (prsError) throw prsError;
   const prMetaMap = new Map((prs as PrRow[]).map((pr) => [pr.id, { title: pr.title, authorLogin: pr.author_login }]));
 
-  const results: ClassificationResult[] = [];
+  const pullRequestIdByThreadId = new Map<number, number>();
+  const payloads: ThreadPayload[] = [];
   for (const root of humanRoots) {
     const prMeta = prMetaMap.get(root.pull_request_id);
     if (!prMeta) continue;
 
     const humanReplies = (repliesByRoot.get(root.id) ?? []).filter((reply) => !isBotComment(reply.commenter_login));
     // Diff hunks are not stored in the DB (Open Risk #2) — v1 classifies from comment text + PR metadata alone.
-    const payload = assembleThreadPayload(root, humanReplies, prMeta, null);
+    payloads.push(assembleThreadPayload(root, humanReplies, prMeta, null));
+    pullRequestIdByThreadId.set(root.id, root.pull_request_id);
+  }
 
-    try {
-      const aiResult = await ai.run(
-        CLASSIFICATION_MODEL,
-        {
-          messages: [
-            { role: "system", content: CLASSIFICATION_SYSTEM_PROMPT },
-            { role: "user", content: JSON.stringify(payload) },
-          ],
-          response_format: { type: "json_object" },
-        },
-        { gateway: { id: "default", collectLog: true } },
-      );
-
-      const rawText =
-        typeof aiResult === "string"
-          ? aiResult
-          : typeof aiResult === "object" &&
-              aiResult !== null &&
-              "response" in aiResult &&
-              typeof aiResult.response === "string"
-            ? aiResult.response
-            : undefined;
-      if (!rawText) throw new Error("Workers AI response did not include text output");
-
-      const parsed = parseClassificationOutput(JSON.parse(extractJsonObject(rawText)));
-
+  const results: ClassificationResult[] = [];
+  for (let i = 0; i < payloads.length; i += CLASSIFICATION_BATCH_INPUT_SIZE) {
+    const batch = payloads.slice(i, i + CLASSIFICATION_BATCH_INPUT_SIZE);
+    const votesByThreadId = await classifyBatch(ai, batch);
+    for (const [threadId, vote] of votesByThreadId) {
+      const pullRequestId = pullRequestIdByThreadId.get(threadId);
+      if (pullRequestId === undefined) continue;
       results.push({
-        thread_root_comment_id: root.id,
-        pull_request_id: root.pull_request_id,
-        intent: parsed.intent,
-        domain: parsed.domain,
-        constructive: parsed.constructive,
-        knowledge_direction: parsed.knowledge_direction,
-        confidence: parsed.confidence,
+        thread_root_comment_id: threadId,
+        pull_request_id: pullRequestId,
+        intent: vote.intent,
+        domain: vote.domain,
         model_id: CLASSIFICATION_MODEL,
       });
-    } catch (err) {
-      logger.warn(
-        `[classification] Failed to classify thread ${root.id}: ${err instanceof Error ? err.message : String(err)}`,
-      );
     }
   }
 
   return results;
+}
+
+async function callClassificationBatch(
+  ai: AiBinding,
+  batch: ThreadPayload[],
+): Promise<Map<number, ClassificationItem>> {
+  const aiResult = await ai.run(
+    CLASSIFICATION_MODEL,
+    {
+      messages: [
+        { role: "system", content: CLASSIFICATION_SYSTEM_PROMPT },
+        { role: "user", content: JSON.stringify(batch) },
+      ],
+      response_format: { type: "json_object" },
+    },
+    { gateway: { id: "default", collectLog: true } },
+  );
+
+  const rawText =
+    typeof aiResult === "string"
+      ? aiResult
+      : typeof aiResult === "object" &&
+          aiResult !== null &&
+          "response" in aiResult &&
+          typeof aiResult.response === "string"
+        ? aiResult.response
+        : undefined;
+  if (!rawText) throw new Error("Workers AI response did not include text output");
+
+  const parsedArray: unknown = JSON.parse(extractJsonArray(rawText));
+  if (!Array.isArray(parsedArray)) throw new Error("Workers AI response was not a JSON array");
+
+  // Per-item validation: one malformed item degrades only that thread's vote, not the whole
+  // batch's retry — a single bad item shouldn't throw away 3 other valid classifications.
+  const byThreadId = new Map<number, ClassificationItem>();
+  for (const item of parsedArray) {
+    const result = ClassificationItemSchema.safeParse(item);
+    if (result.success) byThreadId.set(result.data.thread_id, result.data);
+  }
+  return byThreadId;
+}
+
+async function callClassificationBatchWithRetry(
+  ai: AiBinding,
+  batch: ThreadPayload[],
+): Promise<Map<number, ClassificationItem>> {
+  let lastError: unknown;
+  for (let attempt = 1; attempt <= CLASSIFICATION_MAX_RETRY_ATTEMPTS; attempt++) {
+    try {
+      return await callClassificationBatch(ai, batch);
+    } catch (err) {
+      lastError = err;
+      if (attempt < CLASSIFICATION_MAX_RETRY_ATTEMPTS) {
+        await new Promise((resolve) => setTimeout(resolve, CLASSIFICATION_RETRY_DELAY_MS));
+      }
+    }
+  }
+  // Exhausted retries (e.g. repeated AI Gateway 504s) — this repeat contributes no votes; the
+  // other repeats (and majorityVote's "unknown" fallback) absorb the loss.
+  const threadIds = batch.map((p) => p.thread_id).join(",");
+  logger.warn(
+    `[classification] Batch call failed after ${CLASSIFICATION_MAX_RETRY_ATTEMPTS} attempts for threads ${threadIds}: ${lastError instanceof Error ? lastError.message : String(lastError)}`,
+  );
+  return new Map();
+}
+
+async function classifyBatch(
+  ai: AiBinding,
+  batch: ThreadPayload[],
+): Promise<Map<number, { intent: IntentCategory; domain: TechnicalDomain }>> {
+  const repeats = await Promise.all(
+    Array.from({ length: CLASSIFICATION_VOTE_REPEATS }, () => callClassificationBatchWithRetry(ai, batch)),
+  );
+
+  const result = new Map<number, { intent: IntentCategory; domain: TechnicalDomain }>();
+  for (const payload of batch) {
+    const intentVotes = repeats.map((r) => r.get(payload.thread_id)?.intent ?? "unknown");
+    const domainVotes = repeats.map((r) => r.get(payload.thread_id)?.domain ?? "unknown");
+
+    const intent = majorityVote(intentVotes) as IntentCategory;
+    const domain = majorityVote(domainVotes);
+
+    if (!isValidDomain(domain)) {
+      // Majority vote can land on "unknown" for domain (3-way tie, or every repeat failed) but
+      // "unknown" is not a valid TechnicalDomain — there's no row to store this thread under.
+      // Skip it; get_unclassified_root_comments_for_board offers it again on the next run.
+      logger.warn(
+        `[classification] No valid domain majority for thread ${payload.thread_id} (votes: ${domainVotes.join(",")})`,
+      );
+      continue;
+    }
+    result.set(payload.thread_id, { intent, domain });
+  }
+  return result;
 }

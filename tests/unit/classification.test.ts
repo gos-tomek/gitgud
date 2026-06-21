@@ -2,8 +2,8 @@ import { describe, it, expect } from "vitest";
 import {
   isBotComment,
   assembleThreadPayload,
-  parseClassificationOutput,
-  extractJsonObject,
+  parseClassificationItem,
+  extractJsonArray,
 } from "@/lib/services/classification";
 
 function comment(overrides: Partial<Parameters<typeof assembleThreadPayload>[0]> = {}) {
@@ -97,70 +97,72 @@ describe("assembleThreadPayload", () => {
   });
 });
 
-describe("parseClassificationOutput", () => {
+describe("parseClassificationItem", () => {
   const valid = {
+    thread_id: 1,
     intent: "bug-catch",
     domain: "functional",
-    constructive: true,
-    knowledge_direction: "peer-exchange",
-    confidence: 0.8,
   };
 
   it("returns the parsed object for valid output", () => {
-    expect(parseClassificationOutput(valid)).toEqual(valid);
+    expect(parseClassificationItem(valid)).toEqual(valid);
   });
 
   it("rejects a non-object payload", () => {
-    expect(() => parseClassificationOutput("not an object")).toThrow();
+    expect(() => parseClassificationItem("not an object")).toThrow();
   });
 
   it("rejects a payload missing a required field", () => {
-    const { confidence, ...missingConfidence } = valid;
-    void confidence;
-    expect(() => parseClassificationOutput(missingConfidence)).toThrow();
+    const { domain, ...missingDomain } = valid;
+    void domain;
+    expect(() => parseClassificationItem(missingDomain)).toThrow();
   });
 
-  it("rejects an out-of-range confidence", () => {
-    expect(() => parseClassificationOutput({ ...valid, confidence: 1.5 })).toThrow();
+  it("rejects a non-numeric thread_id", () => {
+    expect(() => parseClassificationItem({ ...valid, thread_id: "1" })).toThrow();
   });
 
   it("rejects an invalid intent enum value", () => {
-    expect(() => parseClassificationOutput({ ...valid, intent: "sarcasm" })).toThrow();
+    expect(() => parseClassificationItem({ ...valid, intent: "sarcasm" })).toThrow();
   });
 
   it("rejects an invalid domain enum value", () => {
-    expect(() => parseClassificationOutput({ ...valid, domain: "vibes" })).toThrow();
+    expect(() => parseClassificationItem({ ...valid, domain: "vibes" })).toThrow();
   });
 
-  it("rejects a non-boolean constructive value", () => {
-    expect(() => parseClassificationOutput({ ...valid, constructive: "yes" })).toThrow();
+  it("rejects domain:'unknown' (valid for intent, not for domain)", () => {
+    expect(() => parseClassificationItem({ ...valid, domain: "unknown" })).toThrow();
+  });
+
+  it("accepts intent:'unknown' (CI/process noise, unclassifiable)", () => {
+    expect(parseClassificationItem({ ...valid, intent: "unknown" })).toEqual({ ...valid, intent: "unknown" });
   });
 });
 
-describe("extractJsonObject", () => {
-  const obj = { intent: "bug-catch", domain: "functional", constructive: true };
-  const json = JSON.stringify(obj);
+describe("extractJsonArray", () => {
+  const arr = [{ thread_id: 1, intent: "bug-catch", domain: "functional" }];
+  const json = JSON.stringify(arr);
 
   it("returns raw JSON unchanged", () => {
-    expect(JSON.parse(extractJsonObject(json))).toEqual(obj);
+    expect(JSON.parse(extractJsonArray(json))).toEqual(arr);
   });
 
   it("strips ```json ... ``` markdown fences", () => {
     const fenced = `\`\`\`json\n${json}\n\`\`\``;
-    expect(JSON.parse(extractJsonObject(fenced))).toEqual(obj);
+    expect(JSON.parse(extractJsonArray(fenced))).toEqual(arr);
   });
 
   it("strips bare ``` ... ``` fences (no language tag)", () => {
     const fenced = `\`\`\`\n${json}\n\`\`\``;
-    expect(JSON.parse(extractJsonObject(fenced))).toEqual(obj);
+    expect(JSON.parse(extractJsonArray(fenced))).toEqual(arr);
   });
 
-  it("strips leading prose before the JSON object", () => {
+  it("strips leading prose before the JSON array", () => {
     const withProse = `Sure, here's the classification:\n${json}`;
-    expect(JSON.parse(extractJsonObject(withProse))).toEqual(obj);
+    expect(JSON.parse(extractJsonArray(withProse))).toEqual(arr);
   });
 
-  it("returns the input unchanged when no braces are found", () => {
-    expect(extractJsonObject("no json here")).toBe("no json here");
+  it("returns the input unchanged when no brackets are found", () => {
+    expect(extractJsonArray("no json here")).toBe("no json here");
   });
 });

@@ -480,18 +480,18 @@ Refactor the manual sync endpoint to trigger the Workflow instead of running syn
 
 #### Automated
 
-- [ ] 4.1 Type checking passes: `npx tsc --noEmit` and `npm run test:typecheck`
-- [ ] 4.2 Lint passes: `npm run lint`
-- [ ] 4.3 Build succeeds: `npm run build`
-- [ ] 4.4 Dry-run deploy succeeds: `npx wrangler deploy --dry-run`
-- [ ] 4.5 Existing tests pass: `npm test`
+- [x] 4.1 Type checking passes: `npx tsc --noEmit` and `npm run test:typecheck`
+- [x] 4.2 Lint passes: `npm run lint`
+- [x] 4.3 Build succeeds: `npm run build`
+- [x] 4.4 Dry-run deploy succeeds: `npx wrangler deploy --dry-run`
+- [x] 4.5 Existing tests pass: `npm test`
 
 #### Manual
 
-- [ ] 4.6 Manual Workflow trigger: sync + classification completes for a test board
-- [ ] 4.7 Workflow instances list shows completed instance
-- [ ] 4.8 AI Gateway dashboard shows classification requests
-- [ ] 4.9 Existing sync endpoint still works
+- [x] 4.6 Manual Workflow trigger: sync + classification completes for a test board
+- [x] 4.7 Workflow instances list shows completed instance
+- [x] 4.8 AI Gateway dashboard shows classification requests
+- [x] 4.9 Existing sync endpoint still works
 
 ### Phase 5: API Integration
 

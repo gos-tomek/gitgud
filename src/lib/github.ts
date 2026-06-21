@@ -65,14 +65,21 @@ export function makeOctokit(token: string): Octokit {
   return octokit;
 }
 
-export async function createGitHubClient(supabase: SupabaseClient, boardId: string): Promise<Octokit> {
-  if (!GITHUB_TOKEN_ENCRYPTION_KEY) {
+export async function createGitHubClient(
+  supabase: SupabaseClient,
+  boardId: string,
+  encryptionKey?: string,
+): Promise<Octokit> {
+  // Astro API routes omit `encryptionKey` and rely on `astro:env/server` (request context).
+  // The Workflow runs outside that context and passes the key explicitly from `this.env`.
+  const key = encryptionKey ?? GITHUB_TOKEN_ENCRYPTION_KEY;
+  if (!key) {
     throw new GitHubTokenMissingError();
   }
 
   const result = await supabase.rpc("get_board_github_pat", {
     p_board_id: boardId,
-    p_encryption_key: GITHUB_TOKEN_ENCRYPTION_KEY,
+    p_encryption_key: key,
   });
 
   if (result.error) {

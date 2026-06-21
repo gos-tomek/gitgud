@@ -13,6 +13,7 @@ declare namespace Cloudflare {
     CLASSIFICATION_BATCH: Workflow<{ boardId: string }>;
     SUPABASE_URL: string;
     SUPABASE_KEY: string;
+    SUPABASE_SERVICE_KEY: string;
     GITHUB_TOKEN_ENCRYPTION_KEY: string;
   }
 }
