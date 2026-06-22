@@ -65,7 +65,7 @@ function ContributorAvatar({ c, size = "md" }: { c: ContributorInfo; size?: "sm"
   );
 }
 
-function ContributorSelector({
+export function ContributorSelector({
   current,
   contributors,
   onContributorChange,

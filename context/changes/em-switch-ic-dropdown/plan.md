@@ -165,25 +165,25 @@ Add a component test for `ContributorSelector` that verifies clicking a contribu
 
 #### Automated
 
-- [x] 1.1 Type checking passes (`npm run test:typecheck` and `npx tsc --noEmit`)
-- [x] 1.2 Linting passes (`npm run lint`)
-- [x] 1.3 Existing tests pass (`npm test`)
-- [x] 1.4 Build succeeds (`npm run build`)
+- [x] 1.1 Type checking passes (`npm run test:typecheck` and `npx tsc --noEmit`) — ce041af
+- [x] 1.2 Linting passes (`npm run lint`) — ce041af
+- [x] 1.3 Existing tests pass (`npm test`) — ce041af
+- [x] 1.4 Build succeeds (`npm run build`) — ce041af
 
 #### Manual
 
-- [x] 1.5 Contributor switch works without full page reload
-- [x] 1.6 URL updates, data refreshes, period preserved
-- [x] 1.7 Back button returns to previous contributor URL
+- [x] 1.5 Contributor switch works without full page reload — ce041af
+- [x] 1.6 URL updates, data refreshes, period preserved — ce041af
+- [x] 1.7 Back button returns to previous contributor URL — ce041af
 
 ### Phase 2: Regression test
 
 #### Automated
 
-- [ ] 2.1 New ContributorSelector tests pass (`npm test`)
-- [ ] 2.2 Type checking passes (`npm run test:typecheck`)
-- [ ] 2.3 Linting passes (`npm run lint`)
+- [x] 2.1 New ContributorSelector tests pass (`npm test`)
+- [x] 2.2 Type checking passes (`npm run test:typecheck`)
+- [x] 2.3 Linting passes (`npm run lint`)
 
 #### Manual
 
-- [ ] 2.4 Test output confirms ContributorSelector describe block runs
+- [x] 2.4 Test output confirms ContributorSelector describe block runs
