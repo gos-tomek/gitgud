@@ -188,6 +188,11 @@ const CLASSIFICATION_VOTE_REPEATS = 3;
 const CLASSIFICATION_MAX_RETRY_ATTEMPTS = 5;
 const CLASSIFICATION_RETRY_DELAY_MS = 1000;
 
+// ai.run() has no built-in timeout — a hung Workers AI backend would otherwise block a batch
+// until the Worker runtime's own (much longer) limit fires. Bounding it here lets the existing
+// retry loop treat a hang the same as any other transient failure.
+const CLASSIFICATION_AI_RUN_TIMEOUT_MS = 30_000;
+
 const VALID_DOMAINS = new Set<TechnicalDomain>([
   "functional",
   "refactoring",
@@ -292,17 +297,24 @@ async function callClassificationBatch(
   ai: AiBinding,
   batch: ThreadPayload[],
 ): Promise<Map<number, ClassificationItem>> {
-  const aiResult = await ai.run(
-    CLASSIFICATION_MODEL,
-    {
-      messages: [
-        { role: "system", content: CLASSIFICATION_SYSTEM_PROMPT },
-        { role: "user", content: JSON.stringify(batch) },
-      ],
-      response_format: { type: "json_object" },
-    },
-    { gateway: { id: "default", collectLog: true } },
-  );
+  const aiResult = await Promise.race([
+    ai.run(
+      CLASSIFICATION_MODEL,
+      {
+        messages: [
+          { role: "system", content: CLASSIFICATION_SYSTEM_PROMPT },
+          { role: "user", content: JSON.stringify(batch) },
+        ],
+        response_format: { type: "json_object" },
+      },
+      { gateway: { id: "default", collectLog: true } },
+    ),
+    new Promise<never>((_, reject) =>
+      setTimeout(() => {
+        reject(new Error("Workers AI call timed out"));
+      }, CLASSIFICATION_AI_RUN_TIMEOUT_MS),
+    ),
+  ]);
 
   const rawText =
     typeof aiResult === "string"

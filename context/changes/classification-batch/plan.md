@@ -230,6 +230,8 @@ Build the classification service that assembles thread payloads, pre-filters bot
 
 **Contract**: Pass `gateway: { id: "gitgud-classification", collectLog: true, metadata: { board_id: "..." } }` as the third argument to `env.AI.run()`. The gateway ID is created on first request. System prompt caching reduces per-thread cost by ~43% (research finding).
 
+**Addendum (post-implementation, 2026-06-22)**: Shipped with `gateway: { id: "default" }` instead of `"gitgud-classification"`. GitGud is self-hosted — each user forks the repo and deploys to their own Cloudflare account — so a named gateway ID would require every deployer to create that AI Gateway manually before first use. `"default"` works out of the box with no per-deployer setup step. Decision: intentional, kept as-is.
+
 ### Success Criteria:
 
 #### Automated Verification:
@@ -304,6 +306,8 @@ Implement the full `ClassificationBatchWorkflow` with durable steps: sync GitHub
 **Intent**: The existing `createClient` requires request headers + cookies (it creates an SSR client). The Workflow needs a service-role client that doesn't depend on a user session.
 
 **Contract**: New function `createServiceClient(url: string, key: string): SupabaseClient` that creates a Supabase client with the service role key. The Workflow uses `this.env.SUPABASE_URL` and `this.env.SUPABASE_KEY` — note: the existing `SUPABASE_KEY` in the codebase is the **anon** key (used with RLS). The Workflow may need the **service role** key to bypass RLS for inserting classifications. If so, add `SUPABASE_SERVICE_KEY` as a new Worker secret.
+
+**Addendum (post-implementation, 2026-06-22)**: Item 3's single `sync-github-data` step was decomposed in `src/worker.ts:96–170` into per-repo durable steps — `list-prs`, `check-rate-limit`, `sync-pr-details`, `sync-review-comments`, `update-last-synced` — with rate-limit-aware `sleepUntil` gates between them. This is a strict improvement over the single-step design: a partial failure (e.g. one repo hitting GitHub's rate limit) no longer discards sync progress already made on other repos. The step map in this section reflects the original design and is kept for implementation history.
 
 ### Success Criteria:
 
@@ -417,6 +421,25 @@ Refactor the manual sync endpoint to trigger the Workflow instead of running syn
 4. **`astro:env` vs `cloudflare:workers` coexistence**. Both import patterns must work in the same codebase. The Workflow code path must never import from `astro:env/server`; the Astro route code path continues to use it. Mixing them in the same module will fail.
 5. **Knowledge direction accuracy**. This axis is experimental — LLM cannot reliably infer seniority. Data will be stored but not surfaced in UI until validated.
 6. **DOM lib / `@cloudflare/workers-types` global type conflict (deferred)**. Root `tsconfig.json` loads `@cloudflare/workers-types` globally via `compilerOptions.types`, while TypeScript also defaults in the DOM lib (needed by client-side React components for `window`/`document`/`HTMLElement`). Both declare incompatible global `Response`/`Body` (and ~80 other) types; `skipLibCheck: true` hides the resulting duplicate-identifier conflict instead of resolving it — confirmed empirically: setting `skipLibCheck: false` surfaces ~869 errors project-wide. This causes a cold `tsc --noEmit` build and `typescript-eslint`'s `projectService` (incremental, tsserver-style resolution) to resolve `Response.json()`'s return type differently (`unknown` vs `any`), producing false-positive `@typescript-eslint/no-unnecessary-type-assertion` errors on `(await res.json()) as T` patterns in client components. Worked around with targeted `eslint-disable-next-line` comments in `src/components/CreateBoardForm.tsx` (pre-existing file, unrelated to this change) — removing the assertions instead breaks the authoritative `tsc` build with `TS18046`. Cloudflare's own templates exclude `"dom"` from `lib` when using `workers-types`, but that's not viable project-wide since client components genuinely need DOM types. The real fix requires splitting into two TypeScript programs (separate tsconfig for client vs. Worker-context files), touching `package.json` scripts, the CI `validate` job, and the Lefthook pre-commit hook — out of scope for this change. **Relevant to Phase 4/5**: today only `src/worker.ts` and `src/env.d.ts` reference Workers ambient globals; Phase 4 (Workflow steps) and Phase 5 (API route dispatching the Workflow via `env` bindings) will grow this footprint, making the tsconfig split increasingly worth revisiting. `skipLibCheck` stays `true` (unchanged) — flipping it blocks the entire build until the split is done.
+
+## Addendum (post-implementation, 2026-06-22)
+
+Risk #1 above resolved empirically during implementation, narrowing scope from what Phase 2/3 specify below:
+
+- **Schema**: 5 fields (intent, domain, constructive, knowledge_direction, confidence) → 2 fields (intent, domain). `constructive`/`knowledge_direction`/`confidence` dropped outright in migration `20260621120000_classification_batch_voting_schema.sql` — the table never shipped to production, so no expand/contract lag applied.
+- **Intent enum**: 6 values → 10 values (added `praise`, `joke`, `self-review`, `unknown`).
+- **Classification strategy**: single-pass classification → batched majority-vote (3 repeats, batch size 4) for accuracy, since the LLM couldn't reliably populate the dropped axes in a single pass.
+
+Phase 2/3 specs and `types.ts` below describe the original 5-field design and are kept as-is for implementation history; see `context/changes/classification-batch/change.md` Notes and migration `20260621120000` for the authoritative current shape.
+
+**Unplanned files discovered during implementation** — infrastructure, test coverage, or CI adjustments needed to land the planned phases, not feature creep:
+
+- Migrations: `unclassified_threads_rpc`, `service_role_pat_access`, `github_repos_last_synced_at` (supporting infra surfaced while wiring Phases 2–4)
+- `src/pages/api/github/sync/status.ts` — new endpoint for the frontend to poll sync/classification progress (paired with the Phase 4 step decomposition above)
+- `src/components/impact/SyncIndicator.tsx`, `src/components/CreateBoardForm.tsx` — UI updates to consume the new status endpoint
+- `src/lib/services/impact-metrics.ts` — adjustments for the narrowed classification schema
+- `.github/workflows/ci.yml`, `.github/workflows/deploy.yml` — CI config adjustments for the new Workflow binding
+- 3 test files covering the above
 
 ## References
 

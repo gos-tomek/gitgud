@@ -102,24 +102,29 @@ export class ClassificationBatchWorkflow extends WorkflowEntrypoint<Env, Classif
     // `since` is tracked per repo (`github_repos.last_synced_at`), not per board — `since` is a
     // GitHub API parameter scoped to one repo, and a board could gain a repo later with its own
     // independent sync history that a shared board-level cursor would silently under-backfill.
-    const targets = await runStep(step, "sync-list-prs", async () => {
-      const repos = await listBoardRepos(supabase, boardId);
-      const result: RepoSyncTarget[] = [];
-      for (const repo of repos) {
+    const repos = await runStep(step, "list-board-repos", () => listBoardRepos(supabase, boardId));
+
+    // One durable step per repo (not one step for all repos) — a board with many repos could
+    // otherwise make thousands of GitHub requests in a single step.do and lose all listing
+    // progress on failure, retrying every repo from scratch instead of just the failed one.
+    const targets: RepoSyncTarget[] = [];
+    for (let r = 0; r < repos.length; r++) {
+      const repo = repos[r];
+      const target = await runStep(step, `sync-list-prs-${r}`, async () => {
         const since = repo.last_synced_at
           ? new Date(repo.last_synced_at)
           : new Date(Date.now() - DEFAULT_BACKFILL_WINDOW_MS);
         const prs = await listAndUpsertPrsForRepo(supabase, octokit, repo, since, Number.POSITIVE_INFINITY);
-        result.push({
+        return {
           repoId: repo.id,
           owner: repo.repo_owner,
           repoName: repo.repo_name,
           since: since.toISOString(),
           prs,
-        });
-      }
-      return result;
-    });
+        };
+      });
+      targets.push(target);
+    }
 
     for (let r = 0; r < targets.length; r++) {
       const { repoId, owner, repoName, since, prs } = targets[r];

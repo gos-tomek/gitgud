@@ -3,6 +3,7 @@ import { z } from "zod";
 import { env } from "cloudflare:workers";
 import { createClient } from "@/lib/supabase";
 import { getBoardWithRole } from "@/lib/services/boards";
+import { logger } from "@/lib/logger";
 
 const statusSchema = z.object({
   boardId: z.string().regex(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i, "Invalid board ID"),
@@ -72,7 +73,8 @@ export const GET: APIRoute = async (context) => {
     const instance = await env.CLASSIFICATION_BATCH.get(instanceId);
     const { status } = await instance.status();
     return json({ status });
-  } catch {
+  } catch (err) {
+    logger.error("[sync-status]", err);
     return json({ error: "Instance not found" }, 404);
   }
 };
@@ -94,10 +96,11 @@ export const DELETE: APIRoute = async (context) => {
     const instance = await env.CLASSIFICATION_BATCH.get(instanceId);
     await instance.terminate();
     return json({ status: "terminated" });
-  } catch {
+  } catch (err) {
     // terminate() throws if the instance is already errored/terminated/complete — the caller's
     // goal (stop it running) is already met in all of those cases, so treat this as a no-op
-    // success rather than an error.
+    // success rather than an error. Still log it: a binding misconfiguration would throw here too.
+    logger.error("[sync-status]", err);
     return json({ status: "unknown" });
   }
 };

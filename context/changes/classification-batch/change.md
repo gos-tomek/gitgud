@@ -1,7 +1,7 @@
 ---
 change_id: classification-batch
 title: Classification batch
-status: implemented
+status: impl_reviewed
 created: 2026-06-18
 updated: 2026-06-22
 archived_at: null

@@ -36,7 +36,9 @@ export function SyncIndicator({ lastSyncedAt, boardId, onSyncComplete }: Props) 
   // asynchronously, so we poll the instance's status until it reaches a terminal state before
   // refreshing the dashboard. Without this, onSyncComplete() would fire before the Workflow's
   // `update-last-synced` step lands, refetching stale data.
-  async function pollUntilDone(instanceId: string, initialStatus: string) {
+  // Returns whether the sync reached "complete" — callers must not refresh the dashboard on
+  // false, since that would show stale data as if the sync had succeeded.
+  async function pollUntilDone(instanceId: string, initialStatus: string): Promise<boolean> {
     let status = initialStatus;
     const deadline = Date.now() + POLL_TIMEOUT_MS;
     while (!TERMINAL_STATUSES.has(status) && Date.now() < deadline) {
@@ -48,9 +50,9 @@ export function SyncIndicator({ lastSyncedAt, boardId, onSyncComplete }: Props) 
       if (!body.status) break;
       status = body.status;
     }
-    if (status === "errored" || status === "terminated") {
-      setError("Sync failed");
-    }
+    if (status === "complete") return true;
+    setError(status === "running" ? "Sync timed out" : "Sync failed");
+    return false;
   }
 
   async function triggerSync() {
@@ -69,8 +71,8 @@ export function SyncIndicator({ lastSyncedAt, boardId, onSyncComplete }: Props) 
       }
       // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion -- workers-types vs DOM `Response.json()` type disagreement; tsc resolves to `unknown` (assertion required), ESLint's incremental resolver disagrees (false positive)
       const { instanceId, status } = (await res.json()) as { instanceId: string; status: string };
-      await pollUntilDone(instanceId, status);
-      onSyncComplete();
+      const completed = await pollUntilDone(instanceId, status);
+      if (completed) onSyncComplete();
     } catch {
       setError("Network error");
     } finally {
