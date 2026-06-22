@@ -470,7 +470,7 @@ Phase 2/3 specs and `types.ts` below describe the original 5-field design and ar
 #### Manual
 
 - [x] 1.5 Astro SSR pages serve correctly in dev — 63e0667
-- [x] 1.6 Cron Trigger fires at scheduled time (after deploy)
+- [x] 1.6 Cron Trigger fires at scheduled time (after deploy) — 547f79c
 
 ### Phase 2: Database Schema
 
