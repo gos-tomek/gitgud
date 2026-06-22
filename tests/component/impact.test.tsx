@@ -5,6 +5,7 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { PeriodSelector } from "@/components/impact/PeriodSelector";
 import { KpiCards } from "@/components/impact/KpiCards";
+import { ContributorSelector } from "@/components/impact/ImpactView";
 import type { ImpactSummary } from "@/types";
 
 const MOCK_SUMMARY: ImpactSummary = {
@@ -111,5 +112,36 @@ describe("KpiCards", () => {
     expect(screen.getByText(/Time to merge/i)).toBeInTheDocument();
     expect(screen.getByText(/Pickup time/i)).toBeInTheDocument();
     expect(screen.getByText(/Discussion ratio/i)).toBeInTheDocument();
+  });
+});
+
+describe("ContributorSelector", () => {
+  const ALICE = { githubLogin: "alice", avatarUrl: null };
+  const BOB = { githubLogin: "bob", avatarUrl: null };
+
+  it("CS1: calls onContributorChange with the clicked contributor's login", async () => {
+    const onContributorChange = vi.fn();
+    const user = userEvent.setup();
+    render(
+      <ContributorSelector current={ALICE} contributors={[ALICE, BOB]} onContributorChange={onContributorChange} />,
+    );
+
+    await user.click(screen.getByRole("button", { name: /alice/i }));
+    await user.click(screen.getByText("@bob"));
+
+    expect(onContributorChange).toHaveBeenCalledWith("bob");
+  });
+
+  it("CS2: never calls window.location.assign when switching contributors", async () => {
+    const assignSpy = vi.fn();
+    vi.stubGlobal("location", { assign: assignSpy });
+    const user = userEvent.setup();
+    render(<ContributorSelector current={ALICE} contributors={[ALICE, BOB]} onContributorChange={vi.fn()} />);
+
+    await user.click(screen.getByRole("button", { name: /alice/i }));
+    await user.click(screen.getByText("@bob"));
+
+    expect(assignSpy).not.toHaveBeenCalled();
+    vi.unstubAllGlobals();
   });
 });
