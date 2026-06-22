@@ -180,10 +180,10 @@ Add a component test for `ContributorSelector` that verifies clicking a contribu
 
 #### Automated
 
-- [x] 2.1 New ContributorSelector tests pass (`npm test`)
-- [x] 2.2 Type checking passes (`npm run test:typecheck`)
-- [x] 2.3 Linting passes (`npm run lint`)
+- [x] 2.1 New ContributorSelector tests pass (`npm test`) — 9a8b87f
+- [x] 2.2 Type checking passes (`npm run test:typecheck`) — 9a8b87f
+- [x] 2.3 Linting passes (`npm run lint`) — 9a8b87f
 
 #### Manual
 
-- [x] 2.4 Test output confirms ContributorSelector describe block runs
+- [x] 2.4 Test output confirms ContributorSelector describe block runs — 9a8b87f
