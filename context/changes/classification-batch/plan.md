@@ -480,31 +480,31 @@ Refactor the manual sync endpoint to trigger the Workflow instead of running syn
 
 #### Automated
 
-- [x] 4.1 Type checking passes: `npx tsc --noEmit` and `npm run test:typecheck`
-- [x] 4.2 Lint passes: `npm run lint`
-- [x] 4.3 Build succeeds: `npm run build`
-- [x] 4.4 Dry-run deploy succeeds: `npx wrangler deploy --dry-run`
-- [x] 4.5 Existing tests pass: `npm test`
+- [x] 4.1 Type checking passes: `npx tsc --noEmit` and `npm run test:typecheck` — b5c186a
+- [x] 4.2 Lint passes: `npm run lint` — b5c186a
+- [x] 4.3 Build succeeds: `npm run build` — b5c186a
+- [x] 4.4 Dry-run deploy succeeds: `npx wrangler deploy --dry-run` — b5c186a
+- [x] 4.5 Existing tests pass: `npm test` — b5c186a
 
 #### Manual
 
-- [x] 4.6 Manual Workflow trigger: sync + classification completes for a test board
-- [x] 4.7 Workflow instances list shows completed instance
-- [x] 4.8 AI Gateway dashboard shows classification requests
-- [x] 4.9 Existing sync endpoint still works
+- [x] 4.6 Manual Workflow trigger: sync + classification completes for a test board — b5c186a
+- [x] 4.7 Workflow instances list shows completed instance — b5c186a
+- [x] 4.8 AI Gateway dashboard shows classification requests — b5c186a
+- [x] 4.9 Existing sync endpoint still works — b5c186a
 
 ### Phase 5: API Integration
 
 #### Automated
 
-- [ ] 5.1 Type checking passes: `npx tsc --noEmit`
-- [ ] 5.2 Lint passes: `npm run lint`
-- [ ] 5.3 Build succeeds: `npm run build`
-- [ ] 5.4 Existing tests pass: `npm test`
+- [x] 5.1 Type checking passes: `npx tsc --noEmit`
+- [x] 5.2 Lint passes: `npm run lint`
+- [x] 5.3 Build succeeds: `npm run build`
+- [x] 5.4 Existing tests pass: `npm test`
 
 #### Manual
 
-- [ ] 5.5 Manual sync from UI/curl returns Workflow instance ID
-- [ ] 5.6 Workflow instance created on trigger
-- [ ] 5.7 Dedup prevents duplicate Workflow instances
-- [ ] 5.8 Classifications appear in DB after Workflow completes
+- [x] 5.5 Manual sync from UI/curl returns Workflow instance ID
+- [x] 5.6 Workflow instance created on trigger
+- [x] 5.7 Dedup prevents duplicate Workflow instances
+- [x] 5.8 Classifications appear in DB after Workflow completes

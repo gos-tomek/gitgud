@@ -20,9 +20,38 @@ interface Props {
   onSyncComplete: () => void;
 }
 
+const TERMINAL_STATUSES = new Set(["complete", "errored", "terminated"]);
+const POLL_INTERVAL_MS = 2_000;
+const POLL_TIMEOUT_MS = 120_000;
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 export function SyncIndicator({ lastSyncedAt, boardId, onSyncComplete }: Props) {
   const [syncing, setSyncing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // POST dispatches the Workflow and returns immediately — the actual sync+classify run happens
+  // asynchronously, so we poll the instance's status until it reaches a terminal state before
+  // refreshing the dashboard. Without this, onSyncComplete() would fire before the Workflow's
+  // `update-last-synced` step lands, refetching stale data.
+  async function pollUntilDone(instanceId: string, initialStatus: string) {
+    let status = initialStatus;
+    const deadline = Date.now() + POLL_TIMEOUT_MS;
+    while (!TERMINAL_STATUSES.has(status) && Date.now() < deadline) {
+      await sleep(POLL_INTERVAL_MS);
+      const res = await fetch(`/api/github/sync/status?boardId=${boardId}&instanceId=${instanceId}`);
+      if (!res.ok) break;
+      // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion -- workers-types vs DOM `Response.json()` type disagreement; tsc resolves to `unknown` (assertion required), ESLint's incremental resolver disagrees (false positive)
+      const body = (await res.json()) as { status?: string };
+      if (!body.status) break;
+      status = body.status;
+    }
+    if (status === "errored" || status === "terminated") {
+      setError("Sync failed");
+    }
+  }
 
   async function triggerSync() {
     setSyncing(true);
@@ -36,9 +65,12 @@ export function SyncIndicator({ lastSyncedAt, boardId, onSyncComplete }: Props) 
       if (!res.ok) {
         const body = (await res.json().catch(() => ({}))) as { error?: string };
         setError(body.error ?? "Sync failed");
-      } else {
-        onSyncComplete();
+        return;
       }
+      // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion -- workers-types vs DOM `Response.json()` type disagreement; tsc resolves to `unknown` (assertion required), ESLint's incremental resolver disagrees (false positive)
+      const { instanceId, status } = (await res.json()) as { instanceId: string; status: string };
+      await pollUntilDone(instanceId, status);
+      onSyncComplete();
     } catch {
       setError("Network error");
     } finally {

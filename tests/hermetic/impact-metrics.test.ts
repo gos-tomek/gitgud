@@ -53,7 +53,7 @@ const D27 = new Date(NOW.getTime() - 27 * DAY).toISOString(); // 2025-09-18
 const D25 = new Date(NOW.getTime() - 25 * DAY).toISOString(); // 2025-09-20
 const D120 = new Date(NOW.getTime() - 120 * DAY).toISOString(); // 2025-06-17 (previous period)
 
-const repos = [{ id: "repo-1" }];
+const repos = [{ id: "repo-1", last_synced_at: NOW.toISOString() }];
 
 const basePr = {
   id: 1,
@@ -70,7 +70,6 @@ const basePr = {
   deletions: 40,
   changed_files: 5,
   repo_id: "repo-1",
-  fetched_at: NOW.toISOString(),
 };
 
 // ── getImpactSummary ──────────────────────────────────────────────────────────
@@ -126,6 +125,41 @@ describe("getImpactSummary (hermetic)", () => {
     // previous period has 0 PRs → delta cannot be computed
     expect(result.prsAuthored.delta).toBeNull();
     expect(result.lastSyncedAt).toBe(NOW.toISOString());
+  });
+
+  it("lastSyncedAt is the oldest last_synced_at across the board's repos, not the freshest", async () => {
+    const olderSync = new Date(NOW.getTime() - 2 * DAY).toISOString();
+    const twoRepos = [
+      { id: "repo-1", last_synced_at: NOW.toISOString() },
+      { id: "repo-2", last_synced_at: olderSync },
+    ];
+    const client = makeMockClient({
+      github_repos: { data: twoRepos, error: null },
+      github_pull_requests: { data: [basePr], error: null },
+      github_reviews: { data: [], error: null },
+      github_review_comments: { data: [], error: null },
+    });
+
+    const result = await getImpactSummary(client as never, BOARD_ID, GITHUB_ID, dateRange);
+
+    expect(result.lastSyncedAt).toBe(olderSync);
+  });
+
+  it("lastSyncedAt is null when any connected repo has never completed a sync", async () => {
+    const neverSyncedRepos = [
+      { id: "repo-1", last_synced_at: NOW.toISOString() },
+      { id: "repo-2", last_synced_at: null },
+    ];
+    const client = makeMockClient({
+      github_repos: { data: neverSyncedRepos, error: null },
+      github_pull_requests: { data: [basePr], error: null },
+      github_reviews: { data: [], error: null },
+      github_review_comments: { data: [], error: null },
+    });
+
+    const result = await getImpactSummary(client as never, BOARD_ID, GITHUB_ID, dateRange);
+
+    expect(result.lastSyncedAt).toBeNull();
   });
 
   it("delta is 0 when current and previous period counts are equal", async () => {

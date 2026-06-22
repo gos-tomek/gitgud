@@ -1,8 +1,8 @@
 import type { APIRoute } from "astro";
 import { z } from "zod";
+import { env } from "cloudflare:workers";
 import { createClient } from "@/lib/supabase";
 import { getBoardWithRole } from "@/lib/services/boards";
-import { syncBoardGitHubData } from "@/lib/services/github-sync";
 import { logger } from "@/lib/logger";
 
 const syncSchema = z.object({
@@ -52,12 +52,24 @@ export const POST: APIRoute = async (context) => {
     return json({ error: "Only the board owner can trigger a sync" }, 403);
   }
 
+  // One Workflow instance per board per UTC day — matches the daily Cron dispatcher's dedup key
+  // (src/worker.ts `scheduled`), so a manual trigger on a day the Cron already ran (or a rapid
+  // double-click) returns the existing instance instead of starting a second sync+classify run.
+  const dateStamp = new Date().toISOString().slice(0, 10);
+  const instanceId = `board-${boardId}-${dateStamp}`;
+
   try {
-    const result = await syncBoardGitHubData(supabase, boardId);
-    return json(result);
+    const instance = await env.CLASSIFICATION_BATCH.create({ id: instanceId, params: { boardId } });
+    return json({ instanceId: instance.id, status: "queued" });
   } catch (err) {
-    logger.error("[github-sync]", err);
-    const message = err instanceof Error ? err.message : "Sync failed";
-    return json({ error: message }, 500);
+    // Workflow.create() throws if the id already exists — that's the dedup hit, not a failure.
+    try {
+      const existing = await env.CLASSIFICATION_BATCH.get(instanceId);
+      const { status } = await existing.status();
+      return json({ instanceId: existing.id, status });
+    } catch {
+      logger.error("[github-sync]", err);
+      return json({ error: "Failed to start sync" }, 500);
+    }
   }
 };

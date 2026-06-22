@@ -32,7 +32,6 @@ interface PrDb {
   deletions: number | null;
   changed_files: number | null;
   repo_id: string;
-  fetched_at?: string;
 }
 
 interface ReviewDb {
@@ -91,12 +90,28 @@ async function getBoardRepoIds(supabase: SupabaseClient, boardId: string): Promi
   return data.map((r) => r.id as string);
 }
 
+// The oldest `last_synced_at` across the board's repos — not the freshest `github_pull_requests
+// .fetched_at`, which only moves when a sync actually finds upstream changes. An incremental sync
+// (the classification-batch Workflow's `since` cursor) can legitimately complete with nothing new
+// to fetch, leaving `fetched_at` stale even though the sync itself ran moments ago. Any repo that
+// has never completed a sync (`last_synced_at IS NULL`) makes the whole board read as un-synced,
+// since the board isn't fully fresh until every connected repo has synced at least once.
+async function getBoardLastSyncedAt(supabase: SupabaseClient, repoIds: string[]): Promise<string | null> {
+  if (repoIds.length === 0) return null;
+  const { data, error } = await supabase.from("github_repos").select("last_synced_at").in("id", repoIds);
+  if (error) throw error;
+  const timestamps = (data as { last_synced_at: string | null }[]).map((r) => r.last_synced_at);
+  const synced = timestamps.filter((t): t is string => t !== null);
+  if (synced.length !== timestamps.length) return null;
+  return synced.reduce<string | null>((oldest, t) => (oldest === null || t < oldest ? t : oldest), null);
+}
+
 async function getAllBoardPrs(supabase: SupabaseClient, repoIds: string[]): Promise<PrDb[]> {
   if (repoIds.length === 0) return [];
   const { data, error } = await supabase
     .from("github_pull_requests")
     .select(
-      "id,number,title,state,author_github_id,author_login,is_draft,created_at,updated_at,merged_at,additions,deletions,changed_files,repo_id,fetched_at",
+      "id,number,title,state,author_github_id,author_login,is_draft,created_at,updated_at,merged_at,additions,deletions,changed_files,repo_id",
     )
     .in("repo_id", repoIds);
   if (error) throw error;
@@ -114,19 +129,17 @@ export async function getImpactSummary(
   const repoIds = await getBoardRepoIds(supabase, boardId);
   if (repoIds.length === 0) return emptyImpactSummary();
 
-  const allPrs = await getAllBoardPrs(supabase, repoIds);
+  const [allPrs, lastSyncedAt] = await Promise.all([
+    getAllBoardPrs(supabase, repoIds),
+    getBoardLastSyncedAt(supabase, repoIds),
+  ]);
   const boardPrIds = allPrs.map((p) => p.id);
 
-  if (boardPrIds.length === 0) return emptyImpactSummary();
+  if (boardPrIds.length === 0) return { ...emptyImpactSummary(), lastSyncedAt };
 
   const prMap = new Map(
     allPrs.map((p) => [p.id, { createdAt: p.created_at, mergedAt: p.merged_at, authorGithubId: p.author_github_id }]),
   );
-
-  const lastSyncedAt = allPrs.reduce<string | null>((max, p) => {
-    const fa = p.fetched_at ?? "";
-    return max === null || fa > max ? fa : max;
-  }, null);
 
   // Fetch reviews and root comments covering both periods in one trip
   const earliestStart = dateRange.previousStart ?? dateRange.start;
