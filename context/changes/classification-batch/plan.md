@@ -497,14 +497,14 @@ Refactor the manual sync endpoint to trigger the Workflow instead of running syn
 
 #### Automated
 
-- [x] 5.1 Type checking passes: `npx tsc --noEmit`
-- [x] 5.2 Lint passes: `npm run lint`
-- [x] 5.3 Build succeeds: `npm run build`
-- [x] 5.4 Existing tests pass: `npm test`
+- [x] 5.1 Type checking passes: `npx tsc --noEmit` — f89592b
+- [x] 5.2 Lint passes: `npm run lint` — f89592b
+- [x] 5.3 Build succeeds: `npm run build` — f89592b
+- [x] 5.4 Existing tests pass: `npm test` — f89592b
 
 #### Manual
 
-- [x] 5.5 Manual sync from UI/curl returns Workflow instance ID
-- [x] 5.6 Workflow instance created on trigger
-- [x] 5.7 Dedup prevents duplicate Workflow instances
-- [x] 5.8 Classifications appear in DB after Workflow completes
+- [x] 5.5 Manual sync from UI/curl returns Workflow instance ID — f89592b
+- [x] 5.6 Workflow instance created on trigger — f89592b
+- [x] 5.7 Dedup prevents duplicate Workflow instances — f89592b
+- [x] 5.8 Classifications appear in DB after Workflow completes — f89592b
