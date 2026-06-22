@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import type { ImpactSummary, AuthorMetrics, ReviewerMetrics, ActivityData, PeriodSlug } from "@/types";
+import { isValidPeriodSlug } from "@/lib/date-range";
 import { PeriodSelector } from "./PeriodSelector";
 import { SyncIndicator } from "./SyncIndicator";
 import { KpiCards } from "./KpiCards";
@@ -67,13 +68,11 @@ function ContributorAvatar({ c, size = "md" }: { c: ContributorInfo; size?: "sm"
 function ContributorSelector({
   current,
   contributors,
-  boardId,
-  period,
+  onContributorChange,
 }: {
   current: ContributorInfo;
   contributors: ContributorInfo[];
-  boardId: string;
-  period: PeriodSlug;
+  onContributorChange: (login: string) => void;
 }) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
@@ -88,10 +87,6 @@ function ContributorSelector({
       document.removeEventListener("mousedown", onClickOutside);
     };
   }, [open]);
-
-  function navigate(login: string) {
-    window.location.assign(`/board/${boardId}/impact/${login}/${period}`);
-  }
 
   if (contributors.length <= 1) {
     return (
@@ -148,7 +143,8 @@ function ContributorSelector({
             <button
               key={c.githubLogin}
               onClick={() => {
-                navigate(c.githubLogin);
+                onContributorChange(c.githubLogin);
+                setOpen(false);
               }}
               className="flex w-full items-center gap-2.5 px-3 py-2 text-left text-sm transition-colors hover:bg-white/5"
             >
@@ -169,8 +165,16 @@ function ContributorSelector({
   );
 }
 
-export default function ImpactView({ boardId, githubLogin, period: initialPeriod, contributor, contributors }: Props) {
+export default function ImpactView({
+  boardId,
+  githubLogin: initialLogin,
+  period: initialPeriod,
+  contributor: initialContributor,
+  contributors,
+}: Props) {
   const [period, setPeriod] = useState<PeriodSlug>(initialPeriod);
+  const [currentLogin, setCurrentLogin] = useState<string>(initialLogin);
+  const [currentContributor, setCurrentContributor] = useState<ContributorInfo>(initialContributor);
   const [fetchKey, setFetchKey] = useState(0);
   const [summary, setSummary] = useState<SectionState<ImpactSummary>>(idle());
   const [author, setAuthor] = useState<SectionState<AuthorMetrics>>(idle());
@@ -178,22 +182,55 @@ export default function ImpactView({ boardId, githubLogin, period: initialPeriod
   const [activity, setActivity] = useState<SectionState<ActivityData>>(idle());
 
   useEffect(() => {
-    const base = `/api/board/${boardId}/impact/${githubLogin}`;
+    const base = `/api/board/${boardId}/impact/${currentLogin}`;
     const q = `?period=${period}`;
     void fetchSection<ImpactSummary>(`${base}/summary${q}`, setSummary);
     void fetchSection<AuthorMetrics>(`${base}/author${q}`, setAuthor);
     void fetchSection<ReviewerMetrics>(`${base}/reviewer${q}`, setReviewer);
     void fetchSection<ActivityData>(`${base}/activity${q}`, setActivity);
-  }, [boardId, githubLogin, period, fetchKey]);
+  }, [boardId, currentLogin, period, fetchKey]);
 
   function handlePeriodChange(slug: PeriodSlug) {
-    history.replaceState(null, "", `/board/${boardId}/impact/${githubLogin}/${slug}`);
+    history.pushState(null, "", `/board/${boardId}/impact/${currentLogin}/${slug}`);
     setSummary(idle());
     setAuthor(idle());
     setReviewer(idle());
     setActivity(idle());
     setPeriod(slug);
   }
+
+  function handleContributorChange(login: string) {
+    const next = contributors.find((c) => c.githubLogin === login);
+    if (!next) return;
+    history.pushState(null, "", `/board/${boardId}/impact/${login}/${period}`);
+    setSummary(idle());
+    setAuthor(idle());
+    setReviewer(idle());
+    setActivity(idle());
+    setCurrentLogin(login);
+    setCurrentContributor(next);
+  }
+
+  useEffect(() => {
+    function onPopState() {
+      const segments = location.pathname.split("/");
+      const login = segments[segments.indexOf("impact") + 1];
+      const slug = segments[segments.indexOf("impact") + 2];
+      const next = contributors.find((c) => c.githubLogin === login);
+      if (!next) return;
+      setSummary(idle());
+      setAuthor(idle());
+      setReviewer(idle());
+      setActivity(idle());
+      setCurrentLogin(login);
+      setCurrentContributor(next);
+      if (isValidPeriodSlug(slug)) setPeriod(slug);
+    }
+    window.addEventListener("popstate", onPopState);
+    return () => {
+      window.removeEventListener("popstate", onPopState);
+    };
+  }, [contributors]);
 
   function handleSyncComplete() {
     setSummary(idle());
@@ -207,7 +244,11 @@ export default function ImpactView({ boardId, githubLogin, period: initialPeriod
     <div className="mx-auto max-w-6xl space-y-6 px-4 py-6">
       {/* header */}
       <div className="flex flex-wrap items-start justify-between gap-4">
-        <ContributorSelector current={contributor} contributors={contributors} boardId={boardId} period={period} />
+        <ContributorSelector
+          current={currentContributor}
+          contributors={contributors}
+          onContributorChange={handleContributorChange}
+        />
         <div className="flex flex-wrap items-center gap-3">
           <SyncIndicator
             lastSyncedAt={summary.data?.lastSyncedAt ?? null}
