@@ -72,6 +72,29 @@ export interface GitHubReviewComment {
   inReplyToId: number | null;
 }
 
+export type IntentCategory =
+  | "mentoring"
+  | "architecture"
+  | "bug-catch"
+  | "nitpick"
+  | "unblocking"
+  | "question"
+  | "praise"
+  | "joke"
+  | "self-review"
+  | "unknown";
+
+export type TechnicalDomain = "functional" | "refactoring" | "documentation" | "discussion" | "false-positive";
+
+export interface ThreadClassification {
+  threadRootCommentId: number;
+  pullRequestId: number;
+  intent: IntentCategory;
+  domain: TechnicalDomain;
+  modelId: string;
+  classifiedAt: string;
+}
+
 export type PeriodSlug = "7d" | "30d" | "90d" | "6m" | "ytd" | "all";
 
 export interface DateRange {

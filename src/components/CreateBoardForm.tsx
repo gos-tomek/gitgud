@@ -44,6 +44,7 @@ export default function CreateBoardForm() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ pat: token }),
       });
+      // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion -- workers-types vs DOM `Response.json()` type disagreement; tsc resolves to `unknown` (assertion required), ESLint's incremental resolver disagrees (false positive)
       const data = (await res.json()) as { login?: string; avatarUrl?: string; warning?: string; error?: string };
       if (latestPatRef.current !== token) return;
       if (res.ok && data.login) {
@@ -84,6 +85,7 @@ export default function CreateBoardForm() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ pat }),
       });
+      // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion -- workers-types vs DOM `Response.json()` type disagreement; tsc resolves to `unknown` (assertion required), ESLint's incremental resolver disagrees (false positive)
       const data = (await res.json()) as { repos?: RepoItem[]; error?: string };
       if (res.ok && data.repos) {
         dispatch({ type: "FETCH_REPOS_SUCCESS", repos: data.repos });
@@ -104,6 +106,7 @@ export default function CreateBoardForm() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ pat, repos: repos.map((r) => ({ owner: r.owner, name: r.name })) }),
       });
+      // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion -- workers-types vs DOM `Response.json()` type disagreement; tsc resolves to `unknown` (assertion required), ESLint's incremental resolver disagrees (false positive)
       const data = (await res.json()) as { collaborators?: CollaboratorItem[]; error?: string };
       if (res.ok && data.collaborators) {
         dispatch({ type: "FETCH_COLLABORATORS_SUCCESS", collaborators: data.collaborators });
@@ -132,6 +135,7 @@ export default function CreateBoardForm() {
         body: JSON.stringify({ name: state.name.trim() }),
       });
       if (res.status === 409) {
+        // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion -- workers-types vs DOM `Response.json()` type disagreement; tsc resolves to `unknown` (assertion required), ESLint's incremental resolver disagrees (false positive)
         const data = (await res.json()) as { error?: string };
         dispatch({ type: "SET_NAME_ERROR", error: data.error ?? "You already have a board with that name" });
         return;
@@ -195,6 +199,7 @@ export default function CreateBoardForm() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ pat: state.pat, owner, name: repoName }),
       });
+      // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion -- workers-types vs DOM `Response.json()` type disagreement; tsc resolves to `unknown` (assertion required), ESLint's incremental resolver disagrees (false positive)
       const data = (await res.json()) as RepoItem & { error?: string };
       if (res.ok) {
         const newRepo: RepoItem = {
@@ -234,6 +239,7 @@ export default function CreateBoardForm() {
           })),
         }),
       });
+      // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion -- workers-types vs DOM `Response.json()` type disagreement; tsc resolves to `unknown` (assertion required), ESLint's incremental resolver disagrees (false positive)
       const data = (await res.json()) as { id?: string; error?: string };
       if (!res.ok) {
         dispatch({ type: "SUBMIT_ERROR", message: data.error ?? "Something went wrong. Please try again." });

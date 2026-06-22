@@ -31,6 +31,10 @@ describe.skipIf(!canRun)("PAT non-leakage (Risk #2)", () => {
   let server: AstroServerHandle;
   let ownerFetch: ReturnType<typeof createAuthenticatedFetch>;
   let contributorFetch: ReturnType<typeof createAuthenticatedFetch>;
+  // Set once the Vectors #1/#2 dispatch resolves — terminated in afterAll so the Workflow
+  // instance doesn't keep retrying against a bad PAT (and, soon, a deleted board) in the
+  // background after the test process exits.
+  let dispatchedInstanceId: string | null = null;
 
   beforeAll(async () => {
     const ts = Date.now();
@@ -50,10 +54,10 @@ describe.skipIf(!canRun)("PAT non-leakage (Risk #2)", () => {
     //    validates p_user_id = auth.uid() — it must be called as the owner,
     //    not the admin service role (which has auth.uid() = null). The
     //    boards_insert_owner_as_member trigger auto-enrolls the owner.
-    //    A repo is required so the sync endpoint gets past the early-exit guard
-    //    (syncBoardGitHubData returns early when repos.length === 0 without
-    //    ever decrypting the PAT, so we need at least one repo to reach the
-    //    GitHub API call that fails with an auth error).
+    //    A repo is required so the dispatched Workflow's sync-list-prs step actually has
+    //    something to sync — with zero repos, `listBoardRepos` returns empty and the Workflow
+    //    never decrypts the PAT or calls GitHub, so the auth-error log line we poll for below
+    //    would never appear.
     const createResult = await ownerClient.rpc("create_board_atomic", {
       p_user_id: ownerUserId,
       p_name: `PAT Leak Test ${ts}`,
@@ -81,6 +85,18 @@ describe.skipIf(!canRun)("PAT non-leakage (Risk #2)", () => {
   }, 150_000);
 
   afterAll(async () => {
+    // Best-effort: terminate while the server (and the board it needs to authorize the call)
+    // still exist. Swallow failures — an instance that already errored out on its own is fine too.
+    // The Content-Type header isn't meaningful here (no body) but is required to pass Astro's
+    // origin-check middleware: an unsafe method with no Content-Type and no matching `Origin`
+    // header (Node's fetch sends neither) is rejected outright. A real browser fetch wouldn't
+    // need this — it always sends a same-origin `Origin` header automatically.
+    if (dispatchedInstanceId) {
+      await ownerFetch(`/api/github/sync/status?boardId=${ownerBoardId}&instanceId=${dispatchedInstanceId}`, {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+      }).catch(() => undefined);
+    }
     try {
       await server.stop();
     } finally {
@@ -90,11 +106,13 @@ describe.skipIf(!canRun)("PAT non-leakage (Risk #2)", () => {
   });
 
   // ─── Vector #1/#2: response body ────────────────────────────────────────────
-  // sync.ts outer catch returns `err.message` verbatim (Vector #1).
-  // github-sync.ts per-PR catch pushes `err.message` into SyncResult.errors[]
-  // which is serialised into the response body (Vector #2).
+  // Since classification-batch (p5), POST /api/github/sync dispatches a
+  // ClassificationBatchWorkflow instance and returns immediately — it no longer runs the
+  // GitHub sync in-request, so the response can no longer carry a sync error (sanitised or
+  // not). These assertions now guard the dispatch path itself: the instanceId/status body
+  // must never echo a secret, regardless of what happens later inside the Workflow.
 
-  describe("sync error response does not contain PAT (Vectors #1/#2)", () => {
+  describe("sync dispatch response does not contain PAT (Vectors #1/#2)", () => {
     let responseBody: string;
 
     beforeAll(async () => {
@@ -104,8 +122,10 @@ describe.skipIf(!canRun)("PAT non-leakage (Risk #2)", () => {
         body: JSON.stringify({ boardId: ownerBoardId }),
       });
       responseBody = await res.text();
-      // Sync must fail (PAT is invalid) — a 200 would mean we never hit GitHub.
-      expect(res.status).not.toBe(200);
+      // Dispatch succeeds even though the PAT is invalid — the bad PAT only surfaces once the
+      // Workflow's sync step actually calls GitHub, which now happens after this response.
+      expect(res.status).toBe(200);
+      dispatchedInstanceId = (JSON.parse(responseBody) as { instanceId: string }).instanceId;
     }, 30_000);
 
     it("response body does not contain the test PAT", () => {
@@ -119,10 +139,23 @@ describe.skipIf(!canRun)("PAT non-leakage (Risk #2)", () => {
 
   // ─── Vector #3/#4: server log output ─────────────────────────────────────────
   // src/lib/logger.ts is a bare consola re-export with zero sanitization.
-  // Six catch blocks near PAT-handling code call logger.error(tag, err).
-  // Cloudflare observability (wrangler.jsonc) persists all console output.
+  // The dispatched Workflow instance hits GitHub with the sentinel PAT asynchronously; its
+  // sync-list-prs step fails (GitHubAuthError) and the failure is logged by `runStep` in
+  // src/worker.ts. Poll for that log line before asserting — checking immediately after
+  // dispatch would race the Workflow's background execution and pass vacuously.
 
   describe("server output does not contain PAT (Vectors #3/#4)", () => {
+    beforeAll(async () => {
+      const deadline = Date.now() + 30_000;
+      while (Date.now() < deadline) {
+        if (server.output().some((line) => line.includes('Step "sync-list-prs" failed'))) return;
+        await new Promise((r) => setTimeout(r, 500));
+      }
+      throw new Error(
+        `Timed out waiting for the Workflow's sync-list-prs step failure to appear in server output.\nLast output:\n${server.output().slice(-30).join("\n")}`,
+      );
+    }, 35_000);
+
     it("server stdout/stderr does not contain the test PAT", () => {
       const allOutput = server.output().join("\n");
       expect(allOutput).not.toContain(TEST_PAT);

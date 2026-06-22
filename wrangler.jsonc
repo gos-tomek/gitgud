@@ -1,7 +1,7 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "gitgud",
-  "main": "@astrojs/cloudflare/entrypoints/server",
+  "main": "./src/worker.ts",
   "compatibility_date": "2026-05-08",
   "compatibility_flags": ["nodejs_compat"],
   "assets": {
@@ -11,5 +11,18 @@
   },
   "observability": {
     "enabled": true,
+  },
+  "ai": {
+    "binding": "AI",
+  },
+  "workflows": [
+    {
+      "name": "classification-batch",
+      "binding": "CLASSIFICATION_BATCH",
+      "class_name": "ClassificationBatchWorkflow",
+    },
+  ],
+  "triggers": {
+    "crons": ["0 3 * * *"],
   },
 }

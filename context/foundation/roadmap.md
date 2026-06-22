@@ -3,7 +3,7 @@ project: GitGud
 version: 1
 status: draft
 created: 2026-05-27
-updated: 2026-06-17
+updated: 2026-06-20
 prd_version: 1
 main_goal: market-feedback
 top_blocker: skills
@@ -111,6 +111,9 @@ Foundations below assume these are present and do NOT re-scaffold them.
   - Hosted-model privacy mitigation: pick a provider with a no-training / no-retention data policy, persist no raw comment text, keep the classifier swappable for a future local model — Owner: user. Block: no.
 - **Risk:** This is the `skills` blocker made concrete — Cloudflare Workflows durable-execution semantics (idempotent steps, retries) are a new programming model, and the accuracy guardrail gates launch. Highest-risk foundation; build the batch as a Workflow from day one rather than a single request.
 - **Status:** blocked
+- **Follow-up (surfaced during classification-batch p4 manual testing, 2026-06-20):** Two GitHub-fetch optimizations identified but deliberately deferred — not blocking, revisit after F-03 ships:
+  1. **REST → GraphQL for per-PR detail+reviews.** Measured on `supabase/supabase`'s actual 90-day window (2647 PRs): REST detail+reviews costs 5321 requests, exceeding the 5000/h primary rate limit (forces one `step.sleepUntil` pause per backfill). The equivalent GraphQL query (`pullRequests(first:100) { additions deletions changedFiles reviews(first:30) {...} }`) costs ~31 points/page × 27 pages ≈ 837 points — comfortably under the separate 5000 points/h GraphQL budget, eliminating the pause entirely. `octokit.graphql()` is already available (bundled in `@octokit/core`), no new dependency. Comments stay on the existing cheap REST repo-wide endpoint either way (~47 requests for the same window — not the bottleneck).
+  2. **Parallelize comments+classification against the expensive detail/review chunking.** `classifyThreads` (`src/lib/services/classification.ts:198-218`) only reads `github_review_comments` + `github_pull_requests(id, title, author_login)` — it has no dependency on `additions`/`deletions`/`changed_files`/`github_reviews`. Today's Workflow sequences `sync-review-comments` _after_ all `sync-pr-details-*` chunks (~5321 requests) purely because the original single-step design treated "sync" as monolithic; the actual data dependency only requires `sync-list-prs` (PR rows) + `sync-review-comments` (comment rows) — both cheap (~74 requests combined). Restructuring to run comments+classification concurrently with (`Promise.all`) the detail/review chunk loop would surface classified threads almost immediately instead of after the full backfill; `update-last-synced` would need to wait on both branches to keep its "fully synced" meaning intact.
 
 ### F-04: Link GitGud account with GitHub via OAuth
 
