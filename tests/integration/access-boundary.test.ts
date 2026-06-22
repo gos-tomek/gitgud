@@ -393,4 +393,57 @@ describe.skipIf(!supabaseAvailable)("Cross-board access boundary (Risk #1 + #5)"
       expect(data).toEqual([]);
     });
   });
+
+  // ─── user_profiles RLS ─────────────────────────────────────────────────────
+  // Self-declared GitHub identity, scoped strictly to its own owner.
+
+  describe("user_profiles RLS", () => {
+    it("a user can read their own profile", async () => {
+      const { data, error } = await fixture.ownerA.client
+        .from("user_profiles")
+        .select("user_id,github_id,github_login")
+        .eq("user_id", fixture.ownerA.userId);
+      expect(error).toBeNull();
+      expect(data).toHaveLength(1);
+      expect(data?.[0].github_id).toBe(fixture.ownerA.githubId);
+    });
+
+    it("a user cannot read another user's profile", async () => {
+      const { data, error } = await fixture.ownerB.client
+        .from("user_profiles")
+        .select("*")
+        .eq("user_id", fixture.ownerA.userId);
+      expect(error).toBeNull();
+      expect(data).toEqual([]);
+    });
+
+    it("a user cannot insert a profile for another user", async () => {
+      const { error } = await fixture.ownerB.client
+        .from("user_profiles")
+        .insert({ user_id: fixture.ownerA.userId, github_id: 999999, github_login: "hijacked" });
+      expect(error?.code).toBe("42501");
+    });
+
+    it("a user cannot update another user's profile", async () => {
+      await fixture.ownerB.client
+        .from("user_profiles")
+        .update({ github_login: "hijacked" })
+        .eq("user_id", fixture.ownerA.userId);
+
+      const { data } = await adminClient
+        .from("user_profiles")
+        .select("github_login")
+        .eq("user_id", fixture.ownerA.userId)
+        .single();
+      expect(data?.github_login).not.toBe("hijacked");
+    });
+
+    it("a user cannot delete another user's profile (no DELETE policy)", async () => {
+      const { error } = await fixture.ownerB.client.from("user_profiles").delete().eq("user_id", fixture.ownerA.userId);
+      expect(error?.code).toBe("42501");
+
+      const { data } = await adminClient.from("user_profiles").select("user_id").eq("user_id", fixture.ownerA.userId);
+      expect(data).toHaveLength(1);
+    });
+  });
 });

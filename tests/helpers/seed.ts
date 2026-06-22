@@ -2,8 +2,8 @@ import { type SupabaseClient } from "@supabase/supabase-js";
 import { adminClient, cleanupBoard, cleanupUser, createTestUser } from "./supabase.js";
 
 export interface TwoBoardFixture {
-  ownerA: { client: SupabaseClient; userId: string; boardId: string };
-  ownerB: { client: SupabaseClient; userId: string; boardId: string };
+  ownerA: { client: SupabaseClient; userId: string; boardId: string; githubId: number };
+  ownerB: { client: SupabaseClient; userId: string; boardId: string; githubId: number };
   repoId: string;
   prId: number;
   reviewId: number;
@@ -22,6 +22,19 @@ export async function seedTwoBoards(): Promise<TwoBoardFixture> {
   ]);
   const { client: clientA, userId: userIdA } = ownerAResult;
   const { client: clientB, userId: userIdB } = ownerBResult;
+
+  // Seed user_profiles for both owners
+  const githubIdA = ts + 10;
+  const githubIdB = ts + 11;
+  const { error: profileAError } = await adminClient
+    .from("user_profiles")
+    .insert({ user_id: userIdA, github_id: githubIdA, github_login: `owner-a-${ts}` });
+  if (profileAError) throw new Error(`Failed to create user_profiles for owner A: ${profileAError.message}`);
+
+  const { error: profileBError } = await adminClient
+    .from("user_profiles")
+    .insert({ user_id: userIdB, github_id: githubIdB, github_login: `owner-b-${ts}` });
+  if (profileBError) throw new Error(`Failed to create user_profiles for owner B: ${profileBError.message}`);
 
   // Create both boards via admin — trigger auto-enrolls owner as board_member
   const { data: boardAData, error: boardAError } = await adminClient
@@ -106,8 +119,8 @@ export async function seedTwoBoards(): Promise<TwoBoardFixture> {
   }
 
   return {
-    ownerA: { client: clientA, userId: userIdA, boardId: boardIdA },
-    ownerB: { client: clientB, userId: userIdB, boardId: boardIdB },
+    ownerA: { client: clientA, userId: userIdA, boardId: boardIdA, githubId: githubIdA },
+    ownerB: { client: clientB, userId: userIdB, boardId: boardIdB, githubId: githubIdB },
     repoId,
     prId,
     reviewId,
