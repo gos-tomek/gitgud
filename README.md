@@ -31,7 +31,13 @@ npm install
 ```
 SUPABASE_URL=https://<project-ref>.supabase.co
 SUPABASE_KEY=<anon key>
+SUPABASE_SERVICE_KEY=<service-role key>
+GITHUB_TOKEN_ENCRYPTION_KEY=<pgcrypto passphrase>
 ```
+
+- `SUPABASE_KEY` (anon key) is used by the cookie-based SSR client (`src/lib/supabase.ts`) for everything request-scoped.
+- `SUPABASE_SERVICE_KEY` (service-role key — bypasses RLS) is used only by the Worker's cron dispatcher and the classification-batch Workflow (`src/worker.ts`), which run outside a user session and can't use the cookie-based client. **Never** substitute the anon key here — the Workflow's board-scoped queries rely on RLS being bypassed.
+- `GITHUB_TOKEN_ENCRYPTION_KEY` is the pgcrypto passphrase `create_board_atomic` uses to encrypt the GitHub PAT a user pastes when creating a board, and that the Workflow uses to decrypt it before calling the GitHub API. Pick any random string (e.g. `openssl rand -base64 32`); it has no SQL `DEFAULT`, so a missing value breaks board creation with a `PGRST202` error.
 
 Ask the team for production values. For local dev, spin up a local Supabase stack:
 
@@ -76,6 +82,17 @@ src/
 | `/dashboard`          | Protected — redirects to `/auth/signin` if unauthenticated |
 
 Route protection is in `src/middleware.ts`. Add paths to `PROTECTED_ROUTES` to require auth.
+
+## Scheduled Jobs
+
+A daily Cron Trigger (`0 3 * * *`, defined in `wrangler.jsonc`) fires the Worker's `scheduled()` handler (`src/worker.ts`), which queries every board with a connected GitHub repo and dispatches one `ClassificationBatchWorkflow` run per board (Cloudflare Workflows, binding `CLASSIFICATION_BATCH`). Each run syncs PRs/reviews since the last sync and classifies new review comments.
+
+This is declared entirely in `wrangler.jsonc` (`triggers.crons`, `workflows`, and the `ai` binding for classification) — `wrangler deploy` provisions the cron and the Workflow class automatically, no separate setup step. It does need:
+
+- The Cloudflare account to have **Workers AI** and **Workflows** available (on by default on standard accounts/plans).
+- The `SUPABASE_SERVICE_KEY` and `GITHUB_TOKEN_ENCRYPTION_KEY` Worker secrets (see step 2 above) — the scheduled handler and the Workflow run outside a request/session context, so they read these directly from `env` rather than `astro:env/server`.
+
+To verify after a deploy, watch `npx wrangler tail` around 03:00 UTC, or check the Workflow's instance list in the Cloudflare dashboard.
 
 ## CI / Deployment
 

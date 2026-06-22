@@ -72,12 +72,14 @@ first, then hand the plan back for execution.
 
 The named imports from `astro:env/server` resolve at **runtime** from the Worker's bound
 secrets (confirmed against the adapter docs — `astro:env` is compatible, no `getSecret()`
-rewrite needed). So the only wiring is uploading two Worker secrets.
+rewrite needed). So the only wiring is uploading Worker secrets.
 
 - [ ] `npx wrangler secret put SUPABASE_URL` → paste the production Supabase URL.
 - [ ] `npx wrangler secret put SUPABASE_KEY` → paste the production anon key.
-- [ ] Verify: `npx wrangler secret list` shows both names (values are write-only).
-- [ ] (Optional, local workerd fidelity) create `.dev.vars` (gitignored) with the same two keys so `npm run dev`/`wrangler dev` mirror prod. `.env` already serves Node dev.
+- [ ] `npx wrangler secret put SUPABASE_SERVICE_KEY` → paste the production service-role key. Used only by the Worker's cron `scheduled()` dispatcher and the `ClassificationBatchWorkflow` (`src/worker.ts`), which run outside a user session and read it directly from `env` (not `astro:env/server`). **Do not** reuse the anon key here — those code paths rely on RLS being bypassed.
+- [ ] `npx wrangler secret put GITHUB_TOKEN_ENCRYPTION_KEY` → paste the pgcrypto passphrase used to encrypt GitHub PATs in `create_board_atomic`. **Required at first deploy**, not optional despite `optional: true` in the `astro:env` schema — the RPC has no SQL `DEFAULT` for this param, so a missing secret makes PostgREST unable to resolve the function signature (`PGRST202`) and board creation fails with a 500. See Phase 6 incident note.
+- [ ] Verify: `npx wrangler secret list` shows all four names (values are write-only).
+- [ ] (Optional, local workerd fidelity) create `.dev.vars` (gitignored) with the same four keys so `npm run dev`/`wrangler dev` mirror prod. `.env` already serves Node dev.
 
 ## Phase 3 — Build + dry-run validation (catch config errors before mutating prod)
 
@@ -114,8 +116,10 @@ rewrite needed). So the only wiring is uploading two Worker secrets.
 
 - [x] **Rollback:** `npx wrangler rollback [version-id]` reverts the Worker near-instantly. Caveat: rolls back **only the Worker** — Supabase schema is NOT included (none exists yet, but true once migrations land).
 - [x] **Logs:** `wrangler tail` (live) + dashboard Workers Observability (historical; `observability.enabled` is on).
-- [x] **Secret rotation:** re-run `wrangler secret put <NAME>` (human-only). Both `SUPABASE_URL` and `SUPABASE_KEY` are wired.
+- [x] **Secret rotation:** re-run `wrangler secret put <NAME>` (human-only). `SUPABASE_URL`, `SUPABASE_KEY`, `SUPABASE_SERVICE_KEY`, and `GITHUB_TOKEN_ENCRYPTION_KEY` are wired.
 - [x] **Approval boundary:** `wrangler deploy`, secret rotation, and any future DB drop/alter are human-by-hand. An agent may run builds, dry-runs, and `wrangler tail` unattended (per CLAUDE.md production-access boundary).
+
+**Incident (2026-06-22): `GITHUB_TOKEN_ENCRYPTION_KEY` missing on the production Worker.** This runbook's Phase 2 only listed `SUPABASE_URL`/`SUPABASE_KEY` — the secret requirement was added later by `create_board_atomic` (see `supabase/migrations/20260611120000_create_board_atomic.sql`) but this doc was never updated to add a third `wrangler secret put` step. Every board-creation attempt on PRD failed with a 500 (`pgCode: PGRST202`, "Could not find the function ... in the schema cache" — the RPC call was missing the `p_encryption_key` argument because `astro:env/server` resolved it to `undefined`). Diagnosed via `wrangler tail`; fixed by running `npx wrangler secret put GITHUB_TOKEN_ENCRYPTION_KEY`. Phase 2 above is now corrected to list all three secrets.
 
 ## Phase 7 — Persist the artifact
 
