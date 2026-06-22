@@ -1,10 +1,10 @@
 ---
 change_id: em-switch-ic-dropdown
 title: Em switch ic dropdown
-status: implemented
+status: archived
 created: 2026-06-22
 updated: 2026-06-22
-archived_at: null
+archived_at: 2026-06-22T16:36:56Z
 ---
 
 ## Notes

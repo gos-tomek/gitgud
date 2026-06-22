@@ -38,7 +38,7 @@ Mentoring, code-review quality, and unblocking — the "glue work" that keeps en
 | S-03 | invite-and-join-board          | invite ICs by email; IC joins via invite link                                                 | S-01, F-01, S-02 | FR-003, FR-004, FR-005, FR-014, FR-015                                        | done     |
 | S-04 | profile-raw-github-metrics     | view a contribution profile: PRs, reviews, comment counts                                     | F-02, S-02, S-03 | FR-006, FR-008, FR-009, FR-010, FR-011, NFR progressive-load, NFR data-parity | done     |
 | S-05 | profile-classified-comments    | see own review comments broken down by semantic category                                      | F-03, F-04, S-04 | FR-012, Business Logic, NFR accuracy-floor, NFR data-parity                   | blocked  |
-| S-06 | em-switch-ic-dropdown          | switch between ICs on a board without a full page reload                                      | S-04             | FR-007, US-01                                                                 | proposed |
+| S-06 | em-switch-ic-dropdown          | switch between ICs on a board without a full page reload                                      | S-04             | FR-007, US-01                                                                 | done     |
 | S-07 | flag-classification-inaccurate | flag a comment's assigned category as inaccurate                                              | S-05             | FR-013                                                                        | blocked  |
 | S-08 | edit-board-connection          | update Board PAT and linked org; both forms re-validate accessible repos/ICs when PAT changes | S-01, S-02       | FR-018, FR-020                                                                | ready    |
 | S-09 | manage-ic-roster               | add or remove ICs from a Board after initial setup                                            | S-03             | FR-019                                                                        | proposed |
@@ -208,7 +208,7 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **Blockers:** —
 - **Unknowns:** —
 - **Risk:** Pure client-side navigation over data S-04 already provides; low risk. Independent of the classification track, so it can proceed while S-05 is blocked.
-- **Status:** proposed
+- **Status:** done
 
 ### S-07: IC flags a classified comment as inaccurate
 
