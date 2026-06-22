@@ -3,7 +3,7 @@ project: GitGud
 version: 1
 status: draft
 created: 2026-05-27
-updated: 2026-06-20
+updated: 2026-06-22
 prd_version: 1
 main_goal: market-feedback
 top_blocker: skills
@@ -31,7 +31,7 @@ Mentoring, code-review quality, and unblocking — the "glue work" that keeps en
 | ---- | ------------------------------ | --------------------------------------------------------------------------------------------- | ---------------- | ----------------------------------------------------------------------------- | -------- |
 | F-01 | access-control-and-membership  | (foundation) IC/EM roles, board + membership, RLS on present auth                             | —                | Access Control, FR-014, FR-015, FR-016                                        | done     |
 | F-02 | github-ingestion-access        | (foundation) authenticated read of an org's PRs/reviews/comments                              | —                | FR-002, FR-009, FR-010, FR-011, US-01                                         | done     |
-| F-03 | classification-batch           | (foundation) daily durable batch classifies comments by intent                                | F-01, F-02       | FR-012, Business Logic, NFR accuracy-floor                                    | blocked  |
+| F-03 | classification-batch           | (foundation) daily durable batch classifies comments by intent                                | F-01, F-02       | FR-012, Business Logic, NFR accuracy-floor                                    | done     |
 | S-01 | board-create-with-em-role      | create a board and be explicitly assigned the EM role                                         | F-01             | FR-001, FR-016, FR-017                                                        | done     |
 | S-02 | link-board-to-github-org       | link a board to a GitHub org so its activity feeds the board                                  | S-01, F-02       | FR-002, US-01                                                                 | done     |
 | F-04 | link-github-account            | (foundation) link GitGud account with GitHub via OAuth                                        | —                | Access Control                                                                | proposed |
@@ -110,7 +110,7 @@ Foundations below assume these are present and do NOT re-scaffold them.
   - Classification-accuracy validation method + minimum threshold before launch (PRD Open Question 1; Discovery noted LLMs lag humans 12–23% on intent) — Owner: user. Block: yes.
   - Hosted-model privacy mitigation: pick a provider with a no-training / no-retention data policy, persist no raw comment text, keep the classifier swappable for a future local model — Owner: user. Block: no.
 - **Risk:** This is the `skills` blocker made concrete — Cloudflare Workflows durable-execution semantics (idempotent steps, retries) are a new programming model, and the accuracy guardrail gates launch. Highest-risk foundation; build the batch as a Workflow from day one rather than a single request.
-- **Status:** blocked
+- **Status:** done
 - **Follow-up (surfaced during classification-batch p4 manual testing, 2026-06-20):** Two GitHub-fetch optimizations identified but deliberately deferred — not blocking, revisit after F-03 ships:
   1. **REST → GraphQL for per-PR detail+reviews.** Measured on `supabase/supabase`'s actual 90-day window (2647 PRs): REST detail+reviews costs 5321 requests, exceeding the 5000/h primary rate limit (forces one `step.sleepUntil` pause per backfill). The equivalent GraphQL query (`pullRequests(first:100) { additions deletions changedFiles reviews(first:30) {...} }`) costs ~31 points/page × 27 pages ≈ 837 points — comfortably under the separate 5000 points/h GraphQL budget, eliminating the pause entirely. `octokit.graphql()` is already available (bundled in `@octokit/core`), no new dependency. Comments stay on the existing cheap REST repo-wide endpoint either way (~47 requests for the same window — not the bottleneck).
   2. **Parallelize comments+classification against the expensive detail/review chunking.** `classifyThreads` (`src/lib/services/classification.ts:198-218`) only reads `github_review_comments` + `github_pull_requests(id, title, author_login)` — it has no dependency on `additions`/`deletions`/`changed_files`/`github_reviews`. Today's Workflow sequences `sync-review-comments` _after_ all `sync-pr-details-*` chunks (~5321 requests) purely because the original single-step design treated "sync" as monolithic; the actual data dependency only requires `sync-list-prs` (PR rows) + `sync-review-comments` (comment rows) — both cheap (~74 requests combined). Restructuring to run comments+classification concurrently with (`Promise.all`) the detail/review chunk loop would surface classified threads almost immediately instead of after the full backfill; `update-last-synced` would need to wait on both branches to keep its "fully synced" meaning intact.
