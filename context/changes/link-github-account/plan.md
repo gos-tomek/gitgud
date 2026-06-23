@@ -588,15 +588,15 @@ DROP TABLE IF EXISTS public.board_members;
 
 #### Automated
 
-- [x] 4.1 Type checking passes (`npx tsc --noEmit` and `npm run test:typecheck`)
-- [x] 4.2 Lint passes (`npm run lint`)
-- [x] 4.3 All tests pass (`npm test`)
+- [x] 4.1 Type checking passes (`npx tsc --noEmit` and `npm run test:typecheck`) — e443f36
+- [x] 4.2 Lint passes (`npm run lint`) — e443f36
+- [x] 4.3 All tests pass (`npm test`) — e443f36
 
 #### Manual
 
-- [x] 4.4 Dashboard shows boards correctly for contributors and owners
-- [x] 4.5 Empty state shows updated message with "Create board" option
-- [x] 4.6 Board detail pages still load correctly
+- [x] 4.4 Dashboard shows boards correctly for contributors and owners — e443f36
+- [x] 4.5 Empty state shows updated message with "Create board" option — e443f36
+- [x] 4.6 Board detail pages still load correctly — e443f36
 
 ### Phase 5: Drop board_members — Cleanup
 
