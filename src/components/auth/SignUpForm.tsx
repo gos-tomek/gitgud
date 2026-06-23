@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Mail, Lock, UserPlus } from "lucide-react";
+import { Mail, Lock, UserPlus, AtSign } from "lucide-react";
 import { FormField } from "@/components/auth/FormField";
 import { PasswordToggle } from "@/components/auth/PasswordToggle";
 import { SubmitButton } from "@/components/auth/SubmitButton";
@@ -13,11 +13,17 @@ interface Props {
 
 export default function SignUpForm({ serverError }: Props) {
   const [email, setEmail] = useState("");
+  const [githubLogin, setGithubLogin] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [errors, setErrors] = useState<{ email?: string; password?: string; confirmPassword?: string }>({});
+  const [errors, setErrors] = useState<{
+    email?: string;
+    githubLogin?: string;
+    password?: string;
+    confirmPassword?: string;
+  }>({});
 
   function validate() {
     const next: typeof errors = {};
@@ -26,6 +32,12 @@ export default function SignUpForm({ serverError }: Props) {
       next.email = "Email is required";
     } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
       next.email = "Enter a valid email address";
+    }
+
+    if (!githubLogin) {
+      next.githubLogin = "GitHub username is required";
+    } else if (/\s/.test(githubLogin)) {
+      next.githubLogin = "GitHub username cannot contain spaces";
     }
 
     if (!password) {
@@ -76,6 +88,20 @@ export default function SignUpForm({ serverError }: Props) {
         placeholder="you@example.com"
         error={errors.email}
         icon={<Mail className="size-4" />}
+      />
+
+      <FormField
+        id="githubLogin"
+        name="github_login"
+        label="GitHub username"
+        value={githubLogin}
+        onChange={(v) => {
+          setGithubLogin(v.trim().replace(/^@+/, "").toLowerCase());
+          clearError("githubLogin");
+        }}
+        placeholder="octocat"
+        error={errors.githubLogin}
+        icon={<AtSign className="size-4" />}
       />
 
       <FormField

@@ -15,11 +15,19 @@ export const adminClient = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY,
 export async function createTestUser(
   email: string,
   password = "test-password-123",
+  github?: { id: number; login: string },
 ): Promise<{ client: SupabaseClient; userId: string }> {
+  // handle_new_user (supabase/migrations/20260622130000_user_profiles_trigger.sql) requires
+  // github_id/github_login metadata on every auth.users insert — supply defaults here so any
+  // caller that doesn't care about the GitHub identity still gets a valid user_profiles row.
+  const defaultGithub = { id: Date.now() + Math.floor(Math.random() * 100_000), login: `test-user-${Date.now()}` };
+  const { id: githubId, login: githubLogin } = github ?? defaultGithub;
+
   const { data, error } = await adminClient.auth.admin.createUser({
     email,
     password,
     email_confirm: true,
+    user_metadata: { github_id: githubId, github_login: githubLogin },
   });
   if (error ?? !data.user) throw new Error(`Failed to create ${email}: ${error?.message ?? "no user"}`);
 

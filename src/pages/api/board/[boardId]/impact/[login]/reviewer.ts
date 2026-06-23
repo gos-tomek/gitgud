@@ -1,7 +1,7 @@
 import type { APIRoute } from "astro";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase";
-import { getBoardWithRole } from "@/lib/services/boards";
+import { getBoardWithRole, getUserProfile } from "@/lib/services/boards";
 import { parsePeriodSlug, isValidPeriodSlug } from "@/lib/date-range";
 import { getReviewerMetrics } from "@/lib/services/impact-metrics";
 import { logger } from "@/lib/logger";
@@ -33,20 +33,6 @@ export const GET: APIRoute = async (context) => {
   const board = await getBoardWithRole(supabase, boardId, user.id);
   if (!board) return json({ error: "Board not found" }, 404);
 
-  if (board.role !== "supervisor") {
-    const { data: own, error: ownError } = await supabase
-      .from("board_contributors")
-      .select("github_login")
-      .eq("board_id", boardId)
-      .eq("user_id", user.id)
-      .maybeSingle();
-    if (ownError) {
-      logger.error("[impact/reviewer] own-contributor lookup failed", ownError);
-      return json({ error: "Database error" }, 500);
-    }
-    if (own?.github_login !== login) return json({ error: "Forbidden" }, 403);
-  }
-
   const periodSlug = context.url.searchParams.get("period") ?? "90d";
   if (!isValidPeriodSlug(periodSlug)) return json({ error: "Invalid period slug" }, 400);
 
@@ -62,6 +48,14 @@ export const GET: APIRoute = async (context) => {
     return json({ error: "Database error" }, 500);
   }
   if (!contributor) return json({ error: "Contributor not found" }, 404);
+
+  if (board.role !== "supervisor") {
+    const ownProfile = await getUserProfile(supabase, user.id).catch((err: unknown) => {
+      logger.error("[impact/reviewer] own-profile lookup failed", err);
+      return null;
+    });
+    if (ownProfile?.githubId !== contributor.github_id) return json({ error: "Forbidden" }, 403);
+  }
 
   try {
     const result = await getReviewerMetrics(

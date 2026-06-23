@@ -26,15 +26,6 @@ describe.skipIf(!supabaseAvailable)("Cross-board access boundary (Risk #1 + #5)"
       expect(data).toEqual([]);
     });
 
-    it("board_members: User B cannot read Board A members", async () => {
-      const { data, error } = await fixture.ownerB.client
-        .from("board_members")
-        .select("*")
-        .eq("board_id", fixture.ownerA.boardId);
-      expect(error).toBeNull();
-      expect(data).toEqual([]);
-    });
-
     it("github_repos: User B cannot read Board A repos", async () => {
       const { data, error } = await fixture.ownerB.client
         .from("github_repos")
@@ -88,13 +79,6 @@ describe.skipIf(!supabaseAvailable)("Cross-board access boundary (Risk #1 + #5)"
         const { error } = await fixture.ownerB.client
           .from("boards")
           .insert({ name: "hijacked board", owner_user_id: fixture.ownerA.userId });
-        expect(error?.code).toBe("42501");
-      });
-
-      it("board_members: User B cannot insert a member into Board A", async () => {
-        const { error } = await fixture.ownerB.client
-          .from("board_members")
-          .insert({ board_id: fixture.ownerA.boardId, user_id: fixture.ownerB.userId });
         expect(error?.code).toBe("42501");
       });
 
@@ -273,20 +257,6 @@ describe.skipIf(!supabaseAvailable)("Cross-board access boundary (Risk #1 + #5)"
         expect(data).toHaveLength(1);
       });
 
-      it("board_members: User B cannot delete Board A's owner membership", async () => {
-        await fixture.ownerB.client
-          .from("board_members")
-          .delete()
-          .eq("board_id", fixture.ownerA.boardId)
-          .eq("user_id", fixture.ownerA.userId);
-
-        const { data } = await adminClient
-          .from("board_members")
-          .select("user_id")
-          .eq("board_id", fixture.ownerA.boardId);
-        expect(data).toHaveLength(1);
-      });
-
       it("github_repos: User B cannot delete Board A's repo", async () => {
         await fixture.ownerB.client.from("github_repos").delete().eq("id", fixture.repoId);
 
@@ -317,6 +287,147 @@ describe.skipIf(!supabaseAvailable)("Cross-board access boundary (Risk #1 + #5)"
 
       it("board_contributors: User B cannot delete Board A's contributor", async () => {
         await fixture.ownerB.client
+          .from("board_contributors")
+          .delete()
+          .eq("board_id", fixture.ownerA.boardId)
+          .eq("github_id", fixture.contributorGithubId);
+
+        const { data } = await adminClient
+          .from("board_contributors")
+          .select("github_id")
+          .eq("board_id", fixture.ownerA.boardId);
+        expect(data).toHaveLength(1);
+      });
+    });
+  });
+
+  // ─── contributor write denial ──────────────────────────────────────────────
+  // Contributor has READ access to Board A via is_board_member(), but all
+  // WRITE policies use is_board_owner() — contributor must still be denied.
+
+  describe("contributor write denial", () => {
+    describe("INSERT denial (42501)", () => {
+      it("boards: contributor cannot insert a board owned by someone else", async () => {
+        const { error } = await fixture.contributor.client
+          .from("boards")
+          .insert({ name: "contributor board", owner_user_id: fixture.ownerA.userId });
+        expect(error?.code).toBe("42501");
+      });
+
+      it("github_repos: contributor cannot insert a repo into Board A", async () => {
+        const { error } = await fixture.contributor.client.from("github_repos").insert({
+          board_id: fixture.ownerA.boardId,
+          repo_owner: "contrib-org",
+          repo_name: "contrib-repo",
+          connected_by: fixture.contributor.userId,
+        });
+        expect(error?.code).toBe("42501");
+      });
+
+      it("github_pull_requests: contributor cannot insert a PR into Board A's repo", async () => {
+        const { error } = await fixture.contributor.client.from("github_pull_requests").insert({
+          id: 999999999911,
+          repo_id: fixture.repoId,
+          number: 998,
+          title: "Contributor PR",
+          state: "open",
+          author_login: "contributor",
+          author_github_id: fixture.contributorGithubId,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        });
+        expect(error?.code).toBe("42501");
+      });
+
+      it("github_reviews: contributor cannot insert a review for Board A's PR", async () => {
+        const { error } = await fixture.contributor.client.from("github_reviews").insert({
+          id: 999999999912,
+          pull_request_id: fixture.prId,
+          reviewer_login: "contributor",
+          reviewer_github_id: fixture.contributorGithubId,
+          state: "APPROVED",
+          submitted_at: new Date().toISOString(),
+        });
+        expect(error?.code).toBe("42501");
+      });
+
+      it("github_review_comments: contributor cannot insert a comment for Board A's PR", async () => {
+        const { error } = await fixture.contributor.client.from("github_review_comments").insert({
+          id: 999999999913,
+          pull_request_id: fixture.prId,
+          commenter_login: "contributor",
+          commenter_github_id: fixture.contributorGithubId,
+          body: "Contributor comment",
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        });
+        expect(error?.code).toBe("42501");
+      });
+
+      it("board_contributors: contributor cannot insert another contributor into Board A", async () => {
+        const { error } = await fixture.contributor.client.from("board_contributors").insert({
+          board_id: fixture.ownerA.boardId,
+          github_id: 66667,
+          github_login: "self-promoted-contributor",
+        });
+        expect(error?.code).toBe("42501");
+      });
+    });
+
+    describe("UPDATE denial (0 rows affected, verified via admin)", () => {
+      it("boards: contributor cannot update Board A's name", async () => {
+        const { data: before } = await adminClient
+          .from("boards")
+          .select("name")
+          .eq("id", fixture.ownerA.boardId)
+          .single();
+
+        await fixture.contributor.client
+          .from("boards")
+          .update({ name: "CONTRIB-HIJACKED" })
+          .eq("id", fixture.ownerA.boardId);
+
+        const { data: after } = await adminClient
+          .from("boards")
+          .select("name")
+          .eq("id", fixture.ownerA.boardId)
+          .single();
+
+        expect(after?.name).toBe(before?.name);
+      });
+
+      it("github_repos: contributor cannot update Board A's repo", async () => {
+        const { data: before } = await adminClient
+          .from("github_repos")
+          .select("repo_name")
+          .eq("id", fixture.repoId)
+          .single();
+
+        await fixture.contributor.client
+          .from("github_repos")
+          .update({ repo_name: "contrib-hijacked-repo" })
+          .eq("id", fixture.repoId);
+
+        const { data: after } = await adminClient
+          .from("github_repos")
+          .select("repo_name")
+          .eq("id", fixture.repoId)
+          .single();
+
+        expect(after?.repo_name).toBe(before?.repo_name);
+      });
+    });
+
+    describe("DELETE denial (row still exists, verified via admin)", () => {
+      it("boards: contributor cannot delete Board A", async () => {
+        await fixture.contributor.client.from("boards").delete().eq("id", fixture.ownerA.boardId);
+
+        const { data } = await adminClient.from("boards").select("id").eq("id", fixture.ownerA.boardId);
+        expect(data).toHaveLength(1);
+      });
+
+      it("board_contributors: contributor cannot delete its own membership row", async () => {
+        await fixture.contributor.client
           .from("board_contributors")
           .delete()
           .eq("board_id", fixture.ownerA.boardId)
@@ -391,6 +502,96 @@ describe.skipIf(!supabaseAvailable)("Cross-board access boundary (Risk #1 + #5)"
         .eq("pull_request_id", 9999999999999);
       expect(error).toBeNull();
       expect(data).toEqual([]);
+    });
+  });
+
+  // ─── user_profiles RLS ─────────────────────────────────────────────────────
+  // Self-declared GitHub identity, scoped strictly to its own owner.
+
+  describe("user_profiles RLS", () => {
+    it("a user can read their own profile", async () => {
+      const { data, error } = await fixture.ownerA.client
+        .from("user_profiles")
+        .select("user_id,github_id,github_login")
+        .eq("user_id", fixture.ownerA.userId);
+      expect(error).toBeNull();
+      expect(data).toHaveLength(1);
+      expect(data?.[0].github_id).toBe(fixture.ownerA.githubId);
+    });
+
+    it("a user cannot read another user's profile", async () => {
+      const { data, error } = await fixture.ownerB.client
+        .from("user_profiles")
+        .select("*")
+        .eq("user_id", fixture.ownerA.userId);
+      expect(error).toBeNull();
+      expect(data).toEqual([]);
+    });
+
+    it("a user cannot insert a profile for another user", async () => {
+      const { error } = await fixture.ownerB.client
+        .from("user_profiles")
+        .insert({ user_id: fixture.ownerA.userId, github_id: 999999, github_login: "hijacked" });
+      expect(error?.code).toBe("42501");
+    });
+
+    it("a user cannot update another user's profile", async () => {
+      await fixture.ownerB.client
+        .from("user_profiles")
+        .update({ github_login: "hijacked" })
+        .eq("user_id", fixture.ownerA.userId);
+
+      const { data } = await adminClient
+        .from("user_profiles")
+        .select("github_login")
+        .eq("user_id", fixture.ownerA.userId)
+        .single();
+      expect(data?.github_login).not.toBe("hijacked");
+    });
+
+    it("a user cannot delete another user's profile (no DELETE policy)", async () => {
+      const { error } = await fixture.ownerB.client.from("user_profiles").delete().eq("user_id", fixture.ownerA.userId);
+      expect(error?.code).toBe("42501");
+
+      const { data } = await adminClient.from("user_profiles").select("user_id").eq("user_id", fixture.ownerA.userId);
+      expect(data).toHaveLength(1);
+    });
+  });
+
+  // ─── derived board access ──────────────────────────────────────────────────
+  // is_board_member() derives access from boards.owner_user_id (owners) and
+  // board_contributors.github_id ⟕ user_profiles.github_id (contributors) —
+  // no separate membership table involved.
+
+  describe("derived board access", () => {
+    it("contributor (matching github_id) can read Board A", async () => {
+      const result = await getBoardWithRole(
+        fixture.contributor.client,
+        fixture.ownerA.boardId,
+        fixture.contributor.userId,
+      );
+      expect(result).not.toBeNull();
+      expect(result?.id).toBe(fixture.ownerA.boardId);
+    });
+
+    it("contributor (matching github_id) can read Board A's repos", async () => {
+      const result = await getBoardRepos(fixture.contributor.client, fixture.ownerA.boardId);
+      expect(result).toHaveLength(1);
+    });
+
+    it("contributor (matching github_id) cannot read Board B", async () => {
+      const result = await getBoardWithRole(
+        fixture.contributor.client,
+        fixture.ownerB.boardId,
+        fixture.contributor.userId,
+      );
+      expect(result).toBeNull();
+    });
+
+    it("owner retains access without a board_contributors row", async () => {
+      const result = await getBoardWithRole(fixture.ownerA.client, fixture.ownerA.boardId, fixture.ownerA.userId);
+      expect(result).not.toBeNull();
+      expect(result?.role).toBe("supervisor");
     });
   });
 });

@@ -35,8 +35,8 @@ BEGIN
   VALUES (trim(p_name), p_user_id)
   RETURNING id INTO v_board_id;
 
-  -- boards_insert_owner_as_member fires here (AFTER INSERT, same transaction),
-  -- so is_board_owner(v_board_id) is already satisfied for the inserts below.
+  -- owner_user_id is set above, so is_board_owner(v_board_id) is already
+  -- satisfied for the inserts below — no membership row needed.
 
   UPDATE public.boards
   SET github_pat_encrypted = pgp_sym_encrypt(p_raw_token, p_encryption_key)

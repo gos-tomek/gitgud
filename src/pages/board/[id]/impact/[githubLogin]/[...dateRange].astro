@@ -1,7 +1,7 @@
 ---
 import Layout from "@/layouts/Layout.astro";
 import { createClient } from "@/lib/supabase";
-import { getBoardWithRole, getBoardContributors, getUserBoards } from "@/lib/services/boards";
+import { getBoardWithRole, getBoardContributors, getUserBoards, getUserProfile } from "@/lib/services/boards";
 import { isValidPeriodSlug } from "@/lib/date-range";
 import ImpactView from "@/components/impact/ImpactView";
 import BoardTopbar from "@/components/BoardTopbar.astro";
@@ -24,9 +24,10 @@ if (!board) {
   return Astro.redirect("/dashboard");
 }
 
-const [contributors, boards] = await Promise.all([
+const [contributors, boards, ownProfile] = await Promise.all([
   getBoardContributors(supabase, board.id).catch(() => []),
   getUserBoards(supabase, user.id).catch(() => []),
+  board.role !== "supervisor" ? getUserProfile(supabase, user.id).catch(() => null) : Promise.resolve(null),
 ]);
 
 const contributor = contributors.find((c) => c.githubLogin === githubLogin);
@@ -35,15 +36,15 @@ if (!contributor) {
 }
 
 // Non-supervisors can only view their own contributor profile, never switch to others.
-// Currently a no-op: board_contributors.user_id isn't linked yet (F-04), so no
-// non-owner board member exists to trigger this branch — kept as a forward-compatible guard.
-const ownContributor = board.role !== "supervisor" ? contributors.find((c) => c.userId === user.id) : null;
+// Ownership is derived from the signed-in user's user_profiles.github_id, matched against
+// board_contributors.github_id — there's no direct user_id link.
+const ownContributor = ownProfile ? contributors.find((c) => c.githubId === ownProfile.githubId) : null;
 if (board.role !== "supervisor" && ownContributor?.githubLogin !== githubLogin) {
   return Astro.redirect(ownContributor ? `/board/${id}/impact/${ownContributor.githubLogin}` : `/board/${id}`);
 }
 
 const visibleContributors =
-  board.role === "supervisor" ? contributors : contributors.filter((c) => c.userId === user.id);
+  board.role === "supervisor" ? contributors : contributors.filter((c) => c.githubId === ownProfile?.githubId);
 
 const rawPeriod: string = typeof dateRangeParam === "string" ? dateRangeParam : "90d";
 const period = isValidPeriodSlug(rawPeriod) ? rawPeriod : "90d";
