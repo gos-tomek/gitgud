@@ -535,31 +535,31 @@ No database migrations needed. The `thread_classifications` table and its RLS po
 
 #### Automated
 
-- [x] 1.1 Type-check passes
-- [x] 1.2 Lint passes
-- [x] 1.3 Tests pass
+- [x] 1.1 Type-check passes — 100b7c7
+- [x] 1.2 Lint passes — 100b7c7
+- [x] 1.3 Tests pass — 100b7c7
 
 #### Manual
 
-- [x] 1.4 API endpoint returns correct JSON shape via curl
-- [x] 1.5 Empty state returns zero counts
+- [x] 1.4 API endpoint returns correct JSON shape via curl — 100b7c7
+- [x] 1.5 Empty state returns zero counts — 100b7c7
 
 ### Phase 2: Classification Section Component
 
 #### Automated
 
-- [ ] 2.1 Type-check passes
-- [ ] 2.2 Lint passes
-- [ ] 2.3 Tests pass
+- [x] 2.1 Type-check passes
+- [x] 2.2 Lint passes
+- [x] 2.3 Tests pass
 
 #### Manual
 
-- [ ] 2.4 Section appears between thread quality and heatmap
-- [ ] 2.5 Stacked bar shows correct 3-tier grouping
-- [ ] 2.6 SVG donut renders with center text
-- [ ] 2.7 Tooltips appear on category label hover
-- [ ] 2.8 Empty and loading states render correctly
-- [ ] 2.9 Coverage footer shows correct counts and progress bar
+- [x] 2.4 Section appears between thread quality and heatmap
+- [x] 2.5 Stacked bar shows correct 3-tier grouping
+- [x] 2.6 SVG donut renders with center text
+- [x] 2.7 Tooltips appear on category label hover
+- [x] 2.8 Empty and loading states render correctly
+- [x] 2.9 Coverage footer shows correct counts and progress bar
 
 ### Phase 3: Data Pipeline for Thread List
 

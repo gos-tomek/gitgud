@@ -1,5 +1,12 @@
 import { useState, useEffect, useRef } from "react";
-import type { ImpactSummary, AuthorMetrics, ReviewerMetrics, ActivityData, PeriodSlug } from "@/types";
+import type {
+  ImpactSummary,
+  AuthorMetrics,
+  ReviewerMetrics,
+  ActivityData,
+  ClassificationAggregates,
+  PeriodSlug,
+} from "@/types";
 import { isValidPeriodSlug } from "@/lib/date-range";
 import { PeriodSelector } from "./PeriodSelector";
 import { SyncIndicator } from "./SyncIndicator";
@@ -7,6 +14,7 @@ import { KpiCards } from "./KpiCards";
 import { AuthorSection } from "./AuthorSection";
 import { ReviewerSection } from "./ReviewerSection";
 import { ThreadQualitySection } from "./ThreadQualitySection";
+import { ClassificationSection } from "./ClassificationSection";
 import { ContributionHeatmap } from "./ContributionHeatmap";
 import { CollaboratorsSection } from "./CollaboratorsSection";
 import { RepoActivitySection } from "./RepoActivitySection";
@@ -180,6 +188,7 @@ export default function ImpactView({
   const [author, setAuthor] = useState<SectionState<AuthorMetrics>>(idle());
   const [reviewer, setReviewer] = useState<SectionState<ReviewerMetrics>>(idle());
   const [activity, setActivity] = useState<SectionState<ActivityData>>(idle());
+  const [classifications, setClassifications] = useState<SectionState<ClassificationAggregates>>(idle());
 
   useEffect(() => {
     const base = `/api/board/${boardId}/impact/${currentLogin}`;
@@ -188,6 +197,7 @@ export default function ImpactView({
     void fetchSection<AuthorMetrics>(`${base}/author${q}`, setAuthor);
     void fetchSection<ReviewerMetrics>(`${base}/reviewer${q}`, setReviewer);
     void fetchSection<ActivityData>(`${base}/activity${q}`, setActivity);
+    void fetchSection<ClassificationAggregates>(`${base}/classifications${q}`, setClassifications);
   }, [boardId, currentLogin, period, fetchKey]);
 
   function handlePeriodChange(slug: PeriodSlug) {
@@ -196,6 +206,7 @@ export default function ImpactView({
     setAuthor(idle());
     setReviewer(idle());
     setActivity(idle());
+    setClassifications(idle());
     setPeriod(slug);
   }
 
@@ -207,6 +218,7 @@ export default function ImpactView({
     setAuthor(idle());
     setReviewer(idle());
     setActivity(idle());
+    setClassifications(idle());
     setCurrentLogin(login);
     setCurrentContributor(next);
   }
@@ -222,6 +234,7 @@ export default function ImpactView({
       setAuthor(idle());
       setReviewer(idle());
       setActivity(idle());
+      setClassifications(idle());
       setCurrentLogin(login);
       setCurrentContributor(next);
       if (isValidPeriodSlug(slug)) setPeriod(slug);
@@ -237,6 +250,7 @@ export default function ImpactView({
     setAuthor(idle());
     setReviewer(idle());
     setActivity(idle());
+    setClassifications(idle());
     setFetchKey((k) => k + 1);
   }
 
@@ -270,6 +284,9 @@ export default function ImpactView({
 
       {/* thread quality */}
       <ThreadQualitySection data={reviewer.data} loading={reviewer.loading} />
+
+      {/* classification */}
+      <ClassificationSection data={classifications.data} loading={classifications.loading} threadsUrl="#" />
 
       {/* heatmap */}
       <section className="rounded-xl border border-white/10 bg-white/5 p-5 backdrop-blur-sm">
