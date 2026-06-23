@@ -10,6 +10,10 @@ SECURITY DEFINER
 SET search_path = public
 AS $$
 BEGIN
+  IF NEW.raw_user_meta_data->>'github_id' IS NULL THEN
+    RETURN NEW;
+  END IF;
+
   INSERT INTO public.user_profiles (user_id, github_id, github_login, avatar_url)
   VALUES (
     NEW.id,

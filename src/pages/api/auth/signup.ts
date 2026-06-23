@@ -1,4 +1,5 @@
 import type { APIRoute } from "astro";
+import { z } from "zod";
 import { createClient } from "@/lib/supabase";
 import { logger } from "@/lib/logger";
 
@@ -7,6 +8,12 @@ interface GitHubUser {
   login: string;
   avatar_url: string;
 }
+
+const signupSchema = z.object({
+  email: z.string().min(1, "Email is required"),
+  password: z.string().min(1, "Password is required"),
+  github_login: z.string().min(1, "GitHub username is required"),
+});
 
 async function fetchGitHubUser(login: string): Promise<GitHubUser | null> {
   const response = await fetch(`https://api.github.com/users/${encodeURIComponent(login)}`, {
@@ -21,9 +28,17 @@ async function fetchGitHubUser(login: string): Promise<GitHubUser | null> {
 
 export const POST: APIRoute = async (context) => {
   const form = await context.request.formData();
-  const email = form.get("email") as string;
-  const password = form.get("password") as string;
-  const githubLogin = (form.get("github_login") as string).trim().toLowerCase();
+  const parsedBody = signupSchema.safeParse({
+    email: form.get("email"),
+    password: form.get("password"),
+    github_login: form.get("github_login"),
+  });
+  if (!parsedBody.success) {
+    const message = parsedBody.error.issues.at(0)?.message ?? "Invalid signup data";
+    return context.redirect(`/auth/signup?error=${encodeURIComponent(message)}`);
+  }
+  const { email, password } = parsedBody.data;
+  const githubLogin = parsedBody.data.github_login.trim().toLowerCase();
 
   const supabase = createClient(context.request.headers, context.cookies);
   if (!supabase) {

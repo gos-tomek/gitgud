@@ -489,6 +489,18 @@ DROP TABLE IF EXISTS public.board_members;
 
 **Implementation Note**: After completing this phase and all automated verification passes, pause here for manual confirmation from the human that the manual testing was successful before proceeding.
 
+### Addendum: Impact API ownership guard refactor (discovered during Phase 5)
+
+Dropping `board_contributors.user_id` (item #2 above) broke the non-supervisor ownership guard in the impact API, which read that column to check whether the requesting user matched the profile being viewed. Since `user_id` was never populated, the guard was already a pre-existing bug — it always denied non-supervisor access.
+
+**Files changed (not in original plan):**
+
+- `src/pages/api/board/[boardId]/impact/[login]/*.ts` (4 endpoints) — ownership guard now compares `getUserProfile().githubId` against the requested `login`'s `github_id`, instead of the dead `user_id` column.
+- `src/pages/board/[boardId]/impact/[login].astro` — same guard update for the page-level check.
+- `tests/hermetic/impact-api.test.ts`, `tests/integration/impact-access.test.ts` — new coverage for the corrected guard (403 for mismatched contributor, 200 for own profile, 200 for supervisor viewing anyone).
+
+This was necessary to avoid runtime breakage from the dropped column, and incidentally fixes the dormant always-deny bug.
+
 ---
 
 ## Testing Strategy

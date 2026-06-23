@@ -301,6 +301,147 @@ describe.skipIf(!supabaseAvailable)("Cross-board access boundary (Risk #1 + #5)"
     });
   });
 
+  // ─── contributor write denial ──────────────────────────────────────────────
+  // Contributor has READ access to Board A via is_board_member(), but all
+  // WRITE policies use is_board_owner() — contributor must still be denied.
+
+  describe("contributor write denial", () => {
+    describe("INSERT denial (42501)", () => {
+      it("boards: contributor cannot insert a board owned by someone else", async () => {
+        const { error } = await fixture.contributor.client
+          .from("boards")
+          .insert({ name: "contributor board", owner_user_id: fixture.ownerA.userId });
+        expect(error?.code).toBe("42501");
+      });
+
+      it("github_repos: contributor cannot insert a repo into Board A", async () => {
+        const { error } = await fixture.contributor.client.from("github_repos").insert({
+          board_id: fixture.ownerA.boardId,
+          repo_owner: "contrib-org",
+          repo_name: "contrib-repo",
+          connected_by: fixture.contributor.userId,
+        });
+        expect(error?.code).toBe("42501");
+      });
+
+      it("github_pull_requests: contributor cannot insert a PR into Board A's repo", async () => {
+        const { error } = await fixture.contributor.client.from("github_pull_requests").insert({
+          id: 999999999911,
+          repo_id: fixture.repoId,
+          number: 998,
+          title: "Contributor PR",
+          state: "open",
+          author_login: "contributor",
+          author_github_id: fixture.contributorGithubId,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        });
+        expect(error?.code).toBe("42501");
+      });
+
+      it("github_reviews: contributor cannot insert a review for Board A's PR", async () => {
+        const { error } = await fixture.contributor.client.from("github_reviews").insert({
+          id: 999999999912,
+          pull_request_id: fixture.prId,
+          reviewer_login: "contributor",
+          reviewer_github_id: fixture.contributorGithubId,
+          state: "APPROVED",
+          submitted_at: new Date().toISOString(),
+        });
+        expect(error?.code).toBe("42501");
+      });
+
+      it("github_review_comments: contributor cannot insert a comment for Board A's PR", async () => {
+        const { error } = await fixture.contributor.client.from("github_review_comments").insert({
+          id: 999999999913,
+          pull_request_id: fixture.prId,
+          commenter_login: "contributor",
+          commenter_github_id: fixture.contributorGithubId,
+          body: "Contributor comment",
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        });
+        expect(error?.code).toBe("42501");
+      });
+
+      it("board_contributors: contributor cannot insert another contributor into Board A", async () => {
+        const { error } = await fixture.contributor.client.from("board_contributors").insert({
+          board_id: fixture.ownerA.boardId,
+          github_id: 66667,
+          github_login: "self-promoted-contributor",
+        });
+        expect(error?.code).toBe("42501");
+      });
+    });
+
+    describe("UPDATE denial (0 rows affected, verified via admin)", () => {
+      it("boards: contributor cannot update Board A's name", async () => {
+        const { data: before } = await adminClient
+          .from("boards")
+          .select("name")
+          .eq("id", fixture.ownerA.boardId)
+          .single();
+
+        await fixture.contributor.client
+          .from("boards")
+          .update({ name: "CONTRIB-HIJACKED" })
+          .eq("id", fixture.ownerA.boardId);
+
+        const { data: after } = await adminClient
+          .from("boards")
+          .select("name")
+          .eq("id", fixture.ownerA.boardId)
+          .single();
+
+        expect(after?.name).toBe(before?.name);
+      });
+
+      it("github_repos: contributor cannot update Board A's repo", async () => {
+        const { data: before } = await adminClient
+          .from("github_repos")
+          .select("repo_name")
+          .eq("id", fixture.repoId)
+          .single();
+
+        await fixture.contributor.client
+          .from("github_repos")
+          .update({ repo_name: "contrib-hijacked-repo" })
+          .eq("id", fixture.repoId);
+
+        const { data: after } = await adminClient
+          .from("github_repos")
+          .select("repo_name")
+          .eq("id", fixture.repoId)
+          .single();
+
+        expect(after?.repo_name).toBe(before?.repo_name);
+      });
+    });
+
+    describe("DELETE denial (row still exists, verified via admin)", () => {
+      it("boards: contributor cannot delete Board A", async () => {
+        await fixture.contributor.client.from("boards").delete().eq("id", fixture.ownerA.boardId);
+
+        const { data } = await adminClient.from("boards").select("id").eq("id", fixture.ownerA.boardId);
+        expect(data).toHaveLength(1);
+      });
+
+      it("board_contributors: contributor cannot delete its own membership row", async () => {
+        await fixture.contributor.client
+          .from("board_contributors")
+          .delete()
+          .eq("board_id", fixture.ownerA.boardId)
+          .eq("github_id", fixture.contributorGithubId);
+
+        const { data } = await adminClient
+          .from("board_contributors")
+          .select("github_id")
+          .eq("board_id", fixture.ownerA.boardId);
+        expect(data).toHaveLength(1);
+      });
+    });
+  });
+
   // ─── service function isolation ───────────────────────────────────────────
   // Service functions pass User B's client — RLS enforced identically.
 
