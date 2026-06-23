@@ -8,7 +8,6 @@
 -- -- RLS can only filter within granted privileges.
 
 REVOKE ALL ON public.boards FROM anon, authenticated;
-REVOKE ALL ON public.board_members FROM anon, authenticated;
 REVOKE ALL ON public.github_repos FROM anon, authenticated;
 REVOKE ALL ON public.github_pull_requests FROM anon, authenticated;
 REVOKE ALL ON public.github_reviews FROM anon, authenticated;
@@ -16,7 +15,6 @@ REVOKE ALL ON public.github_review_comments FROM anon, authenticated;
 REVOKE ALL ON public.board_contributors FROM anon, authenticated;
 
 GRANT SELECT, INSERT, UPDATE, DELETE ON public.boards TO authenticated;
-GRANT SELECT, INSERT, UPDATE, DELETE ON public.board_members TO authenticated;
 GRANT SELECT, INSERT, UPDATE, DELETE ON public.github_repos TO authenticated;
 GRANT SELECT, INSERT, UPDATE, DELETE ON public.github_pull_requests TO authenticated;
 GRANT SELECT, INSERT, UPDATE, DELETE ON public.github_reviews TO authenticated;

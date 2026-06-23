@@ -418,9 +418,9 @@ describe.skipIf(!supabaseAvailable)("Cross-board access boundary (Risk #1 + #5)"
   });
 
   // ─── derived board access ──────────────────────────────────────────────────
-  // is_board_member() now derives access from boards.owner_user_id (owners) and
+  // is_board_member() derives access from boards.owner_user_id (owners) and
   // board_contributors.github_id ⟕ user_profiles.github_id (contributors) —
-  // no board_members row involved.
+  // no separate membership table involved.
 
   describe("derived board access", () => {
     it("contributor (matching github_id) can read Board A", async () => {

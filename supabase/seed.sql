@@ -78,13 +78,15 @@ VALUES
   ('22222222-bbbb-0000-0000-000000000001', 'Board Beta',  'bbbbbbbb-0000-0000-0000-000000000001')
 ON CONFLICT (id) DO NOTHING;
 
-INSERT INTO public.board_members (board_id, user_id)
+-- Owners (supervisor-1, supervisor-2) get board access via boards.owner_user_id —
+-- no row needed. contributor-1's user_profiles row is created by the
+-- handle_new_user trigger from their raw_user_meta_data above; link their
+-- github_id to both boards via board_contributors so derived access applies.
+INSERT INTO public.board_contributors (board_id, github_id, github_login, avatar_url)
 VALUES
-  ('11111111-aaaa-0000-0000-000000000001', 'aaaaaaaa-0000-0000-0000-000000000001'),
-  ('22222222-bbbb-0000-0000-000000000001', 'bbbbbbbb-0000-0000-0000-000000000001'),
-  ('11111111-aaaa-0000-0000-000000000001', 'cccccccc-0000-0000-0000-000000000001'),
-  ('22222222-bbbb-0000-0000-000000000001', 'cccccccc-0000-0000-0000-000000000001')
-ON CONFLICT (board_id, user_id) DO NOTHING;
+  ('11111111-aaaa-0000-0000-000000000001', 8291514, 'MildTomato', 'https://avatars.githubusercontent.com/u/8291514?v=4'),
+  ('22222222-bbbb-0000-0000-000000000001', 8291514, 'MildTomato', 'https://avatars.githubusercontent.com/u/8291514?v=4')
+ON CONFLICT (board_id, github_id) DO NOTHING;
 
 -- F-02 seed: test GitHub repo connection for Board Alpha (no PAT — provide manually during dev)
 INSERT INTO public.github_repos (id, board_id, repo_owner, repo_name, connected_by)
