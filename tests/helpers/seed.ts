@@ -4,6 +4,7 @@ import { adminClient, cleanupBoard, cleanupUser, createTestUser } from "./supaba
 export interface TwoBoardFixture {
   ownerA: { client: SupabaseClient; userId: string; boardId: string; githubId: number };
   ownerB: { client: SupabaseClient; userId: string; boardId: string; githubId: number };
+  contributor: { client: SupabaseClient; userId: string; githubId: number };
   repoId: string;
   prId: number;
   reviewId: number;
@@ -19,12 +20,15 @@ export async function seedTwoBoards(): Promise<TwoBoardFixture> {
   // user_profiles rows are created by the handle_new_user trigger from this metadata.
   const githubIdA = ts + 10;
   const githubIdB = ts + 11;
-  const [ownerAResult, ownerBResult] = await Promise.all([
+  const contributorGithubId = ts + 12;
+  const [ownerAResult, ownerBResult, contributorResult] = await Promise.all([
     createTestUser(email("owner-a"), undefined, { id: githubIdA, login: `owner-a-${ts}` }),
     createTestUser(email("owner-b"), undefined, { id: githubIdB, login: `owner-b-${ts}` }),
+    createTestUser(email("contributor"), undefined, { id: contributorGithubId, login: `test-contributor-${ts}` }),
   ]);
   const { client: clientA, userId: userIdA } = ownerAResult;
   const { client: clientB, userId: userIdB } = ownerBResult;
+  const { client: contributorClient, userId: contributorUserId } = contributorResult;
 
   // Create both boards via admin — trigger auto-enrolls owner as board_member
   const { data: boardAData, error: boardAError } = await adminClient
@@ -93,24 +97,24 @@ export async function seedTwoBoards(): Promise<TwoBoardFixture> {
   });
   if (commentError) throw new Error(`Failed to create review comment: ${commentError.message}`);
 
-  // Seed Board A: board_contributor
-  const contributorGithubId = 11111;
+  // Seed Board A: board_contributor — linked to the contributor user via matching github_id
   const { error: contributorError } = await adminClient.from("board_contributors").insert({
     board_id: boardIdA,
     github_id: contributorGithubId,
-    github_login: "test-contributor",
+    github_login: `test-contributor-${ts}`,
   });
   if (contributorError) throw new Error(`Failed to create contributor: ${contributorError.message}`);
 
   async function cleanup() {
     // CASCADE from boards handles all child rows; users are deleted last
     await Promise.all([cleanupBoard(boardIdA), cleanupBoard(boardIdB)]);
-    await Promise.all([cleanupUser(userIdA), cleanupUser(userIdB)]);
+    await Promise.all([cleanupUser(userIdA), cleanupUser(userIdB), cleanupUser(contributorUserId)]);
   }
 
   return {
     ownerA: { client: clientA, userId: userIdA, boardId: boardIdA, githubId: githubIdA },
     ownerB: { client: clientB, userId: userIdB, boardId: boardIdB, githubId: githubIdB },
+    contributor: { client: contributorClient, userId: contributorUserId, githubId: contributorGithubId },
     repoId,
     prId,
     reviewId,

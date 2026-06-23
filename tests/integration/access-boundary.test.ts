@@ -26,15 +26,6 @@ describe.skipIf(!supabaseAvailable)("Cross-board access boundary (Risk #1 + #5)"
       expect(data).toEqual([]);
     });
 
-    it("board_members: User B cannot read Board A members", async () => {
-      const { data, error } = await fixture.ownerB.client
-        .from("board_members")
-        .select("*")
-        .eq("board_id", fixture.ownerA.boardId);
-      expect(error).toBeNull();
-      expect(data).toEqual([]);
-    });
-
     it("github_repos: User B cannot read Board A repos", async () => {
       const { data, error } = await fixture.ownerB.client
         .from("github_repos")
@@ -88,13 +79,6 @@ describe.skipIf(!supabaseAvailable)("Cross-board access boundary (Risk #1 + #5)"
         const { error } = await fixture.ownerB.client
           .from("boards")
           .insert({ name: "hijacked board", owner_user_id: fixture.ownerA.userId });
-        expect(error?.code).toBe("42501");
-      });
-
-      it("board_members: User B cannot insert a member into Board A", async () => {
-        const { error } = await fixture.ownerB.client
-          .from("board_members")
-          .insert({ board_id: fixture.ownerA.boardId, user_id: fixture.ownerB.userId });
         expect(error?.code).toBe("42501");
       });
 
@@ -273,20 +257,6 @@ describe.skipIf(!supabaseAvailable)("Cross-board access boundary (Risk #1 + #5)"
         expect(data).toHaveLength(1);
       });
 
-      it("board_members: User B cannot delete Board A's owner membership", async () => {
-        await fixture.ownerB.client
-          .from("board_members")
-          .delete()
-          .eq("board_id", fixture.ownerA.boardId)
-          .eq("user_id", fixture.ownerA.userId);
-
-        const { data } = await adminClient
-          .from("board_members")
-          .select("user_id")
-          .eq("board_id", fixture.ownerA.boardId);
-        expect(data).toHaveLength(1);
-      });
-
       it("github_repos: User B cannot delete Board A's repo", async () => {
         await fixture.ownerB.client.from("github_repos").delete().eq("id", fixture.repoId);
 
@@ -444,6 +414,43 @@ describe.skipIf(!supabaseAvailable)("Cross-board access boundary (Risk #1 + #5)"
 
       const { data } = await adminClient.from("user_profiles").select("user_id").eq("user_id", fixture.ownerA.userId);
       expect(data).toHaveLength(1);
+    });
+  });
+
+  // ─── derived board access ──────────────────────────────────────────────────
+  // is_board_member() now derives access from boards.owner_user_id (owners) and
+  // board_contributors.github_id ⟕ user_profiles.github_id (contributors) —
+  // no board_members row involved.
+
+  describe("derived board access", () => {
+    it("contributor (matching github_id) can read Board A", async () => {
+      const result = await getBoardWithRole(
+        fixture.contributor.client,
+        fixture.ownerA.boardId,
+        fixture.contributor.userId,
+      );
+      expect(result).not.toBeNull();
+      expect(result?.id).toBe(fixture.ownerA.boardId);
+    });
+
+    it("contributor (matching github_id) can read Board A's repos", async () => {
+      const result = await getBoardRepos(fixture.contributor.client, fixture.ownerA.boardId);
+      expect(result).toHaveLength(1);
+    });
+
+    it("contributor (matching github_id) cannot read Board B", async () => {
+      const result = await getBoardWithRole(
+        fixture.contributor.client,
+        fixture.ownerB.boardId,
+        fixture.contributor.userId,
+      );
+      expect(result).toBeNull();
+    });
+
+    it("owner retains access without a board_contributors row", async () => {
+      const result = await getBoardWithRole(fixture.ownerA.client, fixture.ownerA.boardId, fixture.ownerA.userId);
+      expect(result).not.toBeNull();
+      expect(result?.role).toBe("supervisor");
     });
   });
 });

@@ -39,10 +39,16 @@ describe.skipIf(!canRun)("PAT non-leakage (Risk #2)", () => {
   beforeAll(async () => {
     const ts = Date.now();
 
-    // 1. Create owner and contributor users
+    // 1. Create owner and contributor users. The contributor's github_id must match a
+    //    board_contributors row (added in step 3) — under the derived access model,
+    //    that join is what makes them a board member at all.
+    const contributorGithubId = ts + 1;
     const [ownerResult, contributorResult] = await Promise.all([
       createTestUser(`pat-leak-owner-${ts}@test.local`),
-      createTestUser(`pat-leak-contrib-${ts}@test.local`),
+      createTestUser(`pat-leak-contrib-${ts}@test.local`, undefined, {
+        id: contributorGithubId,
+        login: `pat-leak-contrib-${ts}`,
+      }),
     ]);
     ownerUserId = ownerResult.userId;
     ownerClient = ownerResult.client;
@@ -69,11 +75,12 @@ describe.skipIf(!canRun)("PAT non-leakage (Risk #2)", () => {
     if (createResult.error) throw new Error(`Failed to create board: ${createResult.error.message}`);
     ownerBoardId = createResult.data as string;
 
-    // 3. Add contributor as a board member (requires admin — owner-only by RLS;
-    //    contributors aren't added via create_board_atomic)
+    // 3. Add contributor via board_contributors (requires admin — owner-only by RLS;
+    //    contributors aren't added via create_board_atomic). Board access is derived from
+    //    this row joined against the contributor's user_profiles.github_id.
     const { error: memberError } = await adminClient
-      .from("board_members")
-      .insert({ board_id: ownerBoardId, user_id: contributorUserId });
+      .from("board_contributors")
+      .insert({ board_id: ownerBoardId, github_id: contributorGithubId, github_login: `pat-leak-contrib-${ts}` });
     if (memberError) throw new Error(`Failed to add contributor: ${memberError.message}`);
 
     // 4. Start the Astro dev server (reads GITHUB_TOKEN_ENCRYPTION_KEY from
@@ -148,7 +155,7 @@ describe.skipIf(!canRun)("PAT non-leakage (Risk #2)", () => {
     beforeAll(async () => {
       const deadline = Date.now() + 30_000;
       while (Date.now() < deadline) {
-        if (server.output().some((line) => line.includes('Step "sync-list-prs" failed'))) return;
+        if (server.output().some((line) => line.includes('Step "sync-list-prs-0" failed'))) return;
         await new Promise((r) => setTimeout(r, 500));
       }
       throw new Error(

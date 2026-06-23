@@ -557,25 +557,25 @@ DROP TABLE IF EXISTS public.board_members;
 
 #### Automated
 
-- [x] 2.1 Type checking passes (`npx tsc --noEmit` and `npm run test:typecheck`)
-- [x] 2.2 Lint passes (`npm run lint`)
-- [x] 2.3 Component tests pass (`npx vitest run tests/component/`)
-- [x] 2.4 Non-integration tests pass (`npx vitest run --exclude 'tests/integration/**'`)
+- [x] 2.1 Type checking passes (`npx tsc --noEmit` and `npm run test:typecheck`) — 7fa0466
+- [x] 2.2 Lint passes (`npm run lint`) — 7fa0466
+- [x] 2.3 Component tests pass (`npx vitest run tests/component/`) — 7fa0466
+- [x] 2.4 Non-integration tests pass (`npx vitest run --exclude 'tests/integration/**'`) — 7fa0466
 
 #### Manual
 
-- [x] 2.5 Sign up with valid GitHub username → `user_profiles` row created
-- [x] 2.6 Sign up with non-existent GitHub username → error message
-- [x] 2.7 Sign up with GitHub API unreachable → error about verification failure
+- [x] 2.5 Sign up with valid GitHub username → `user_profiles` row created — 7fa0466
+- [x] 2.6 Sign up with non-existent GitHub username → error message — 7fa0466
+- [x] 2.7 Sign up with GitHub API unreachable → error about verification failure — 7fa0466
 
 ### Phase 3: Refactor is_board_member() — Derived Access
 
 #### Automated
 
-- [ ] 3.1 Migration applies cleanly (`npx supabase db reset`)
-- [ ] 3.2 Integration tests pass (`npx vitest run tests/integration/`)
-- [ ] 3.3 Non-integration tests pass (`npx vitest run --exclude 'tests/integration/**'`)
-- [ ] 3.4 Type checking passes (`npx tsc --noEmit`)
+- [x] 3.1 Migration applies cleanly (`npx supabase db reset`)
+- [x] 3.2 Integration tests pass (`npx vitest run tests/integration/`)
+- [x] 3.3 Non-integration tests pass (`npx vitest run --exclude 'tests/integration/**'`)
+- [x] 3.4 Type checking passes (`npx tsc --noEmit`)
 
 #### Manual
 
