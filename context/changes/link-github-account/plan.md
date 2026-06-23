@@ -579,10 +579,10 @@ DROP TABLE IF EXISTS public.board_members;
 
 #### Manual
 
-- [ ] 3.5 Contributor sees matching boards on dashboard
-- [ ] 3.6 Non-contributor sees "no boards" message
-- [ ] 3.7 Board owner still sees own boards
-- [ ] 3.8 Cross-board isolation holds
+- [x] 3.5 Contributor sees matching boards on dashboard — 8617292
+- [x] 3.6 Non-contributor sees "no boards" message — 8617292
+- [x] 3.7 Board owner still sees own boards — 8617292
+- [x] 3.8 Cross-board isolation holds — 8617292
 
 ### Phase 4: Refactor getUserBoards + Dashboard UX
 
@@ -602,15 +602,15 @@ DROP TABLE IF EXISTS public.board_members;
 
 #### Automated
 
-- [x] 5.1 Migration applies cleanly (`npx supabase db reset`)
-- [x] 5.2 Type checking passes (`npx tsc --noEmit` and `npm run test:typecheck`)
-- [x] 5.3 Lint passes (`npm run lint`)
-- [x] 5.4 All tests pass (`npm test`)
-- [x] 5.5 Build succeeds (`npm run build`)
+- [x] 5.1 Migration applies cleanly (`npx supabase db reset`) — 8617292
+- [x] 5.2 Type checking passes (`npx tsc --noEmit` and `npm run test:typecheck`) — 8617292
+- [x] 5.3 Lint passes (`npm run lint`) — 8617292
+- [x] 5.4 All tests pass (`npm test`) — 8617292
+- [x] 5.5 Build succeeds (`npm run build`) — 8617292
 
 #### Manual
 
-- [x] 5.6 Full signup → dashboard flow works end-to-end
-- [x] 5.7 Board creation still works
-- [x] 5.8 `board_members` table no longer exists in Supabase Studio
-- [x] 5.9 No `board_members` references in codebase (`grep -r "board_members" src/ supabase/ tests/`)
+- [x] 5.6 Full signup → dashboard flow works end-to-end — 8617292
+- [x] 5.7 Board creation still works — 8617292
+- [x] 5.8 `board_members` table no longer exists in Supabase Studio — 8617292
+- [x] 5.9 No `board_members` references in codebase (`grep -r "board_members" src/ supabase/ tests/`) — 8617292
