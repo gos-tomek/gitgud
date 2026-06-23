@@ -47,6 +47,13 @@ export interface GitHubReview {
   fetchedAt: string;
 }
 
+export interface UserProfile {
+  userId: string;
+  githubId: number;
+  githubLogin: string;
+  avatarUrl: string | null;
+}
+
 export interface BoardContributor {
   boardId: string;
   githubId: number;

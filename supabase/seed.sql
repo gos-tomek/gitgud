@@ -14,7 +14,12 @@ INSERT INTO auth.users (
     'authenticated', 'authenticated',
     'supervisor-1@example.test',
     crypt('password', gen_salt('bf')),
-    now(), now(), now(), '{}', '{}',
+    now(), now(), now(), '{}',
+    -- Real GitHub identity (supabase/supabase contributor) so dev seed avatars/logins are legit.
+    jsonb_build_object(
+      'github_id', 19742402, 'github_login', 'joshenlim',
+      'avatar_url', 'https://avatars.githubusercontent.com/u/19742402?v=4'
+    ),
     '', '', '', ''
   ),
   (
@@ -23,7 +28,11 @@ INSERT INTO auth.users (
     'authenticated', 'authenticated',
     'supervisor-2@example.test',
     crypt('password', gen_salt('bf')),
-    now(), now(), now(), '{}', '{}',
+    now(), now(), now(), '{}',
+    jsonb_build_object(
+      'github_id', 10214025, 'github_login', 'kiwicopple',
+      'avatar_url', 'https://avatars.githubusercontent.com/u/10214025?v=4'
+    ),
     '', '', '', ''
   ),
   (
@@ -32,7 +41,11 @@ INSERT INTO auth.users (
     'authenticated', 'authenticated',
     'contributor-1@example.test',
     crypt('password', gen_salt('bf')),
-    now(), now(), now(), '{}', '{}',
+    now(), now(), now(), '{}',
+    jsonb_build_object(
+      'github_id', 8291514, 'github_login', 'MildTomato',
+      'avatar_url', 'https://avatars.githubusercontent.com/u/8291514?v=4'
+    ),
     '', '', '', ''
   )
 ON CONFLICT (id) DO NOTHING;

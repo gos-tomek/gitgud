@@ -16,25 +16,15 @@ export async function seedTwoBoards(): Promise<TwoBoardFixture> {
   const ts = Date.now();
   const email = (label: string) => `seed-${label}-${ts}@test.local`;
 
+  // user_profiles rows are created by the handle_new_user trigger from this metadata.
+  const githubIdA = ts + 10;
+  const githubIdB = ts + 11;
   const [ownerAResult, ownerBResult] = await Promise.all([
-    createTestUser(email("owner-a")),
-    createTestUser(email("owner-b")),
+    createTestUser(email("owner-a"), undefined, { id: githubIdA, login: `owner-a-${ts}` }),
+    createTestUser(email("owner-b"), undefined, { id: githubIdB, login: `owner-b-${ts}` }),
   ]);
   const { client: clientA, userId: userIdA } = ownerAResult;
   const { client: clientB, userId: userIdB } = ownerBResult;
-
-  // Seed user_profiles for both owners
-  const githubIdA = ts + 10;
-  const githubIdB = ts + 11;
-  const { error: profileAError } = await adminClient
-    .from("user_profiles")
-    .insert({ user_id: userIdA, github_id: githubIdA, github_login: `owner-a-${ts}` });
-  if (profileAError) throw new Error(`Failed to create user_profiles for owner A: ${profileAError.message}`);
-
-  const { error: profileBError } = await adminClient
-    .from("user_profiles")
-    .insert({ user_id: userIdB, github_id: githubIdB, github_login: `owner-b-${ts}` });
-  if (profileBError) throw new Error(`Failed to create user_profiles for owner B: ${profileBError.message}`);
 
   // Create both boards via admin — trigger auto-enrolls owner as board_member
   const { data: boardAData, error: boardAError } = await adminClient

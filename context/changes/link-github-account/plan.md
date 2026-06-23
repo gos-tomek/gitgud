@@ -545,28 +545,28 @@ DROP TABLE IF EXISTS public.board_members;
 
 #### Automated
 
-- [x] 1.1 Migration applies cleanly (`npx supabase db reset`)
-- [x] 1.2 Type checking passes (`npx tsc --noEmit`)
-- [x] 1.3 Integration tests pass (`npx vitest run tests/integration/access-boundary.test.ts`)
+- [x] 1.1 Migration applies cleanly (`npx supabase db reset`) — bea649d
+- [x] 1.2 Type checking passes (`npx tsc --noEmit`) — bea649d
+- [x] 1.3 Integration tests pass (`npx vitest run tests/integration/access-boundary.test.ts`) — bea649d
 
 #### Manual
 
-- [x] 1.4 Verify `user_profiles` table in Supabase Studio
+- [x] 1.4 Verify `user_profiles` table in Supabase Studio — bea649d
 
 ### Phase 2: Signup with github_login — Form + API + GitHub Validation
 
 #### Automated
 
-- [ ] 2.1 Type checking passes (`npx tsc --noEmit` and `npm run test:typecheck`)
-- [ ] 2.2 Lint passes (`npm run lint`)
-- [ ] 2.3 Component tests pass (`npx vitest run tests/component/`)
-- [ ] 2.4 Non-integration tests pass (`npx vitest run --exclude 'tests/integration/**'`)
+- [x] 2.1 Type checking passes (`npx tsc --noEmit` and `npm run test:typecheck`)
+- [x] 2.2 Lint passes (`npm run lint`)
+- [x] 2.3 Component tests pass (`npx vitest run tests/component/`)
+- [x] 2.4 Non-integration tests pass (`npx vitest run --exclude 'tests/integration/**'`)
 
 #### Manual
 
-- [ ] 2.5 Sign up with valid GitHub username → `user_profiles` row created
-- [ ] 2.6 Sign up with non-existent GitHub username → error message
-- [ ] 2.7 Sign up with GitHub API unreachable → error about verification failure
+- [x] 2.5 Sign up with valid GitHub username → `user_profiles` row created
+- [x] 2.6 Sign up with non-existent GitHub username → error message
+- [x] 2.7 Sign up with GitHub API unreachable → error about verification failure
 
 ### Phase 3: Refactor is_board_member() — Derived Access
 
