@@ -25,6 +25,7 @@ const { GET: summaryGET } = await import("@/pages/api/board/[boardId]/impact/[lo
 const { GET: authorGET } = await import("@/pages/api/board/[boardId]/impact/[login]/author");
 const { GET: reviewerGET } = await import("@/pages/api/board/[boardId]/impact/[login]/reviewer");
 const { GET: activityGET } = await import("@/pages/api/board/[boardId]/impact/[login]/activity");
+const { GET: classificationsGET } = await import("@/pages/api/board/[boardId]/impact/[login]/classifications");
 
 const supabaseAvailable = await checkSupabase();
 
@@ -75,6 +76,7 @@ describe.skipIf(!supabaseAvailable)("Impact API ownership guard against real dat
     ["author", authorGET],
     ["reviewer", reviewerGET],
     ["activity", activityGET],
+    ["classifications", classificationsGET],
   ] as const)("%s: a contributor can view their own impact profile (200, not 403)", async (_name, handler) => {
     const res = await handler(makeContext(fixture.ownerA.boardId, contributorLogin));
     expect(res.status).toBe(200);
@@ -85,6 +87,7 @@ describe.skipIf(!supabaseAvailable)("Impact API ownership guard against real dat
     ["author", authorGET],
     ["reviewer", reviewerGET],
     ["activity", activityGET],
+    ["classifications", classificationsGET],
   ] as const)("%s: a contributor cannot view another contributor's impact profile (403)", async (_name, handler) => {
     const res = await handler(makeContext(fixture.ownerA.boardId, otherContributorLogin));
     expect(res.status).toBe(403);

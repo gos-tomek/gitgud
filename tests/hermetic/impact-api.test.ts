@@ -56,18 +56,28 @@ vi.mock("@/lib/supabase", () => ({ createClient: vi.fn(() => mockSupabase) }));
 
 // Service layer — keep HTTP-layer tests independent of aggregation logic.
 // Must be hoisted so vi.mock factories can reference these values.
-const { mockSummaryData, mockAuthorData, mockReviewerData, mockActivityData } = vi.hoisted(() => ({
-  mockSummaryData: { prsAuthored: { value: 3, delta: 50 }, reviewsGiven: { value: 1, delta: null } },
-  mockAuthorData: { prsByState: { open: 1, merged: 2, closed: 0, draft: 0, total: 3 }, mergeRate: 67 },
-  mockReviewerData: { reviewsByVerdict: { approved: 5, changesRequested: 1, commented: 0, dismissed: 0, total: 6 } },
-  mockActivityData: { weeklyActivity: [], dailyHeatmap: [], topCollaborators: [] },
-}));
+const { mockSummaryData, mockAuthorData, mockReviewerData, mockActivityData, mockClassificationsData } = vi.hoisted(
+  () => ({
+    mockSummaryData: { prsAuthored: { value: 3, delta: 50 }, reviewsGiven: { value: 1, delta: null } },
+    mockAuthorData: { prsByState: { open: 1, merged: 2, closed: 0, draft: 0, total: 3 }, mergeRate: 67 },
+    mockReviewerData: { reviewsByVerdict: { approved: 5, changesRequested: 1, commented: 0, dismissed: 0, total: 6 } },
+    mockActivityData: { weeklyActivity: [], dailyHeatmap: [], topCollaborators: [] },
+    mockClassificationsData: {
+      intentCounts: [{ category: "architecture", count: 2, tier: "high-signal" }],
+      domainCounts: [{ category: "functional", count: 2 }],
+      totalClassified: 2,
+      totalThreads: 3,
+      highSignalPercent: 100,
+    },
+  }),
+);
 
 vi.mock("@/lib/services/impact-metrics", () => ({
   getImpactSummary: vi.fn().mockResolvedValue(mockSummaryData),
   getAuthorMetrics: vi.fn().mockResolvedValue(mockAuthorData),
   getReviewerMetrics: vi.fn().mockResolvedValue(mockReviewerData),
   getActivityData: vi.fn().mockResolvedValue(mockActivityData),
+  getClassificationAggregates: vi.fn().mockResolvedValue(mockClassificationsData),
 }));
 
 import { createClient } from "@/lib/supabase";
@@ -76,6 +86,7 @@ const { GET: summaryGET } = await import("@/pages/api/board/[boardId]/impact/[lo
 const { GET: authorGET } = await import("@/pages/api/board/[boardId]/impact/[login]/author");
 const { GET: reviewerGET } = await import("@/pages/api/board/[boardId]/impact/[login]/reviewer");
 const { GET: activityGET } = await import("@/pages/api/board/[boardId]/impact/[login]/activity");
+const { GET: classificationsGET } = await import("@/pages/api/board/[boardId]/impact/[login]/classifications");
 
 const VALID_BOARD_ID = "00000000-0000-0000-0000-000000000001";
 const VALID_LOGIN = "alice";
@@ -123,6 +134,7 @@ describe("Impact API guard layer (hermetic)", () => {
     ["author", authorGET],
     ["reviewer", reviewerGET],
     ["activity", activityGET],
+    ["classifications", classificationsGET],
   ] as const)("%s: 401 when unauthenticated", async (_name, handler) => {
     mockSupabase.auth.getUser.mockResolvedValue({ data: { user: null } });
     const ctx = makeContext({ boardId: VALID_BOARD_ID, login: VALID_LOGIN });
@@ -153,6 +165,7 @@ describe("Impact API guard layer (hermetic)", () => {
     ["author", authorGET],
     ["reviewer", reviewerGET],
     ["activity", activityGET],
+    ["classifications", classificationsGET],
   ] as const)("%s: 400 when period slug is unknown", async (_name, handler) => {
     const ctx = makeContext({ boardId: VALID_BOARD_ID, login: VALID_LOGIN }, { period: "quarterly" });
     const res = await handler(ctx);
@@ -177,6 +190,7 @@ describe("Impact API guard layer (hermetic)", () => {
     ["author", authorGET],
     ["reviewer", reviewerGET],
     ["activity", activityGET],
+    ["classifications", classificationsGET],
   ] as const)("%s: 404 when contributor not found on board", async (_name, handler) => {
     mockBuilder.maybeSingle.mockResolvedValue({ data: null, error: null });
     const ctx = makeContext({ boardId: VALID_BOARD_ID, login: "ghost" });
@@ -245,6 +259,14 @@ describe("Impact API guard layer (hermetic)", () => {
     expect(res.status).toBe(200);
     // Service was called (regardless of period, it still returns 200)
     expect(getImpactSummary).toHaveBeenCalledOnce();
+  });
+
+  it("classifications: 200 with service result on valid request", async () => {
+    const ctx = makeContext({ boardId: VALID_BOARD_ID, login: VALID_LOGIN }, { period: "30d" });
+    const res = await classificationsGET(ctx);
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as typeof mockClassificationsData;
+    expect(body).toEqual(mockClassificationsData);
   });
 
   it("summary: 500 when service throws", async () => {

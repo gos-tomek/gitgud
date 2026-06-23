@@ -11,6 +11,10 @@ import type {
   Collaborator,
   RepoActivity,
   PrRow,
+  ClassificationAggregates,
+  IntentCategory,
+  TechnicalDomain,
+  IntentTier,
 } from "@/types";
 
 type SupabaseClient = NonNullable<ReturnType<typeof createClient>>;
@@ -865,5 +869,88 @@ function emptyActivityData(): ActivityData {
     repoActivity: [],
     recentAuthoredPrs: [],
     recentReviewedPrs: [],
+  };
+}
+
+// ── getClassificationAggregates ─────────────────────────────────────────────
+
+const INTENT_TIER_MAP: Record<IntentCategory, IntentTier> = {
+  architecture: "high-signal",
+  "bug-catch": "high-signal",
+  mentoring: "high-signal",
+  unblocking: "high-signal",
+  nitpick: "routine",
+  question: "routine",
+  praise: "routine",
+  joke: "low-signal",
+  "self-review": "low-signal",
+  unknown: "low-signal",
+};
+
+const HIGH_SIGNAL_TIER: IntentTier = "high-signal";
+
+export async function getClassificationAggregates(
+  supabase: SupabaseClient,
+  boardId: string,
+  githubId: number,
+  dateRange: DateRange,
+): Promise<ClassificationAggregates> {
+  const repoIds = await getBoardRepoIds(supabase, boardId);
+  if (repoIds.length === 0) return emptyClassificationAggregates();
+
+  const startIso = dateRange.start?.toISOString() ?? null;
+  const endIso = dateRange.end.toISOString();
+
+  const [classificationsResult, rootCommentsResult] = await Promise.all([
+    supabase.rpc("get_board_classifications_for_commenter", {
+      p_repo_ids: repoIds,
+      p_commenter_github_id: githubId,
+      p_start: startIso,
+      p_end: endIso,
+    }),
+    supabase.rpc("get_board_root_comments_for_commenter", {
+      p_repo_ids: repoIds,
+      p_commenter_github_id: githubId,
+      p_start: startIso,
+      p_end: endIso,
+    }),
+  ]);
+  if (classificationsResult.error) throw classificationsResult.error;
+  if (rootCommentsResult.error) throw rootCommentsResult.error;
+
+  const classifications = classificationsResult.data as { intent: IntentCategory; domain: TechnicalDomain }[];
+  const rootComments = rootCommentsResult.data as { id: number }[];
+
+  const intentCounts = new Map<IntentCategory, number>();
+  const domainCounts = new Map<TechnicalDomain, number>();
+  let highSignalCount = 0;
+  for (const c of classifications) {
+    intentCounts.set(c.intent, (intentCounts.get(c.intent) ?? 0) + 1);
+    domainCounts.set(c.domain, (domainCounts.get(c.domain) ?? 0) + 1);
+    if (INTENT_TIER_MAP[c.intent] === HIGH_SIGNAL_TIER) highSignalCount++;
+  }
+
+  const totalClassified = classifications.length;
+
+  return {
+    intentCounts: Array.from(intentCounts.entries()).map(([category, count]) => ({
+      category,
+      count,
+      tier: INTENT_TIER_MAP[category],
+    })),
+    domainCounts: Array.from(domainCounts.entries()).map(([category, count]) => ({ category, count })),
+    totalClassified,
+    totalThreads: rootComments.length,
+    highSignalPercent: totalClassified > 0 ? Math.round((highSignalCount / totalClassified) * 100) : 0,
+  };
+}
+
+function emptyClassificationAggregates(): ClassificationAggregates {
+  return {
+    intentCounts: [],
+    domainCounts: [],
+    totalClassified: 0,
+    totalThreads: 0,
+    highSignalPercent: 0,
   };
 }

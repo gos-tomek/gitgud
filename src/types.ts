@@ -101,6 +101,16 @@ export interface ThreadClassification {
   classifiedAt: string;
 }
 
+export type IntentTier = "high-signal" | "routine" | "low-signal";
+
+export interface ClassificationAggregates {
+  intentCounts: { category: IntentCategory; count: number; tier: IntentTier }[];
+  domainCounts: { category: TechnicalDomain; count: number }[];
+  totalClassified: number;
+  totalThreads: number;
+  highSignalPercent: number;
+}
+
 export type PeriodSlug = "7d" | "30d" | "90d" | "6m" | "ytd" | "all";
 
 export interface DateRange {
