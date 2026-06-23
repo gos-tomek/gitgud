@@ -572,10 +572,10 @@ DROP TABLE IF EXISTS public.board_members;
 
 #### Automated
 
-- [x] 3.1 Migration applies cleanly (`npx supabase db reset`)
-- [x] 3.2 Integration tests pass (`npx vitest run tests/integration/`)
-- [x] 3.3 Non-integration tests pass (`npx vitest run --exclude 'tests/integration/**'`)
-- [x] 3.4 Type checking passes (`npx tsc --noEmit`)
+- [x] 3.1 Migration applies cleanly (`npx supabase db reset`) — 674c881
+- [x] 3.2 Integration tests pass (`npx vitest run tests/integration/`) — 674c881
+- [x] 3.3 Non-integration tests pass (`npx vitest run --exclude 'tests/integration/**'`) — 674c881
+- [x] 3.4 Type checking passes (`npx tsc --noEmit`) — 674c881
 
 #### Manual
 
@@ -588,15 +588,15 @@ DROP TABLE IF EXISTS public.board_members;
 
 #### Automated
 
-- [ ] 4.1 Type checking passes (`npx tsc --noEmit` and `npm run test:typecheck`)
-- [ ] 4.2 Lint passes (`npm run lint`)
-- [ ] 4.3 All tests pass (`npm test`)
+- [x] 4.1 Type checking passes (`npx tsc --noEmit` and `npm run test:typecheck`)
+- [x] 4.2 Lint passes (`npm run lint`)
+- [x] 4.3 All tests pass (`npm test`)
 
 #### Manual
 
-- [ ] 4.4 Dashboard shows boards correctly for contributors and owners
-- [ ] 4.5 Empty state shows updated message with "Create board" option
-- [ ] 4.6 Board detail pages still load correctly
+- [x] 4.4 Dashboard shows boards correctly for contributors and owners
+- [x] 4.5 Empty state shows updated message with "Create board" option
+- [x] 4.6 Board detail pages still load correctly
 
 ### Phase 5: Drop board_members — Cleanup
 

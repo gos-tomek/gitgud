@@ -10,10 +10,14 @@ vi.mock("astro:env/server", () => ({
 const mockLogger = vi.hoisted(() => ({ error: vi.fn(), warn: vi.fn(), info: vi.fn() }));
 vi.mock("@/lib/logger", () => ({ logger: mockLogger }));
 
-// Supabase mock — two tables are queried: "boards" (getBoardWithRole) and
-// "board_contributors" (own-contributor guard + target-contributor lookup).
+// Supabase mock — three tables are queried: "boards" (getBoardWithRole),
+// "board_contributors" (target-contributor lookup), and "user_profiles" (own-profile
+// lookup for the non-supervisor ownership guard, via getUserProfile). The latter two
+// share a generic mock builder, so call order (not table name) drives the queued
+// maybeSingle resolutions below: contributor lookup always fires first, then — only
+// for non-supervisors — the own-profile lookup.
 // Default board row makes the authenticated user the owner ("supervisor"),
-// which skips the own-contributor guard branch and keeps existing tests unaffected.
+// which skips the own-profile guard branch and keeps existing tests unaffected.
 const mockContributorResult = vi.hoisted(() => ({ data: { github_id: 42 }, error: null }));
 const mockBuilder = vi.hoisted(() => {
   const b: Record<string, ReturnType<typeof vi.fn>> = {
@@ -189,7 +193,11 @@ describe("Impact API guard layer (hermetic)", () => {
       data: { ...mockBoardRow, owner_user_id: "owner-2" },
       error: null,
     });
-    mockBuilder.maybeSingle.mockResolvedValueOnce({ data: { github_login: "bob" }, error: null });
+    // 1st call: target-contributor lookup (board_contributors, by login) — github_id 42.
+    // 2nd call: own-profile lookup (user_profiles, by user_id) — a different github_id.
+    mockBuilder.maybeSingle
+      .mockResolvedValueOnce({ data: { github_id: 42 }, error: null })
+      .mockResolvedValueOnce({ data: { github_id: 99 }, error: null });
     const ctx = makeContext({ boardId: VALID_BOARD_ID, login: VALID_LOGIN });
     const res = await summaryGET(ctx);
     expect(res.status).toBe(403);
@@ -202,8 +210,9 @@ describe("Impact API guard layer (hermetic)", () => {
       data: { ...mockBoardRow, owner_user_id: "owner-2" },
       error: null,
     });
+    // Same github_id from both the target-contributor lookup and the own-profile lookup.
     mockBuilder.maybeSingle
-      .mockResolvedValueOnce({ data: { github_login: VALID_LOGIN }, error: null })
+      .mockResolvedValueOnce({ data: { github_id: 42 }, error: null })
       .mockResolvedValueOnce({ data: { github_id: 42 }, error: null });
     const ctx = makeContext({ boardId: VALID_BOARD_ID, login: VALID_LOGIN });
     const res = await summaryGET(ctx);

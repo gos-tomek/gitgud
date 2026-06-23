@@ -26,13 +26,28 @@ function toUserBoard(row: BoardRow, userId: string): UserBoard {
 export async function getUserBoards(supabase: SupabaseClient, userId: string): Promise<UserBoard[]> {
   const { data, error } = await supabase
     .from("boards")
-    .select("id,name,owner_user_id,created_at,updated_at,board_members!inner(user_id)")
-    .eq("board_members.user_id", userId)
+    .select("id,name,owner_user_id,created_at,updated_at")
     .order("created_at", { ascending: false });
 
   if (error) throw error;
 
   return (data as BoardRow[]).map((row) => toUserBoard(row, userId));
+}
+
+export async function getUserProfile(
+  supabase: SupabaseClient,
+  userId: string,
+): Promise<{ githubId: number; githubLogin: string } | null> {
+  const { data, error } = await supabase
+    .from("user_profiles")
+    .select("github_id,github_login")
+    .eq("user_id", userId)
+    .maybeSingle();
+
+  if (error) throw error;
+  if (!data) return null;
+
+  return { githubId: data.github_id as number, githubLogin: data.github_login as string };
 }
 
 export async function getBoardWithRole(
@@ -74,7 +89,7 @@ export async function getBoardRepos(
 export async function getBoardContributors(supabase: SupabaseClient, boardId: string): Promise<BoardContributor[]> {
   const { data, error } = await supabase
     .from("board_contributors")
-    .select("board_id,github_id,github_login,avatar_url,user_id,added_at")
+    .select("board_id,github_id,github_login,avatar_url,added_at")
     .eq("board_id", boardId)
     .order("added_at", { ascending: true });
 
@@ -85,7 +100,6 @@ export async function getBoardContributors(supabase: SupabaseClient, boardId: st
     githubId: row.github_id as number,
     githubLogin: row.github_login as string,
     avatarUrl: row.avatar_url as string | null,
-    userId: row.user_id as string | null,
     addedAt: row.added_at as string,
   }));
 }

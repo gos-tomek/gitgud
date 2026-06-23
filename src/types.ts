@@ -59,7 +59,6 @@ export interface BoardContributor {
   githubId: number;
   githubLogin: string;
   avatarUrl: string | null;
-  userId: string | null;
   addedAt: string;
 }
 
