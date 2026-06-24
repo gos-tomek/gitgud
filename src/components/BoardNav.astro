@@ -1,14 +1,21 @@
 ---
 interface Props {
   boardId: string;
+  githubLogin?: string;
+  period?: string;
 }
 
-const { boardId } = Astro.props;
+const { boardId, githubLogin, period } = Astro.props;
 const path = Astro.url.pathname;
 
 const isImpact = path === `/board/${boardId}` || path.startsWith(`/board/${boardId}/impact`);
+const isThreads = path.startsWith(`/board/${boardId}/threads`);
 const isActivity = path.startsWith(`/board/${boardId}/activity`);
 const isSettings = path.startsWith(`/board/${boardId}/settings`);
+
+const contributorSuffix = githubLogin ? `/${githubLogin}${period ? `/${period}` : ""}` : "";
+const impactHref = `/board/${boardId}/impact${contributorSuffix}`;
+const threadsHref = `/board/${boardId}/threads${contributorSuffix}`;
 
 const base = "border-b-2 px-4 py-3 text-sm font-medium transition-colors";
 const active = "border-purple-400 text-white";
@@ -18,9 +25,26 @@ const inactive = "border-transparent text-blue-100/50 hover:text-white";
 <nav class="border-b border-white/10">
   <div class="mx-auto max-w-6xl px-4">
     <div class="flex">
-      <a href={`/board/${boardId}/impact`} class:list={[base, isImpact ? active : inactive]}>Impact</a>
+      <a href={impactHref} data-nav-segment="impact" class:list={[base, isImpact ? active : inactive]}>Impact</a>
+      <a href={threadsHref} data-nav-segment="threads" class:list={[base, isThreads ? active : inactive]}>Threads</a>
       <a href={`/board/${boardId}/activity`} class:list={[base, isActivity ? active : inactive]}>Activity</a>
       <a href={`/board/${boardId}/settings`} class:list={[base, isSettings ? active : inactive]}>Settings</a>
     </div>
   </div>
 </nav>
+
+<script>
+  // ImpactView/ThreadsView update the contributor + period in the URL client-side via
+  // history.pushState/replaceState without a full reload, so these hrefs (baked from the
+  // initial server-rendered props) can go stale. Swap only the leading path segment against
+  // the live location at click time so the current contributor/period survive the tab switch.
+  document.querySelectorAll("a[data-nav-segment]").forEach((link) => {
+    link.addEventListener("click", (event) => {
+      const target = link.dataset.navSegment;
+      const match = /^(\/board\/[^/]+\/)(impact|threads)(\/.*)?$/.exec(location.pathname);
+      if (!target || !match) return;
+      event.preventDefault();
+      window.location.href = `${match[1]}${target}${match[3] ?? ""}`;
+    });
+  });
+</script>

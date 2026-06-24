@@ -11,6 +11,13 @@ import type {
   Collaborator,
   RepoActivity,
   PrRow,
+  ClassificationAggregates,
+  ClassifiedThread,
+  ClassifiedThreadsPage,
+  ThreadMessage,
+  IntentCategory,
+  TechnicalDomain,
+  IntentTier,
 } from "@/types";
 
 type SupabaseClient = NonNullable<ReturnType<typeof createClient>>;
@@ -84,7 +91,7 @@ function isoDate(dateStr: string): string {
   return new Date(dateStr).toISOString().slice(0, 10);
 }
 
-async function getBoardRepoIds(supabase: SupabaseClient, boardId: string): Promise<string[]> {
+export async function getBoardRepoIds(supabase: SupabaseClient, boardId: string): Promise<string[]> {
   const { data, error } = await supabase.from("github_repos").select("id").eq("board_id", boardId);
   if (error) throw error;
   return data.map((r) => r.id as string);
@@ -96,7 +103,7 @@ async function getBoardRepoIds(supabase: SupabaseClient, boardId: string): Promi
 // to fetch, leaving `fetched_at` stale even though the sync itself ran moments ago. Any repo that
 // has never completed a sync (`last_synced_at IS NULL`) makes the whole board read as un-synced,
 // since the board isn't fully fresh until every connected repo has synced at least once.
-async function getBoardLastSyncedAt(supabase: SupabaseClient, repoIds: string[]): Promise<string | null> {
+export async function getBoardLastSyncedAt(supabase: SupabaseClient, repoIds: string[]): Promise<string | null> {
   if (repoIds.length === 0) return null;
   const { data, error } = await supabase.from("github_repos").select("last_synced_at").in("id", repoIds);
   if (error) throw error;
@@ -776,11 +783,23 @@ export async function getActivityData(
     .sort(([, a], [, b]) => b.prCount + b.reviewCount - (a.prCount + a.reviewCount))
     .map(([repoName, v]) => ({ repoName, ...v }));
 
-  // ── thread counts by PR (from root comments) ─────────────────────────────
-  const threadsByPr = new Map<number, number>();
-  for (const c of rootComments) {
-    if (c.created_at < periodStartIso || c.created_at > endIso) continue;
-    threadsByPr.set(c.pull_request_id, (threadsByPr.get(c.pull_request_id) ?? 0) + 1);
+  // Thread count = all-commenter root comments on the PR, within the period — used identically
+  // for both authored and reviewed PR rows below so the two tables stay comparable.
+  async function periodThreadCounts(prIds: number[]): Promise<Map<number, number>> {
+    const counts = new Map<number, number>();
+    if (prIds.length === 0) return counts;
+    const { data } = await supabase
+      .from("github_review_comments")
+      .select("pull_request_id")
+      .in("pull_request_id", prIds)
+      .is("in_reply_to_id", null)
+      .gte("created_at", periodStartIso)
+      .lte("created_at", endIso);
+    for (const c of data ?? []) {
+      const prId = c.pull_request_id as number;
+      counts.set(prId, (counts.get(prId) ?? 0) + 1);
+    }
+    return counts;
   }
 
   // ── recent authored PRs ───────────────────────────────────────────────────
@@ -789,20 +808,7 @@ export async function getActivityData(
     .sort((a, b) => b.updated_at.localeCompare(a.updated_at))
     .slice(0, 10);
 
-  // Fetch root comments by ALL commenters on authored PRs (for thread count)
-  const authoredIds = authoredInPeriod.map((p) => p.id);
-  const authoredThreadCounts = new Map<number, number>();
-  if (authoredIds.length > 0) {
-    const { data: authoredComments } = await supabase
-      .from("github_review_comments")
-      .select("pull_request_id")
-      .in("pull_request_id", authoredIds)
-      .is("in_reply_to_id", null);
-    for (const c of authoredComments ?? []) {
-      const prId = c.pull_request_id as number;
-      authoredThreadCounts.set(prId, (authoredThreadCounts.get(prId) ?? 0) + 1);
-    }
-  }
+  const authoredThreadCounts = await periodThreadCounts(authoredInPeriod.map((p) => p.id));
 
   const recentAuthoredPrs: PrRow[] = authoredInPeriod.map((p) => {
     const repoInfo = repoOwnerRepoMap.get(p.repo_id);
@@ -829,30 +835,33 @@ export async function getActivityData(
     reviews.filter((r) => r.submitted_at >= periodStartIso && r.submitted_at <= endIso).map((r) => r.pull_request_id),
   );
 
-  const recentReviewedPrs: PrRow[] = Array.from(reviewedPrIdsInPeriod)
+  const reviewedInPeriod = Array.from(reviewedPrIdsInPeriod)
     .map((prId) => prMap.get(prId))
     .filter((p): p is PrDb => p !== undefined && p.author_github_id !== githubId)
     .sort((a, b) => b.updated_at.localeCompare(a.updated_at))
-    .slice(0, 10)
-    .map((p) => {
-      const repoInfo = repoOwnerRepoMap.get(p.repo_id);
-      const timeToMergeHours = p.merged_at
-        ? (new Date(p.merged_at).getTime() - new Date(p.created_at).getTime()) / 3_600_000
-        : null;
-      return {
-        id: p.id,
-        number: p.number,
-        title: p.title,
-        repo: repoNameMap.get(p.repo_id) ?? p.repo_id,
-        state: p.state,
-        additions: p.additions,
-        deletions: p.deletions,
-        threadCount: threadsByPr.get(p.id) ?? 0,
-        timeToMergeHours,
-        updatedAt: p.updated_at,
-        url: repoInfo ? `https://github.com/${repoInfo.owner}/${repoInfo.name}/pull/${p.number}` : "",
-      };
-    });
+    .slice(0, 10);
+
+  const reviewedThreadCounts = await periodThreadCounts(reviewedInPeriod.map((p) => p.id));
+
+  const recentReviewedPrs: PrRow[] = reviewedInPeriod.map((p) => {
+    const repoInfo = repoOwnerRepoMap.get(p.repo_id);
+    const timeToMergeHours = p.merged_at
+      ? (new Date(p.merged_at).getTime() - new Date(p.created_at).getTime()) / 3_600_000
+      : null;
+    return {
+      id: p.id,
+      number: p.number,
+      title: p.title,
+      repo: repoNameMap.get(p.repo_id) ?? p.repo_id,
+      state: p.state,
+      additions: p.additions,
+      deletions: p.deletions,
+      threadCount: reviewedThreadCounts.get(p.id) ?? 0,
+      timeToMergeHours,
+      updatedAt: p.updated_at,
+      url: repoInfo ? `https://github.com/${repoInfo.owner}/${repoInfo.name}/pull/${p.number}` : "",
+    };
+  });
 
   return { weeklyActivity, dailyHeatmap, topCollaborators, repoActivity, recentAuthoredPrs, recentReviewedPrs };
 }
@@ -866,4 +875,271 @@ function emptyActivityData(): ActivityData {
     recentAuthoredPrs: [],
     recentReviewedPrs: [],
   };
+}
+
+// ── getClassificationAggregates ─────────────────────────────────────────────
+
+const INTENT_TIER_MAP: Record<IntentCategory, IntentTier> = {
+  architecture: "high-signal",
+  "bug-catch": "high-signal",
+  mentoring: "high-signal",
+  unblocking: "high-signal",
+  nitpick: "routine",
+  question: "routine",
+  praise: "routine",
+  joke: "low-signal",
+  "self-review": "low-signal",
+  unknown: "low-signal",
+};
+
+const HIGH_SIGNAL_TIER: IntentTier = "high-signal";
+
+export async function getClassificationAggregates(
+  supabase: SupabaseClient,
+  boardId: string,
+  githubId: number,
+  dateRange: DateRange,
+): Promise<ClassificationAggregates> {
+  const repoIds = await getBoardRepoIds(supabase, boardId);
+  if (repoIds.length === 0) return emptyClassificationAggregates();
+
+  const startIso = dateRange.start?.toISOString() ?? null;
+  const endIso = dateRange.end.toISOString();
+
+  const [classificationsResult, rootCommentsResult] = await Promise.all([
+    supabase.rpc("get_board_classifications_for_commenter", {
+      p_repo_ids: repoIds,
+      p_commenter_github_id: githubId,
+      p_start: startIso,
+      p_end: endIso,
+    }),
+    supabase.rpc("get_board_started_root_comments_for_commenter", {
+      p_repo_ids: repoIds,
+      p_commenter_github_id: githubId,
+      p_start: startIso,
+      p_end: endIso,
+    }),
+  ]);
+  if (classificationsResult.error) throw classificationsResult.error;
+  if (rootCommentsResult.error) throw rootCommentsResult.error;
+
+  const classifications = classificationsResult.data as { intent: IntentCategory; domain: TechnicalDomain }[];
+  const rootComments = rootCommentsResult.data as { id: number }[];
+
+  const intentCounts = new Map<IntentCategory, number>();
+  const domainCounts = new Map<TechnicalDomain, number>();
+  let highSignalCount = 0;
+  for (const c of classifications) {
+    intentCounts.set(c.intent, (intentCounts.get(c.intent) ?? 0) + 1);
+    domainCounts.set(c.domain, (domainCounts.get(c.domain) ?? 0) + 1);
+    if (INTENT_TIER_MAP[c.intent] === HIGH_SIGNAL_TIER) highSignalCount++;
+  }
+
+  const totalClassified = classifications.length;
+
+  return {
+    intentCounts: Array.from(intentCounts.entries()).map(([category, count]) => ({
+      category,
+      count,
+      tier: INTENT_TIER_MAP[category],
+    })),
+    domainCounts: Array.from(domainCounts.entries()).map(([category, count]) => ({ category, count })),
+    totalClassified,
+    totalThreads: rootComments.length,
+    highSignalPercent: totalClassified > 0 ? Math.round((highSignalCount / totalClassified) * 100) : 0,
+  };
+}
+
+function emptyClassificationAggregates(): ClassificationAggregates {
+  return {
+    intentCounts: [],
+    domainCounts: [],
+    totalClassified: 0,
+    totalThreads: 0,
+    highSignalPercent: 0,
+  };
+}
+
+// ── getClassifiedThreads ─────────────────────────────────────────────────────
+
+interface ClassifiedThreadRow {
+  thread_root_comment_id: number;
+  pull_request_id: number;
+  pr_number: number;
+  pr_title: string;
+  pr_author_login: string;
+  repo_id: string;
+  comment_snippet: string;
+  intent: IntentCategory;
+  domain: TechnicalDomain;
+  commenter_login: string;
+  classified_at: string;
+  created_at: string;
+  message_count: number;
+}
+
+export async function getClassifiedThreads(
+  supabase: SupabaseClient,
+  boardId: string,
+  githubId: number,
+  dateRange: DateRange,
+  filters: {
+    intent?: IntentCategory;
+    domain?: TechnicalDomain;
+    pullRequestId?: number;
+    role?: "started" | "received" | "self" | "joined" | "all";
+  },
+  page: number,
+  pageSize: number,
+): Promise<ClassifiedThreadsPage> {
+  const { data: reposData, error: reposError } = await supabase
+    .from("github_repos")
+    .select("id,repo_owner,repo_name")
+    .eq("board_id", boardId);
+  if (reposError) throw reposError;
+
+  const repos = reposData as { id: string; repo_owner: string; repo_name: string }[];
+  if (repos.length === 0) return emptyClassifiedThreadsPage(page, pageSize);
+
+  const repoIds = repos.map((r) => r.id);
+  const repoMap = new Map(repos.map((r) => [r.id, { owner: r.repo_owner, name: r.repo_name }]));
+
+  const startIso = dateRange.start?.toISOString() ?? null;
+  const endIso = dateRange.end.toISOString();
+  const offset = (page - 1) * pageSize;
+  const role = filters.role ?? "all";
+
+  const [rpcResult, countResult, coverageResult] = await Promise.all([
+    supabase.rpc("get_board_classified_threads", {
+      p_repo_ids: repoIds,
+      p_github_id: githubId,
+      p_role: role,
+      p_start: startIso,
+      p_end: endIso,
+      p_intent: filters.intent ?? null,
+      p_domain: filters.domain ?? null,
+      p_pr_id: filters.pullRequestId ?? null,
+      p_limit: pageSize,
+      p_offset: offset,
+    }),
+    supabase.rpc("get_board_classified_threads_count", {
+      p_repo_ids: repoIds,
+      p_github_id: githubId,
+      p_role: role,
+      p_start: startIso,
+      p_end: endIso,
+      p_intent: filters.intent ?? null,
+      p_domain: filters.domain ?? null,
+      p_pr_id: filters.pullRequestId ?? null,
+    }),
+    supabase.rpc("get_board_thread_coverage", {
+      p_repo_ids: repoIds,
+      p_github_id: githubId,
+      p_role: role,
+      p_start: startIso,
+      p_end: endIso,
+    }),
+  ]);
+  if (rpcResult.error) throw rpcResult.error;
+  if (countResult.error) throw countResult.error;
+  if (coverageResult.error) throw coverageResult.error;
+
+  const rows = rpcResult.data as ClassifiedThreadRow[];
+  const total = countResult.data as number;
+  const coverageRows = coverageResult.data as { total_root_comments: number }[];
+  const totalRootComments = coverageRows.length > 0 ? coverageRows[0].total_root_comments : 0;
+
+  const threads: ClassifiedThread[] = rows.map((row) => {
+    const repoInfo = repoMap.get(row.repo_id);
+    return {
+      threadRootCommentId: row.thread_root_comment_id,
+      pullRequestId: row.pull_request_id,
+      prNumber: row.pr_number,
+      prTitle: row.pr_title,
+      prAuthorLogin: row.pr_author_login,
+      prRepo: repoInfo ? `${repoInfo.owner}/${repoInfo.name}` : row.repo_id,
+      prUrl: repoInfo ? `https://github.com/${repoInfo.owner}/${repoInfo.name}/pull/${row.pr_number}` : "",
+      commentSnippet: row.comment_snippet,
+      intent: row.intent,
+      domain: row.domain,
+      commenterLogin: row.commenter_login,
+      classifiedAt: row.classified_at,
+      createdAt: row.created_at,
+      messageCount: row.message_count,
+    };
+  });
+
+  return {
+    threads,
+    total,
+    page,
+    pageSize,
+    totalRootComments,
+  };
+}
+
+function emptyClassifiedThreadsPage(page: number, pageSize: number): ClassifiedThreadsPage {
+  return { threads: [], total: 0, page, pageSize, totalRootComments: 0 };
+}
+
+// ── getThreadMessages ────────────────────────────────────────────────────────
+
+// Guards getThreadMessages against cross-board reads: a thread_root_comment_id is just an
+// integer, so without this check any board member could fetch any other board's thread
+// messages by guessing/enumerating IDs.
+export async function isThreadInBoard(
+  supabase: SupabaseClient,
+  boardId: string,
+  threadRootCommentId: number,
+): Promise<boolean> {
+  const { data: classification, error: classificationError } = await supabase
+    .from("thread_classifications")
+    .select("pull_request_id")
+    .eq("thread_root_comment_id", threadRootCommentId)
+    .maybeSingle();
+  if (classificationError) throw classificationError;
+  if (!classification) return false;
+
+  const { data: pr, error: prError } = await supabase
+    .from("github_pull_requests")
+    .select("repo_id")
+    .eq("id", classification.pull_request_id)
+    .maybeSingle();
+  if (prError) throw prError;
+  if (!pr) return false;
+
+  const repoIds = await getBoardRepoIds(supabase, boardId);
+  return repoIds.includes(pr.repo_id as string);
+}
+
+interface ThreadMessageRow {
+  id: number;
+  commenter_login: string;
+  body: string;
+  created_at: string;
+  in_reply_to_id: number | null;
+}
+
+// GitHub review comment threads are flat — every reply's in_reply_to_id points
+// directly at the thread root, never at another reply — so a single OR query
+// covers the whole discussion with no recursion needed.
+export async function getThreadMessages(
+  supabase: SupabaseClient,
+  threadRootCommentId: number,
+): Promise<ThreadMessage[]> {
+  const { data, error } = await supabase
+    .from("github_review_comments")
+    .select("id,commenter_login,body,created_at,in_reply_to_id")
+    .or(`id.eq.${threadRootCommentId},in_reply_to_id.eq.${threadRootCommentId}`)
+    .order("created_at", { ascending: true });
+  if (error) throw error;
+
+  const rows = data as ThreadMessageRow[];
+  return rows.map((row) => ({
+    id: row.id,
+    commenterLogin: row.commenter_login,
+    body: row.body,
+    createdAt: row.created_at,
+    inReplyToId: row.in_reply_to_id,
+  }));
 }

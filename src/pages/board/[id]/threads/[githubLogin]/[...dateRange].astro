@@ -3,7 +3,9 @@ import Layout from "@/layouts/Layout.astro";
 import { createClient } from "@/lib/supabase";
 import { getBoardWithRole, getBoardContributors, getUserBoards, getUserProfile } from "@/lib/services/boards";
 import { isValidPeriodSlug } from "@/lib/date-range";
-import ImpactView from "@/components/impact/ImpactView";
+import { INTENT_CATEGORIES, DOMAIN_CATEGORIES } from "@/lib/classification-colors";
+import type { IntentCategory, TechnicalDomain } from "@/types";
+import ThreadsView from "@/components/threads/ThreadsView";
 import BoardTopbar from "@/components/BoardTopbar.astro";
 import BoardNav from "@/components/BoardNav.astro";
 
@@ -36,11 +38,9 @@ if (!contributor) {
 }
 
 // Non-supervisors can only view their own contributor profile, never switch to others.
-// Ownership is derived from the signed-in user's user_profiles.github_id, matched against
-// board_contributors.github_id — there's no direct user_id link.
 const ownContributor = ownProfile ? contributors.find((c) => c.githubId === ownProfile.githubId) : null;
 if (board.role !== "supervisor" && ownContributor?.githubLogin !== githubLogin) {
-  return Astro.redirect(ownContributor ? `/board/${id}/impact/${ownContributor.githubLogin}` : `/board/${id}`);
+  return Astro.redirect(ownContributor ? `/board/${id}/threads/${ownContributor.githubLogin}` : `/board/${id}`);
 }
 
 const visibleContributors =
@@ -49,14 +49,22 @@ const visibleContributors =
 const rawPeriod: string = typeof dateRangeParam === "string" ? dateRangeParam : "90d";
 const period = isValidPeriodSlug(rawPeriod) ? rawPeriod : "90d";
 
+const sp = Astro.url.searchParams;
+const rawPrId = sp.get("prId");
+const prId = rawPrId && /^\d+$/.test(rawPrId) ? Number(rawPrId) : undefined;
+const rawIntent = sp.get("intent");
+const intent = (INTENT_CATEGORIES as string[]).includes(rawIntent ?? "") ? (rawIntent as IntentCategory) : undefined;
+const rawDomain = sp.get("domain");
+const domain = (DOMAIN_CATEGORIES as string[]).includes(rawDomain ?? "") ? (rawDomain as TechnicalDomain) : undefined;
+
 const userInitial = user.email?.[0]?.toUpperCase() ?? "?";
 ---
 
-<Layout title={`${contributor.githubLogin} — ${board.name}`}>
+<Layout title={`Threads — ${contributor.githubLogin} — ${board.name}`}>
   <div class="bg-cosmic min-h-screen text-white">
     <BoardTopbar board={board} boards={boards} userInitial={userInitial} />
     <BoardNav boardId={board.id} githubLogin={contributor.githubLogin} period={period} />
-    <ImpactView
+    <ThreadsView
       client:only="react"
       boardId={board.id}
       githubLogin={contributor.githubLogin}
@@ -66,6 +74,7 @@ const userInitial = user.email?.[0]?.toUpperCase() ?? "?";
         avatarUrl: contributor.avatarUrl,
       }}
       contributors={visibleContributors.map((c) => ({ githubLogin: c.githubLogin, avatarUrl: c.avatarUrl }))}
+      initialFilters={{ prId, intent, domain }}
     />
   </div>
 </Layout>

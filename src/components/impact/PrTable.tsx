@@ -17,7 +17,7 @@ function fmtHours(n: number | null): string {
   return `${(n / 24).toFixed(1)}d`;
 }
 
-function PrRowItem({ pr }: { pr: PrRow }) {
+function PrRowItem({ pr, threadsBaseUrl }: { pr: PrRow; threadsBaseUrl: string }) {
   const stateStyle = STATE_STYLE[pr.state] ?? "bg-white/10 text-blue-100/60";
   return (
     <tr className="border-t border-white/5 hover:bg-white/5">
@@ -41,7 +41,15 @@ function PrRowItem({ pr }: { pr: PrRow }) {
         <span className="text-red-400">{pr.deletions !== null ? `-${pr.deletions}` : ""}</span>
         {pr.additions === null && pr.deletions === null && <span className="text-blue-100/30">—</span>}
       </td>
-      <td className="py-2 pr-3 text-xs text-blue-100/50">{pr.threadCount}</td>
+      <td className="py-2 pr-3 text-xs text-blue-100/50">
+        {pr.threadCount > 0 ? (
+          <a href={`${threadsBaseUrl}?prId=${pr.id}`} className="underline decoration-dotted hover:text-white">
+            {pr.threadCount}
+          </a>
+        ) : (
+          pr.threadCount
+        )}
+      </td>
       <td className="py-2 pr-3 text-xs text-blue-100/50">{fmtHours(pr.timeToMergeHours)}</td>
       <td className="py-2 text-xs text-blue-100/30">{new Date(pr.updatedAt).toLocaleDateString("en-GB")}</td>
     </tr>
@@ -52,9 +60,10 @@ interface Props {
   authoredPrs: PrRow[] | null;
   reviewedPrs: PrRow[] | null;
   loading: boolean;
+  threadsBaseUrl: string;
 }
 
-export function PrTable({ authoredPrs, reviewedPrs, loading }: Props) {
+export function PrTable({ authoredPrs, reviewedPrs, loading, threadsBaseUrl }: Props) {
   const [tab, setTab] = useState<"authored" | "reviewed">("authored");
 
   const allRows = tab === "authored" ? authoredPrs : reviewedPrs;
@@ -105,7 +114,7 @@ export function PrTable({ authoredPrs, reviewedPrs, loading }: Props) {
             </thead>
             <tbody>
               {rows.map((pr) => (
-                <PrRowItem key={pr.id} pr={pr} />
+                <PrRowItem key={pr.id} pr={pr} threadsBaseUrl={threadsBaseUrl} />
               ))}
             </tbody>
           </table>
