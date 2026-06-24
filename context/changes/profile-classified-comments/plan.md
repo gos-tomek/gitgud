@@ -579,18 +579,18 @@ No database migrations needed. The `thread_classifications` table and its RLS po
 
 #### Automated
 
-- [x] 4.1 Type-check passes (src and tests)
-- [x] 4.2 Lint passes
-- [x] 4.3 Tests pass
-- [x] 4.4 Build succeeds
+- [x] 4.1 Type-check passes (src and tests) — e2f7506
+- [x] 4.2 Lint passes — e2f7506
+- [x] 4.3 Tests pass — e2f7506
+- [x] 4.4 Build succeeds — e2f7506
 
 #### Manual
 
-- [ ] 4.5 Thread list renders with classification badges
-- [ ] 4.6 Filter dropdowns work correctly
-- [ ] 4.7 Pagination controls navigate between pages
-- [ ] 4.8 Contributor selector switches threads
-- [ ] 4.9 Deep-link with query params pre-fills filters
+- [x] 4.5 Thread list renders with classification badges — e2f7506
+- [x] 4.6 Filter dropdowns work correctly — e2f7506
+- [x] 4.7 Pagination controls navigate between pages — e2f7506
+- [x] 4.8 Contributor selector switches threads — e2f7506
+- [x] 4.9 Deep-link with query params pre-fills filters — e2f7506
 
 ### Phase 5: Navigation & Integration
 
