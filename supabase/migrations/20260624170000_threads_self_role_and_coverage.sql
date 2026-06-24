@@ -88,7 +88,13 @@ AS $$
         p_role = 'all'
         AND (
           grc.commenter_github_id = p_github_id
-          OR (gpr.author_github_id = p_github_id AND grc.commenter_github_id != p_github_id)
+          OR gpr.author_github_id = p_github_id
+          OR EXISTS (
+            SELECT 1
+            FROM public.github_review_comments reply
+            WHERE reply.in_reply_to_id = grc.id
+              AND reply.commenter_github_id = p_github_id
+          )
         )
       )
     )
@@ -134,7 +140,13 @@ AS $$
         p_role = 'all'
         AND (
           grc.commenter_github_id = p_github_id
-          OR (gpr.author_github_id = p_github_id AND grc.commenter_github_id != p_github_id)
+          OR gpr.author_github_id = p_github_id
+          OR EXISTS (
+            SELECT 1
+            FROM public.github_review_comments reply
+            WHERE reply.in_reply_to_id = grc.id
+              AND reply.commenter_github_id = p_github_id
+          )
         )
       )
     );

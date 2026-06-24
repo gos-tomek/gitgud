@@ -976,7 +976,6 @@ interface ClassifiedThreadRow {
   classified_at: string;
   created_at: string;
   message_count: number;
-  total_count: number;
 }
 
 export async function getClassifiedThreads(
@@ -1010,7 +1009,7 @@ export async function getClassifiedThreads(
   const offset = (page - 1) * pageSize;
   const role = filters.role ?? "all";
 
-  const [rpcResult, coverageResult] = await Promise.all([
+  const [rpcResult, countResult, coverageResult] = await Promise.all([
     supabase.rpc("get_board_classified_threads", {
       p_repo_ids: repoIds,
       p_github_id: githubId,
@@ -1023,6 +1022,16 @@ export async function getClassifiedThreads(
       p_limit: pageSize,
       p_offset: offset,
     }),
+    supabase.rpc("get_board_classified_threads_count", {
+      p_repo_ids: repoIds,
+      p_github_id: githubId,
+      p_role: role,
+      p_start: startIso,
+      p_end: endIso,
+      p_intent: filters.intent ?? null,
+      p_domain: filters.domain ?? null,
+      p_pr_id: filters.pullRequestId ?? null,
+    }),
     supabase.rpc("get_board_thread_coverage", {
       p_repo_ids: repoIds,
       p_github_id: githubId,
@@ -1032,9 +1041,11 @@ export async function getClassifiedThreads(
     }),
   ]);
   if (rpcResult.error) throw rpcResult.error;
+  if (countResult.error) throw countResult.error;
   if (coverageResult.error) throw coverageResult.error;
 
   const rows = rpcResult.data as ClassifiedThreadRow[];
+  const total = countResult.data as number;
   const coverageRows = coverageResult.data as { total_root_comments: number }[];
   const totalRootComments = coverageRows.length > 0 ? coverageRows[0].total_root_comments : 0;
 
@@ -1060,7 +1071,7 @@ export async function getClassifiedThreads(
 
   return {
     threads,
-    total: rows.length > 0 ? rows[0].total_count : 0,
+    total,
     page,
     pageSize,
     totalRootComments,
@@ -1072,6 +1083,34 @@ function emptyClassifiedThreadsPage(page: number, pageSize: number): ClassifiedT
 }
 
 // ── getThreadMessages ────────────────────────────────────────────────────────
+
+// Guards getThreadMessages against cross-board reads: a thread_root_comment_id is just an
+// integer, so without this check any board member could fetch any other board's thread
+// messages by guessing/enumerating IDs.
+export async function isThreadInBoard(
+  supabase: SupabaseClient,
+  boardId: string,
+  threadRootCommentId: number,
+): Promise<boolean> {
+  const { data: classification, error: classificationError } = await supabase
+    .from("thread_classifications")
+    .select("pull_request_id")
+    .eq("thread_root_comment_id", threadRootCommentId)
+    .maybeSingle();
+  if (classificationError) throw classificationError;
+  if (!classification) return false;
+
+  const { data: pr, error: prError } = await supabase
+    .from("github_pull_requests")
+    .select("repo_id")
+    .eq("id", classification.pull_request_id)
+    .maybeSingle();
+  if (prError) throw prError;
+  if (!pr) return false;
+
+  const repoIds = await getBoardRepoIds(supabase, boardId);
+  return repoIds.includes(pr.repo_id as string);
+}
 
 interface ThreadMessageRow {
   id: number;

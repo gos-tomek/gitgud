@@ -399,6 +399,7 @@ describe("getClassificationAggregates (hermetic)", () => {
 function makeThreadsMockClient(opts: {
   repos?: { id: string; repo_owner: string; repo_name: string }[];
   rpcRows?: unknown[];
+  totalCount?: number;
   totalRootComments?: number;
 }) {
   const repos = opts.repos ?? [{ id: "repo-1", repo_owner: "acme", repo_name: "widgets" }];
@@ -406,6 +407,9 @@ function makeThreadsMockClient(opts: {
   const rpc = vi.fn().mockImplementation((fn: string) => {
     if (fn === "get_board_thread_coverage") {
       return Promise.resolve({ data: [{ total_root_comments: opts.totalRootComments ?? 0 }], error: null });
+    }
+    if (fn === "get_board_classified_threads_count") {
+      return Promise.resolve({ data: opts.totalCount ?? 0, error: null });
     }
     return Promise.resolve({ data: opts.rpcRows ?? [], error: null });
   });
@@ -443,9 +447,9 @@ describe("getClassifiedThreads (hermetic)", () => {
           commenter_login: "alice",
           classified_at: D28,
           created_at: D27,
-          total_count: 12,
         },
       ],
+      totalCount: 12,
     });
 
     const result = await getClassifiedThreads(client as never, BOARD_ID, GITHUB_ID, dateRange, {}, 2, 10);

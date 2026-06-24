@@ -511,7 +511,15 @@ Add "Threads" to the board navigation, wire the "Inspect threads" link from the 
 
 ## Migration Notes
 
-No database migrations needed. The `thread_classifications` table and its RLS policies already exist. The only new SQL is the aggregation query executed at read time by the service function.
+> **Addendum (impl review, 2026-06-24):** the statement below ("no migrations needed") did not hold once Phase 3/4 implementation started. Five migrations were added to keep complex filtering/aggregation SQL in RPCs rather than the service layer, plus one index. All are additive/backward-compatible (no column drops, no schema changes to existing tables) per the expand/contract rule in `CLAUDE.md`:
+>
+> - `20260623130000_board_classified_threads_rpc.sql` — `get_board_classified_threads` RPC: paginated/filterable classified thread list for the Threads page (role/intent/domain/PR filters), joining server-side on `repo_id` instead of a caller-supplied PR-id array.
+> - `20260624140000_classified_threads_author_and_count.sql` — adds PR author and thread `message_count` to the RPC output; adds `github_review_comments_in_reply_to_id_idx` index to keep the per-row message-count subquery cheap.
+> - `20260624160845_threads_started_excludes_self_review.sql` — excludes self-authored-PR comments from the "started" role bucket, matching the Impact page's `threadsStarted` KPI.
+> - `20260624170000_threads_self_role_and_coverage.sql` — adds "self" and "joined" role buckets, and a `get_board_thread_coverage` RPC for the "N of M classified" indicator.
+> - `20260624190000_classification_aggregates_exclude_self_review.sql` — applies the same self-review exclusion to `get_board_classifications_for_commenter`, fixing inflated classification totals on the Impact page.
+
+No database migrations were originally planned. The `thread_classifications` table and its RLS policies already exist. The only new SQL anticipated was the aggregation query executed at read time by the service function — that scope grew during implementation, as documented above.
 
 ## References
 

@@ -2,7 +2,7 @@ import type { APIRoute } from "astro";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase";
 import { getBoardWithRole, getUserProfile } from "@/lib/services/boards";
-import { getThreadMessages } from "@/lib/services/impact-metrics";
+import { getThreadMessages, isThreadInBoard } from "@/lib/services/impact-metrics";
 import { logger } from "@/lib/logger";
 
 function json(body: unknown, status = 200): Response {
@@ -55,6 +55,9 @@ export const GET: APIRoute = async (context) => {
   }
 
   try {
+    const inBoard = await isThreadInBoard(supabase, boardId, threadId);
+    if (!inBoard) return json({ error: "Thread not found" }, 404);
+
     const messages = await getThreadMessages(supabase, threadId);
     return json({ messages });
   } catch (err) {
