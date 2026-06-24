@@ -1,11 +1,11 @@
 ---
 change_id: profile-classified-comments
 title: Profile classified comments
-status: impl_reviewed
+status: archived
 created: 2026-06-23
 updated: 2026-06-24
 impl_reviewed: 2026-06-24
-archived_at: null
+archived_at: 2026-06-24T20:53:44Z
 ---
 
 ## Notes

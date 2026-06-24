@@ -3,7 +3,7 @@ project: GitGud
 version: 1
 status: draft
 created: 2026-05-27
-updated: 2026-06-23
+updated: 2026-06-24
 prd_version: 1
 main_goal: market-feedback
 top_blocker: skills
@@ -37,7 +37,7 @@ Mentoring, code-review quality, and unblocking — the "glue work" that keeps en
 | F-04 | link-github-account            | (foundation) link GitGud account with GitHub via OAuth                                        | —                | Access Control                                                                | done     |
 | S-03 | invite-and-join-board          | invite ICs by email; IC joins via invite link                                                 | S-01, F-01, S-02 | FR-003, FR-004, FR-005, FR-014, FR-015                                        | done     |
 | S-04 | profile-raw-github-metrics     | view a contribution profile: PRs, reviews, comment counts                                     | F-02, S-02, S-03 | FR-006, FR-008, FR-009, FR-010, FR-011, NFR progressive-load, NFR data-parity | done     |
-| S-05 | profile-classified-comments    | see own review comments broken down by semantic category                                      | F-03, F-04, S-04 | FR-012, Business Logic, NFR accuracy-floor, NFR data-parity                   | blocked  |
+| S-05 | profile-classified-comments    | see own review comments broken down by semantic category                                      | F-03, F-04, S-04 | FR-012, Business Logic, NFR accuracy-floor, NFR data-parity                   | done     |
 | S-06 | em-switch-ic-dropdown          | switch between ICs on a board without a full page reload                                      | S-04             | FR-007, US-01                                                                 | done     |
 | S-07 | flag-classification-inaccurate | flag a comment's assigned category as inaccurate                                              | S-05             | FR-013                                                                        | blocked  |
 | S-08 | edit-board-connection          | update Board PAT and linked org; both forms re-validate accessible repos/ICs when PAT changes | S-01, S-02       | FR-018, FR-020                                                                | ready    |
@@ -196,7 +196,7 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **Unknowns:**
   - Classification-accuracy validation method + minimum threshold must be met before this view ships (inherits PRD Open Question 1) — Owner: user. Block: yes.
 - **Risk:** The north star and the product wedge. Misclassification is "worse than no classification" (FR-012) — this view must not ship until the accuracy guardrail is validated.
-- **Status:** blocked
+- **Status:** done
 
 ### S-06: EM switches between ICs via a dropdown
 
@@ -324,3 +324,4 @@ Foundations below assume these are present and do NOT re-scaffold them.
 | S-03 | invite-and-join-board         | 2026-06-02 (archived) | —                                        |
 
 - **F-04: (foundation) a user can connect their GitGud account to GitHub via OAuth, establishing a verified bridge between `auth.users.id` and their GitHub numeric ID. When an IC with an existing `board_contributors` record links GitHub, the system auto-matches via `github_id`.** — Archived 2026-06-23 → `context/archive/2026-06-22-link-github-account/`. Lesson: —.
+- **S-05: An IC can see their own review comments broken down by semantic category (mentoring, architecture, bug-catch, nitpick, unblocking, question) — the same breakdown an EM sees for that profile — with click-through to per-comment labels.** — Archived 2026-06-24 → `context/archive/2026-06-23-profile-classified-comments/`. Lesson: —.
