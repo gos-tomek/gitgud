@@ -1,0 +1,20 @@
+---
+import { createClient } from "@/lib/supabase";
+import { getBoardWithRole, getBoardContributors } from "@/lib/services/boards";
+
+const { user } = Astro.locals;
+const { id } = Astro.params;
+
+const supabase = createClient(Astro.request.headers, Astro.cookies);
+const board = supabase && user && id ? await getBoardWithRole(supabase, id, user.id).catch(() => null) : null;
+
+if (!board) {
+  return Astro.redirect("/dashboard");
+}
+
+const contributors = supabase ? await getBoardContributors(supabase, board.id).catch(() => []) : [];
+if (contributors.length > 0) {
+  return Astro.redirect(`/board/${board.id}/threads/${contributors[0].githubLogin}/90d`);
+}
+return Astro.redirect(`/board/${board.id}/settings`);
+---

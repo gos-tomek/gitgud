@@ -286,7 +286,11 @@ export default function ImpactView({
       <ThreadQualitySection data={reviewer.data} loading={reviewer.loading} />
 
       {/* classification */}
-      <ClassificationSection data={classifications.data} loading={classifications.loading} threadsUrl="#" />
+      <ClassificationSection
+        data={classifications.data}
+        loading={classifications.loading}
+        threadsUrl={`/board/${boardId}/threads/${currentLogin}/${period}`}
+      />
 
       {/* heatmap */}
       <section className="rounded-xl border border-white/10 bg-white/5 p-5 backdrop-blur-sm">
@@ -329,6 +333,7 @@ export default function ImpactView({
         authoredPrs={activity.data?.recentAuthoredPrs ?? null}
         reviewedPrs={activity.data?.recentReviewedPrs ?? null}
         loading={activity.loading}
+        threadsBaseUrl={`/board/${boardId}/threads/${currentLogin}/${period}`}
       />
     </div>
   );

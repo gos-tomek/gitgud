@@ -55,7 +55,7 @@ const userInitial = user.email?.[0]?.toUpperCase() ?? "?";
 <Layout title={`${contributor.githubLogin} — ${board.name}`}>
   <div class="bg-cosmic min-h-screen text-white">
     <BoardTopbar board={board} boards={boards} userInitial={userInitial} />
-    <BoardNav boardId={board.id} />
+    <BoardNav boardId={board.id} githubLogin={contributor.githubLogin} period={period} />
     <ImpactView
       client:only="react"
       boardId={board.id}

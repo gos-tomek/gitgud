@@ -596,14 +596,14 @@ No database migrations needed. The `thread_classifications` table and its RLS po
 
 #### Automated
 
-- [ ] 5.1 Type-check passes (src and tests)
-- [ ] 5.2 Lint passes
-- [ ] 5.3 Tests pass
-- [ ] 5.4 Build succeeds
+- [x] 5.1 Type-check passes (src and tests)
+- [x] 5.2 Lint passes
+- [x] 5.3 Tests pass
+- [x] 5.4 Build succeeds
 
 #### Manual
 
-- [ ] 5.5 BoardNav shows 4 tabs with correct active states
-- [ ] 5.6 "Inspect threads" link navigates to Threads page
-- [ ] 5.7 PrTable thread count links to Threads page with PR filter
-- [ ] 5.8 Navigation preserves contributor and period context
+- [x] 5.5 BoardNav shows 4 tabs with correct active states
+- [x] 5.6 "Inspect threads" link navigates to Threads page
+- [x] 5.7 PrTable thread count links to Threads page with PR filter
+- [x] 5.8 Navigation preserves contributor and period context
