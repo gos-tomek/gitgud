@@ -1,7 +1,7 @@
 ---
 change_id: profile-classified-comments
 title: Profile classified comments
-status: implementing
+status: implemented
 created: 2026-06-23
 updated: 2026-06-24
 archived_at: null
