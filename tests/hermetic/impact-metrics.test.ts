@@ -26,6 +26,7 @@ function makeBuilder(result: { data: unknown[] | null; error: null | { message: 
 const RPC_TABLE: Record<string, string> = {
   get_board_reviews_for_reviewer: "github_reviews",
   get_board_root_comments_for_commenter: "github_review_comments",
+  get_board_started_root_comments_for_commenter: "github_review_comments",
   get_board_classifications_for_commenter: "thread_classifications",
 };
 
@@ -374,6 +375,19 @@ describe("getClassificationAggregates (hermetic)", () => {
 
     expect(result.highSignalPercent).toBe(0);
   });
+
+  it("uses the started-only RPCs, not the shared (self-review-inclusive) ones", async () => {
+    const client = makeMockClient({
+      github_repos: { data: repos, error: null },
+      thread_classifications: { data: [], error: null },
+      github_review_comments: { data: [], error: null },
+    });
+    await getClassificationAggregates(client as never, BOARD_ID, GITHUB_ID, dateRange);
+
+    expect(client.rpc).toHaveBeenCalledWith("get_board_classifications_for_commenter", expect.anything());
+    expect(client.rpc).toHaveBeenCalledWith("get_board_started_root_comments_for_commenter", expect.anything());
+    expect(client.rpc).not.toHaveBeenCalledWith("get_board_root_comments_for_commenter", expect.anything());
+  });
 });
 
 // ── getClassifiedThreads ──────────────────────────────────────────────────────
@@ -385,10 +399,16 @@ describe("getClassificationAggregates (hermetic)", () => {
 function makeThreadsMockClient(opts: {
   repos?: { id: string; repo_owner: string; repo_name: string }[];
   rpcRows?: unknown[];
+  totalRootComments?: number;
 }) {
   const repos = opts.repos ?? [{ id: "repo-1", repo_owner: "acme", repo_name: "widgets" }];
   const reposBuilder = makeBuilder({ data: repos, error: null });
-  const rpc = vi.fn().mockResolvedValue({ data: opts.rpcRows ?? [], error: null });
+  const rpc = vi.fn().mockImplementation((fn: string) => {
+    if (fn === "get_board_thread_coverage") {
+      return Promise.resolve({ data: [{ total_root_comments: opts.totalRootComments ?? 0 }], error: null });
+    }
+    return Promise.resolve({ data: opts.rpcRows ?? [], error: null });
+  });
   return { from: vi.fn().mockImplementation(() => reposBuilder), rpc };
 }
 
@@ -397,7 +417,7 @@ describe("getClassifiedThreads (hermetic)", () => {
     const client = makeThreadsMockClient({ repos: [] });
     const result = await getClassifiedThreads(client as never, BOARD_ID, GITHUB_ID, dateRange, {}, 1, 25);
 
-    expect(result).toEqual({ threads: [], total: 0, page: 1, pageSize: 25 });
+    expect(result).toEqual({ threads: [], total: 0, page: 1, pageSize: 25, totalRootComments: 0 });
     expect(client.rpc).not.toHaveBeenCalled();
   });
 
@@ -405,7 +425,7 @@ describe("getClassifiedThreads (hermetic)", () => {
     const client = makeThreadsMockClient({ rpcRows: [] });
     const result = await getClassifiedThreads(client as never, BOARD_ID, GITHUB_ID, dateRange, {}, 1, 25);
 
-    expect(result).toEqual({ threads: [], total: 0, page: 1, pageSize: 25 });
+    expect(result).toEqual({ threads: [], total: 0, page: 1, pageSize: 25, totalRootComments: 0 });
   });
 
   it("maps RPC rows into ClassifiedThread, resolving repo name and PR URL", async () => {
@@ -493,5 +513,35 @@ describe("getClassifiedThreads (hermetic)", () => {
         p_offset: 0,
       }),
     );
+  });
+
+  it("forwards the 'joined' role to the RPC", async () => {
+    const client = makeThreadsMockClient({ rpcRows: [] });
+    await getClassifiedThreads(client as never, BOARD_ID, GITHUB_ID, dateRange, { role: "joined" }, 1, 25);
+
+    expect(client.rpc).toHaveBeenCalledWith(
+      "get_board_classified_threads",
+      expect.objectContaining({ p_role: "joined" }),
+    );
+    expect(client.rpc).toHaveBeenCalledWith("get_board_thread_coverage", expect.objectContaining({ p_role: "joined" }));
+  });
+
+  it("forwards the 'self' role to the RPC", async () => {
+    const client = makeThreadsMockClient({ rpcRows: [] });
+    await getClassifiedThreads(client as never, BOARD_ID, GITHUB_ID, dateRange, { role: "self" }, 1, 25);
+
+    expect(client.rpc).toHaveBeenCalledWith(
+      "get_board_classified_threads",
+      expect.objectContaining({ p_role: "self" }),
+    );
+    expect(client.rpc).toHaveBeenCalledWith("get_board_thread_coverage", expect.objectContaining({ p_role: "self" }));
+  });
+
+  it("returns totalRootComments from the coverage RPC, independent of the filtered total", async () => {
+    const client = makeThreadsMockClient({ rpcRows: [], totalRootComments: 24 });
+    const result = await getClassifiedThreads(client as never, BOARD_ID, GITHUB_ID, dateRange, {}, 1, 25);
+
+    expect(result.total).toBe(0);
+    expect(result.totalRootComments).toBe(24);
   });
 });

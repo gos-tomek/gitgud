@@ -2,82 +2,38 @@ import { Info, ChevronRight } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import type { ClassificationAggregates, IntentCategory, TechnicalDomain, IntentTier } from "@/types";
+import {
+  INTENT_CATEGORIES,
+  DOMAIN_CATEGORIES,
+  INTENT_COLORS,
+  DOMAIN_COLORS,
+  INTENT_TIERS,
+  INTENT_LABELS,
+  DOMAIN_LABELS,
+  CATEGORY_TOOLTIPS,
+} from "@/lib/classification-colors";
 
-const INTENT_COLORS: Record<IntentCategory, string> = {
-  architecture: "#3b82f6",
-  "bug-catch": "#ef4444",
-  mentoring: "#10b981",
-  unblocking: "#06b6d4",
-  nitpick: "#f59e0b",
-  question: "#8b5cf6",
-  praise: "#eab308",
-  joke: "#ec4899",
-  "self-review": "#a1a1aa",
-  unknown: "#d4d4d8",
-};
+const DOMAIN_ORDER = DOMAIN_CATEGORIES;
 
-const DOMAIN_COLORS: Record<TechnicalDomain, string> = {
-  functional: "#7c3aed",
-  refactoring: "#0ea5e9",
-  documentation: "#10b981",
-  discussion: "#f59e0b",
-  "false-positive": "#d4d4d8",
-};
-
-const DOMAIN_ORDER: TechnicalDomain[] = ["functional", "refactoring", "documentation", "discussion", "false-positive"];
-
-const HIGH_SIGNAL_CATEGORIES: IntentCategory[] = ["architecture", "bug-catch", "mentoring", "unblocking"];
+const HIGH_SIGNAL_CATEGORIES = INTENT_CATEGORIES.filter((c) => INTENT_TIERS[c] === "high-signal");
+const ROUTINE_CATEGORIES = INTENT_CATEGORIES.filter((c) => INTENT_TIERS[c] === "routine");
+const LOW_SIGNAL_CATEGORIES = INTENT_CATEGORIES.filter((c) => INTENT_TIERS[c] === "low-signal");
 
 const TIER_ORDER: { tier: IntentTier; label: string; categories: IntentCategory[] }[] = [
   { tier: "high-signal", label: "High-signal", categories: HIGH_SIGNAL_CATEGORIES },
-  { tier: "routine", label: "Routine", categories: ["nitpick", "question", "praise"] },
-  { tier: "low-signal", label: "Low", categories: ["joke", "self-review", "unknown"] },
+  { tier: "routine", label: "Routine", categories: ROUTINE_CATEGORIES },
+  { tier: "low-signal", label: "Low", categories: LOW_SIGNAL_CATEGORIES },
 ];
 
+// Low-signal categories collapse into a single grouped legend row; the rest keep their own label.
 const CATEGORY_LABELS: Record<IntentCategory, string> = {
-  architecture: "Architecture",
-  "bug-catch": "Bug-catch",
-  mentoring: "Mentoring",
-  unblocking: "Unblocking",
-  nitpick: "Nitpick",
-  question: "Question",
-  praise: "Praise",
+  ...INTENT_LABELS,
   joke: "Joke / self-review / other",
   "self-review": "Joke / self-review / other",
   unknown: "Joke / self-review / other",
 };
 
-const DOMAIN_LABELS: Record<TechnicalDomain, string> = {
-  functional: "Functional",
-  refactoring: "Refactoring",
-  documentation: "Documentation",
-  discussion: "Discussion",
-  "false-positive": "False-positive",
-};
-
-// Sourced from context/changes/profile-classified-comments/research.md §5 (prototype tooltip table).
-const CATEGORY_TOOLTIPS: Record<string, string> = {
-  architecture:
-    "A structural, component, API, or data-flow change — or a firm objection to recreating something that already exists.",
-  "bug-catch":
-    "Asserts a concrete defect or broken behaviour — a claim that something IS currently wrong, not just a suggestion.",
-  mentoring: "Explains a concept, convention, or rationale aimed at the author's growth.",
-  unblocking: "A concrete next step in prose, for an issue this comment doesn't itself flag as broken.",
-  nitpick: "Trivial style, naming, or formatting point — tests would pass either way.",
-  question: "Asks for clarification or rationale — must be phrased as an actual question.",
-  praise: "Approval or thanks from the reviewer, with no code change requested.",
-  "joke-group":
-    "Off-topic banter, the PR author commenting on their own thread, CI/bot noise, or anything the model couldn't classify.",
-  functional: "Correctness, bugs, or security — whether the code behaves right.",
-  refactoring: "Changes structure without changing behaviour — cleanups, renames, reorganisation.",
-  documentation: "Docstrings, READMEs, and code comments — explanatory text rather than logic.",
-  discussion: "Questions, design conversation, or praise — not tied to correctness or structure.",
-  "false-positive": "A concern that was raised and then conclusively withdrawn or refuted in the thread.",
-};
-
 const HIGH_SIGNAL_TOOLTIP = `Share of classified threads tagged ${HIGH_SIGNAL_CATEGORIES.map((c) => CATEGORY_LABELS[c]).join(", ")} — the categories considered high-signal feedback.`;
-
-const LOW_SIGNAL_CATEGORIES: IntentCategory[] = ["joke", "self-review", "unknown"];
 
 const DONUT_RADIUS = 42;
 const DONUT_CIRCUMFERENCE = 2 * Math.PI * DONUT_RADIUS;
@@ -113,7 +69,7 @@ export function ClassificationSection({ data, loading, threadsUrl }: Props) {
   const lowSignalCount = LOW_SIGNAL_CATEGORIES.reduce((sum, c) => sum + (intentCountMap.get(c) ?? 0), 0);
 
   const intentLegendItems = [
-    ...(["architecture", "bug-catch", "mentoring", "unblocking", "nitpick", "question", "praise"] as const)
+    ...[...HIGH_SIGNAL_CATEGORIES, ...ROUTINE_CATEGORIES]
       .filter((category) => (intentCountMap.get(category) ?? 0) > 0)
       .map((category) => ({
         key: category,

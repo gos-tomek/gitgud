@@ -1,0 +1,80 @@
+---
+import Layout from "@/layouts/Layout.astro";
+import { createClient } from "@/lib/supabase";
+import { getBoardWithRole, getBoardContributors, getUserBoards, getUserProfile } from "@/lib/services/boards";
+import { isValidPeriodSlug } from "@/lib/date-range";
+import { INTENT_CATEGORIES, DOMAIN_CATEGORIES } from "@/lib/classification-colors";
+import type { IntentCategory, TechnicalDomain } from "@/types";
+import ThreadsView from "@/components/threads/ThreadsView";
+import BoardTopbar from "@/components/BoardTopbar.astro";
+import BoardNav from "@/components/BoardNav.astro";
+
+const { user } = Astro.locals;
+const { id, githubLogin, dateRange: dateRangeParam } = Astro.params;
+
+if (!user) {
+  return Astro.redirect("/auth/signin");
+}
+
+const supabase = createClient(Astro.request.headers, Astro.cookies);
+if (!supabase || !id || !githubLogin) {
+  return Astro.redirect("/dashboard");
+}
+
+const board = await getBoardWithRole(supabase, id, user.id).catch(() => null);
+if (!board) {
+  return Astro.redirect("/dashboard");
+}
+
+const [contributors, boards, ownProfile] = await Promise.all([
+  getBoardContributors(supabase, board.id).catch(() => []),
+  getUserBoards(supabase, user.id).catch(() => []),
+  board.role !== "supervisor" ? getUserProfile(supabase, user.id).catch(() => null) : Promise.resolve(null),
+]);
+
+const contributor = contributors.find((c) => c.githubLogin === githubLogin);
+if (!contributor) {
+  return Astro.redirect(`/board/${id}`);
+}
+
+// Non-supervisors can only view their own contributor profile, never switch to others.
+const ownContributor = ownProfile ? contributors.find((c) => c.githubId === ownProfile.githubId) : null;
+if (board.role !== "supervisor" && ownContributor?.githubLogin !== githubLogin) {
+  return Astro.redirect(ownContributor ? `/board/${id}/threads/${ownContributor.githubLogin}` : `/board/${id}`);
+}
+
+const visibleContributors =
+  board.role === "supervisor" ? contributors : contributors.filter((c) => c.githubId === ownProfile?.githubId);
+
+const rawPeriod: string = typeof dateRangeParam === "string" ? dateRangeParam : "90d";
+const period = isValidPeriodSlug(rawPeriod) ? rawPeriod : "90d";
+
+const sp = Astro.url.searchParams;
+const rawPrId = sp.get("prId");
+const prId = rawPrId && /^\d+$/.test(rawPrId) ? Number(rawPrId) : undefined;
+const rawIntent = sp.get("intent");
+const intent = (INTENT_CATEGORIES as string[]).includes(rawIntent ?? "") ? (rawIntent as IntentCategory) : undefined;
+const rawDomain = sp.get("domain");
+const domain = (DOMAIN_CATEGORIES as string[]).includes(rawDomain ?? "") ? (rawDomain as TechnicalDomain) : undefined;
+
+const userInitial = user.email?.[0]?.toUpperCase() ?? "?";
+---
+
+<Layout title={`Threads — ${contributor.githubLogin} — ${board.name}`}>
+  <div class="bg-cosmic min-h-screen text-white">
+    <BoardTopbar board={board} boards={boards} userInitial={userInitial} />
+    <BoardNav boardId={board.id} />
+    <ThreadsView
+      client:only="react"
+      boardId={board.id}
+      githubLogin={contributor.githubLogin}
+      period={period}
+      contributor={{
+        githubLogin: contributor.githubLogin,
+        avatarUrl: contributor.avatarUrl,
+      }}
+      contributors={visibleContributors.map((c) => ({ githubLogin: c.githubLogin, avatarUrl: c.avatarUrl }))}
+      initialFilters={{ prId, intent, domain }}
+    />
+  </div>
+</Layout>

@@ -116,6 +116,7 @@ export interface ClassifiedThread {
   pullRequestId: number;
   prNumber: number;
   prTitle: string;
+  prAuthorLogin: string;
   prRepo: string;
   prUrl: string;
   commentSnippet: string;
@@ -124,6 +125,7 @@ export interface ClassifiedThread {
   commenterLogin: string;
   classifiedAt: string;
   createdAt: string;
+  messageCount: number;
 }
 
 export interface ClassifiedThreadsPage {
@@ -131,6 +133,16 @@ export interface ClassifiedThreadsPage {
   total: number;
   page: number;
   pageSize: number;
+  /** Root comments (classified + unclassified) matching the active role filter, regardless of intent/domain/PR filters. */
+  totalRootComments: number;
+}
+
+export interface ThreadMessage {
+  id: number;
+  commenterLogin: string;
+  body: string;
+  createdAt: string;
+  inReplyToId: number | null;
 }
 
 export type PeriodSlug = "7d" | "30d" | "90d" | "6m" | "ytd" | "all";

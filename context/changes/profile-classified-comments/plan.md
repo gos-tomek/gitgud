@@ -565,24 +565,24 @@ No database migrations needed. The `thread_classifications` table and its RLS po
 
 #### Automated
 
-- [x] 3.1 Type-check passes
-- [x] 3.2 Lint passes
-- [x] 3.3 Tests pass
+- [x] 3.1 Type-check passes — e989309
+- [x] 3.2 Lint passes — e989309
+- [x] 3.3 Tests pass — e989309
 
 #### Manual
 
-- [x] 3.4 API returns paginated thread rows via curl
-- [x] 3.5 Filters work correctly (intent, domain, PR, role)
-- [x] 3.6 Pagination returns correct offset
+- [x] 3.4 API returns paginated thread rows via curl — e989309
+- [x] 3.5 Filters work correctly (intent, domain, PR, role) — e989309
+- [x] 3.6 Pagination returns correct offset — e989309
 
 ### Phase 4: Threads Page
 
 #### Automated
 
-- [ ] 4.1 Type-check passes (src and tests)
-- [ ] 4.2 Lint passes
-- [ ] 4.3 Tests pass
-- [ ] 4.4 Build succeeds
+- [x] 4.1 Type-check passes (src and tests)
+- [x] 4.2 Lint passes
+- [x] 4.3 Tests pass
+- [x] 4.4 Build succeeds
 
 #### Manual
 

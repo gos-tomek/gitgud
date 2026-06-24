@@ -34,7 +34,7 @@ const queryParamsSchema = z.object({
     .optional(),
   domain: z.enum(["functional", "refactoring", "documentation", "discussion", "false-positive"]).optional(),
   prId: z.coerce.number().int().positive().optional(),
-  role: z.enum(["started", "received", "all"]).default("all"),
+  role: z.enum(["started", "received", "self", "joined", "all"]).default("all"),
 });
 
 export const GET: APIRoute = async (context) => {
