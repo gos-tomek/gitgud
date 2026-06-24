@@ -1,6 +1,11 @@
 import { describe, it, expect, vi } from "vitest";
 import type { DateRange } from "@/types";
-import { getImpactSummary, getAuthorMetrics, getClassificationAggregates } from "@/lib/services/impact-metrics";
+import {
+  getImpactSummary,
+  getAuthorMetrics,
+  getClassificationAggregates,
+  getClassifiedThreads,
+} from "@/lib/services/impact-metrics";
 
 // Creates a chainable mock builder that resolves to `result` when awaited.
 function makeBuilder(result: { data: unknown[] | null; error: null | { message: string } }) {
@@ -368,5 +373,125 @@ describe("getClassificationAggregates (hermetic)", () => {
     const result = await getClassificationAggregates(client as never, BOARD_ID, GITHUB_ID, dateRange);
 
     expect(result.highSignalPercent).toBe(0);
+  });
+});
+
+// ── getClassifiedThreads ──────────────────────────────────────────────────────
+
+// Filtering (intent/domain/PR/role) and pagination happen inside the
+// get_board_classified_threads SQL function (see tests/integration for real-data coverage)
+// — these hermetic tests cover the service's own job: repo-id board lookup short-circuit,
+// RPC parameter wiring (offset math, default values), and row→ClassifiedThread mapping.
+function makeThreadsMockClient(opts: {
+  repos?: { id: string; repo_owner: string; repo_name: string }[];
+  rpcRows?: unknown[];
+}) {
+  const repos = opts.repos ?? [{ id: "repo-1", repo_owner: "acme", repo_name: "widgets" }];
+  const reposBuilder = makeBuilder({ data: repos, error: null });
+  const rpc = vi.fn().mockResolvedValue({ data: opts.rpcRows ?? [], error: null });
+  return { from: vi.fn().mockImplementation(() => reposBuilder), rpc };
+}
+
+describe("getClassifiedThreads (hermetic)", () => {
+  it("returns an empty page when board has no repos", async () => {
+    const client = makeThreadsMockClient({ repos: [] });
+    const result = await getClassifiedThreads(client as never, BOARD_ID, GITHUB_ID, dateRange, {}, 1, 25);
+
+    expect(result).toEqual({ threads: [], total: 0, page: 1, pageSize: 25 });
+    expect(client.rpc).not.toHaveBeenCalled();
+  });
+
+  it("returns an empty page when the RPC returns no rows", async () => {
+    const client = makeThreadsMockClient({ rpcRows: [] });
+    const result = await getClassifiedThreads(client as never, BOARD_ID, GITHUB_ID, dateRange, {}, 1, 25);
+
+    expect(result).toEqual({ threads: [], total: 0, page: 1, pageSize: 25 });
+  });
+
+  it("maps RPC rows into ClassifiedThread, resolving repo name and PR URL", async () => {
+    const client = makeThreadsMockClient({
+      rpcRows: [
+        {
+          thread_root_comment_id: 100,
+          pull_request_id: 2,
+          pr_number: 7,
+          pr_title: "Add feature",
+          repo_id: "repo-1",
+          comment_snippet: "Looks good",
+          intent: "architecture",
+          domain: "functional",
+          commenter_login: "alice",
+          classified_at: D28,
+          created_at: D27,
+          total_count: 12,
+        },
+      ],
+    });
+
+    const result = await getClassifiedThreads(client as never, BOARD_ID, GITHUB_ID, dateRange, {}, 2, 10);
+
+    expect(result.total).toBe(12);
+    expect(result.page).toBe(2);
+    expect(result.pageSize).toBe(10);
+    expect(result.threads).toEqual([
+      {
+        threadRootCommentId: 100,
+        pullRequestId: 2,
+        prNumber: 7,
+        prTitle: "Add feature",
+        prRepo: "acme/widgets",
+        prUrl: "https://github.com/acme/widgets/pull/7",
+        commentSnippet: "Looks good",
+        intent: "architecture",
+        domain: "functional",
+        commenterLogin: "alice",
+        classifiedAt: D28,
+        createdAt: D27,
+      },
+    ]);
+  });
+
+  it("computes offset from page/pageSize and forwards filters to the RPC", async () => {
+    const client = makeThreadsMockClient({ rpcRows: [] });
+    await getClassifiedThreads(
+      client as never,
+      BOARD_ID,
+      GITHUB_ID,
+      dateRange,
+      { intent: "nitpick", domain: "discussion", pullRequestId: 5, role: "received" },
+      3,
+      10,
+    );
+
+    expect(client.rpc).toHaveBeenCalledWith(
+      "get_board_classified_threads",
+      expect.objectContaining({
+        p_repo_ids: ["repo-1"],
+        p_github_id: GITHUB_ID,
+        p_role: "received",
+        p_intent: "nitpick",
+        p_domain: "discussion",
+        p_pr_id: 5,
+        p_limit: 10,
+        p_offset: 20,
+      }),
+    );
+  });
+
+  it("defaults role to 'all' and unset filters to null", async () => {
+    const client = makeThreadsMockClient({ rpcRows: [] });
+    await getClassifiedThreads(client as never, BOARD_ID, GITHUB_ID, dateRange, {}, 1, 25);
+
+    expect(client.rpc).toHaveBeenCalledWith(
+      "get_board_classified_threads",
+      expect.objectContaining({
+        p_role: "all",
+        p_intent: null,
+        p_domain: null,
+        p_pr_id: null,
+        p_limit: 25,
+        p_offset: 0,
+      }),
+    );
   });
 });

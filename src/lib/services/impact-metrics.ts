@@ -12,6 +12,8 @@ import type {
   RepoActivity,
   PrRow,
   ClassificationAggregates,
+  ClassifiedThread,
+  ClassifiedThreadsPage,
   IntentCategory,
   TechnicalDomain,
   IntentTier,
@@ -953,4 +955,97 @@ function emptyClassificationAggregates(): ClassificationAggregates {
     totalThreads: 0,
     highSignalPercent: 0,
   };
+}
+
+// ── getClassifiedThreads ─────────────────────────────────────────────────────
+
+interface ClassifiedThreadRow {
+  thread_root_comment_id: number;
+  pull_request_id: number;
+  pr_number: number;
+  pr_title: string;
+  repo_id: string;
+  comment_snippet: string;
+  intent: IntentCategory;
+  domain: TechnicalDomain;
+  commenter_login: string;
+  classified_at: string;
+  created_at: string;
+  total_count: number;
+}
+
+export async function getClassifiedThreads(
+  supabase: SupabaseClient,
+  boardId: string,
+  githubId: number,
+  dateRange: DateRange,
+  filters: {
+    intent?: IntentCategory;
+    domain?: TechnicalDomain;
+    pullRequestId?: number;
+    role?: "started" | "received" | "all";
+  },
+  page: number,
+  pageSize: number,
+): Promise<ClassifiedThreadsPage> {
+  const { data: reposData, error: reposError } = await supabase
+    .from("github_repos")
+    .select("id,repo_owner,repo_name")
+    .eq("board_id", boardId);
+  if (reposError) throw reposError;
+
+  const repos = reposData as { id: string; repo_owner: string; repo_name: string }[];
+  if (repos.length === 0) return emptyClassifiedThreadsPage(page, pageSize);
+
+  const repoIds = repos.map((r) => r.id);
+  const repoMap = new Map(repos.map((r) => [r.id, { owner: r.repo_owner, name: r.repo_name }]));
+
+  const startIso = dateRange.start?.toISOString() ?? null;
+  const endIso = dateRange.end.toISOString();
+  const offset = (page - 1) * pageSize;
+
+  const rpcResult = await supabase.rpc("get_board_classified_threads", {
+    p_repo_ids: repoIds,
+    p_github_id: githubId,
+    p_role: filters.role ?? "all",
+    p_start: startIso,
+    p_end: endIso,
+    p_intent: filters.intent ?? null,
+    p_domain: filters.domain ?? null,
+    p_pr_id: filters.pullRequestId ?? null,
+    p_limit: pageSize,
+    p_offset: offset,
+  });
+  if (rpcResult.error) throw rpcResult.error;
+
+  const rows = rpcResult.data as ClassifiedThreadRow[];
+
+  const threads: ClassifiedThread[] = rows.map((row) => {
+    const repoInfo = repoMap.get(row.repo_id);
+    return {
+      threadRootCommentId: row.thread_root_comment_id,
+      pullRequestId: row.pull_request_id,
+      prNumber: row.pr_number,
+      prTitle: row.pr_title,
+      prRepo: repoInfo ? `${repoInfo.owner}/${repoInfo.name}` : row.repo_id,
+      prUrl: repoInfo ? `https://github.com/${repoInfo.owner}/${repoInfo.name}/pull/${row.pr_number}` : "",
+      commentSnippet: row.comment_snippet,
+      intent: row.intent,
+      domain: row.domain,
+      commenterLogin: row.commenter_login,
+      classifiedAt: row.classified_at,
+      createdAt: row.created_at,
+    };
+  });
+
+  return {
+    threads,
+    total: rows.length > 0 ? rows[0].total_count : 0,
+    page,
+    pageSize,
+  };
+}
+
+function emptyClassifiedThreadsPage(page: number, pageSize: number): ClassifiedThreadsPage {
+  return { threads: [], total: 0, page, pageSize };
 }

@@ -548,32 +548,32 @@ No database migrations needed. The `thread_classifications` table and its RLS po
 
 #### Automated
 
-- [x] 2.1 Type-check passes
-- [x] 2.2 Lint passes
-- [x] 2.3 Tests pass
+- [x] 2.1 Type-check passes — f78f6f9
+- [x] 2.2 Lint passes — f78f6f9
+- [x] 2.3 Tests pass — f78f6f9
 
 #### Manual
 
-- [x] 2.4 Section appears between thread quality and heatmap
-- [x] 2.5 Stacked bar shows correct 3-tier grouping
-- [x] 2.6 SVG donut renders with center text
-- [x] 2.7 Tooltips appear on category label hover
-- [x] 2.8 Empty and loading states render correctly
-- [x] 2.9 Coverage footer shows correct counts and progress bar
+- [x] 2.4 Section appears between thread quality and heatmap — f78f6f9
+- [x] 2.5 Stacked bar shows correct 3-tier grouping — f78f6f9
+- [x] 2.6 SVG donut renders with center text — f78f6f9
+- [x] 2.7 Tooltips appear on category label hover — f78f6f9
+- [x] 2.8 Empty and loading states render correctly — f78f6f9
+- [x] 2.9 Coverage footer shows correct counts and progress bar — f78f6f9
 
 ### Phase 3: Data Pipeline for Thread List
 
 #### Automated
 
-- [ ] 3.1 Type-check passes
-- [ ] 3.2 Lint passes
-- [ ] 3.3 Tests pass
+- [x] 3.1 Type-check passes
+- [x] 3.2 Lint passes
+- [x] 3.3 Tests pass
 
 #### Manual
 
-- [ ] 3.4 API returns paginated thread rows via curl
-- [ ] 3.5 Filters work correctly (intent, domain, PR, role)
-- [ ] 3.6 Pagination returns correct offset
+- [x] 3.4 API returns paginated thread rows via curl
+- [x] 3.5 Filters work correctly (intent, domain, PR, role)
+- [x] 3.6 Pagination returns correct offset
 
 ### Phase 4: Threads Page
 

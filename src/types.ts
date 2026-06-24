@@ -111,6 +111,28 @@ export interface ClassificationAggregates {
   highSignalPercent: number;
 }
 
+export interface ClassifiedThread {
+  threadRootCommentId: number;
+  pullRequestId: number;
+  prNumber: number;
+  prTitle: string;
+  prRepo: string;
+  prUrl: string;
+  commentSnippet: string;
+  intent: IntentCategory;
+  domain: TechnicalDomain;
+  commenterLogin: string;
+  classifiedAt: string;
+  createdAt: string;
+}
+
+export interface ClassifiedThreadsPage {
+  threads: ClassifiedThread[];
+  total: number;
+  page: number;
+  pageSize: number;
+}
+
 export type PeriodSlug = "7d" | "30d" | "90d" | "6m" | "ytd" | "all";
 
 export interface DateRange {
