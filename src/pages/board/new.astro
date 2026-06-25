@@ -8,10 +8,7 @@ const { user } = Astro.locals;
 const supabase = createClient(Astro.request.headers, Astro.cookies);
 const profile = supabase && user ? await getUserProfile(supabase, user.id).catch(() => null) : null;
 
-const storedPat =
-  profile?.hasGithubPat && profile.githubLogin
-    ? { login: profile.githubLogin, expiresAt: profile.tokenExpiresAt }
-    : null;
+const storedPat = profile?.hasGithubPat ? { login: profile.githubPatLogin, expiresAt: profile.tokenExpiresAt } : null;
 ---
 
 <Layout title="New board">

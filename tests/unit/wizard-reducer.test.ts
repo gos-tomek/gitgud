@@ -269,6 +269,15 @@ describe("stored PAT toggle", () => {
     });
   });
 
+  it("USE_STORED_PAT normalizes a null login (unknown PAT identity) to undefined in patValidation", () => {
+    const state = step1({ pat: "ghp_sometoken", patValidation: { status: "idle" }, usingStoredPat: false });
+
+    const result = wizardReducer(state, { type: "USE_STORED_PAT", login: null, expiresAt: null });
+
+    expect(result.usingStoredPat).toBe(true);
+    expect(result.patValidation).toEqual({ status: "valid", login: undefined, expiresAt: null });
+  });
+
   it("USE_DIFFERENT_TOKEN clears the stored-PAT identity back to idle manual entry", () => {
     const state = step1({
       pat: "",

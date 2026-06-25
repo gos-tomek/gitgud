@@ -55,6 +55,7 @@ export const POST: APIRoute = async (context) => {
       p_raw_token: pat,
       p_encryption_key: GITHUB_TOKEN_ENCRYPTION_KEY,
       p_expires_at: expiresAt ? expiresAt.toISOString() : null,
+      p_github_login: data.login,
     });
 
     if (result.error) {

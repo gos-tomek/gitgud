@@ -56,6 +56,7 @@ describe("POST /api/profile/pat (hermetic)", () => {
       p_raw_token: "ghp_validtoken",
       p_encryption_key: "test-encryption-key",
       p_expires_at: "2099-06-03T19:52:44.000Z",
+      p_github_login: "octocat",
     });
   });
 

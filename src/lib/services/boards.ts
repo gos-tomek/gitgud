@@ -43,10 +43,11 @@ export async function getUserProfile(
   avatarUrl: string | null;
   tokenExpiresAt: string | null;
   hasGithubPat: boolean;
+  githubPatLogin: string | null;
 } | null> {
   const { data, error } = await supabase
     .from("user_profiles")
-    .select("github_id,github_login,avatar_url,token_expires_at,github_pat_encrypted")
+    .select("github_id,github_login,avatar_url,token_expires_at,github_pat_encrypted,github_pat_login")
     .eq("user_id", userId)
     .maybeSingle();
 
@@ -59,6 +60,9 @@ export async function getUserProfile(
     avatarUrl: data.avatar_url as string | null,
     tokenExpiresAt: data.token_expires_at as string | null,
     hasGithubPat: data.github_pat_encrypted !== null,
+    // The GitHub identity that authenticated the *saved PAT* — distinct from githubLogin
+    // (the OAuth identity from signup), since a PAT can belong to a different account.
+    githubPatLogin: data.github_pat_login as string | null,
   };
 }
 

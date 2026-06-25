@@ -331,7 +331,13 @@ export default function CreateBoardForm({ storedPat }: CreateBoardFormProps) {
                 <div className="space-y-2 rounded-lg border border-white/10 bg-white/5 px-3 py-2.5">
                   <div className="flex items-center gap-2 text-sm text-green-400">
                     <CheckCircle2 className="size-4" />
-                    Connected as <span className="font-semibold">@{state.patValidation.login}</span>
+                    {state.patValidation.login ? (
+                      <>
+                        Connected as <span className="font-semibold">@{state.patValidation.login}</span>
+                      </>
+                    ) : (
+                      "Using saved token"
+                    )}
                   </div>
                   <p className="text-xs text-blue-100/50">
                     {state.patValidation.expiresAt
@@ -358,7 +364,7 @@ export default function CreateBoardForm({ storedPat }: CreateBoardFormProps) {
                       }}
                       className="text-xs text-blue-100/60 underline hover:text-blue-100/80"
                     >
-                      Use stored token (@{storedPat.login})
+                      {storedPat.login ? `Use stored token (@${storedPat.login})` : "Use saved token"}
                     </button>
                   )}
 

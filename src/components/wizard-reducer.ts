@@ -15,7 +15,9 @@ export interface PatValidation {
 }
 
 export interface StoredPat {
-  login: string;
+  // null when the saved token's GitHub identity wasn't captured (e.g. a token saved
+  // before the owner-login column existed) — the token is still usable, just unlabeled.
+  login: string | null;
   expiresAt: string | null;
 }
 
@@ -83,7 +85,7 @@ export type WizardAction =
   | { type: "VALIDATE_PAT_START" }
   | { type: "VALIDATE_PAT_SUCCESS"; login: string; avatarUrl?: string; warnings?: string[]; expiresAt?: string | null }
   | { type: "VALIDATE_PAT_ERROR"; message: string }
-  | { type: "USE_STORED_PAT"; login: string; expiresAt: string | null }
+  | { type: "USE_STORED_PAT"; login: string | null; expiresAt: string | null }
   | { type: "USE_DIFFERENT_TOKEN" }
   | { type: "NEXT_TO_STEP_2" }
   | { type: "BACK_TO_STEP_1" }
@@ -131,7 +133,7 @@ export function initWizardState(storedPat?: StoredPat | null): WizardState {
   return {
     ...initialState,
     usingStoredPat: true,
-    patValidation: { status: "valid", login: storedPat.login, expiresAt: storedPat.expiresAt },
+    patValidation: { status: "valid", login: storedPat.login ?? undefined, expiresAt: storedPat.expiresAt },
   };
 }
 
@@ -204,7 +206,7 @@ export function wizardReducer(state: WizardState, action: WizardAction): WizardS
         ...state,
         pat: "",
         usingStoredPat: true,
-        patValidation: { status: "valid", login: action.login, expiresAt: action.expiresAt },
+        patValidation: { status: "valid", login: action.login ?? undefined, expiresAt: action.expiresAt },
       };
     }
 

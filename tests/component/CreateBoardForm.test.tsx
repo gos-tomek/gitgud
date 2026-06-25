@@ -328,6 +328,14 @@ describe("CreateBoardForm", () => {
     expect(screen.queryByText(/Connected as/i)).not.toBeInTheDocument();
   });
 
+  it("W14: falls back to a generic 'saved token' label when the stored PAT's GitHub identity is unknown", () => {
+    installFetchMock();
+    render(<CreateBoardForm storedPat={{ login: null, expiresAt: null }} />);
+
+    expect(screen.getByText("Using saved token")).toBeInTheDocument();
+    expect(screen.queryByText(/Connected as/i)).not.toBeInTheDocument();
+  });
+
   it("W12: proceeds with the stored PAT without re-validating or sending a raw token to repos", async () => {
     const fetchMock = installFetchMock();
     const user = userEvent.setup();

@@ -556,30 +556,31 @@ Amend PRD functional requirements FR-018, FR-020, and FR-022 to reflect per-user
 
 #### Automated
 
-- [x] 3.1 New migration applies cleanly
-- [x] 3.2 Type checking passes (src and tests)
-- [x] 3.3 Linting passes
-- [x] 3.4 Existing tests pass
-- [x] 3.5 Build succeeds
+- [x] 3.1 New migration applies cleanly — b80f2eb
+- [x] 3.2 Type checking passes (src and tests) — b80f2eb
+- [x] 3.3 Linting passes — b80f2eb
+- [x] 3.4 Existing tests pass — b80f2eb
+- [x] 3.5 Build succeeds — b80f2eb
 
 #### Manual
 
-- [x] 3.6 Board creation without stored PAT shows error
-- [x] 3.7 Board creation with stored PAT shows identity in step 1
-- [x] 3.8 "Use a different token" flow validates and saves
-- [x] 3.9 POST /api/profile/pat stores encrypted token + expiry
-- [x] 3.10 validate-pat response includes expiresAt
-- [x] 3.11 Worker sync works with user-level PAT
-- [x] 3.12 No-expiry tokens return expiresAt: null
+- [x] 3.6 Board creation without stored PAT shows error — b80f2eb
+- [x] 3.7 Board creation with stored PAT shows identity in step 1 — b80f2eb
+- [x] 3.8 "Use a different token" flow validates and saves — b80f2eb
+- [x] 3.9 POST /api/profile/pat stores encrypted token + expiry — b80f2eb
+- [x] 3.10 validate-pat response includes expiresAt — b80f2eb
+- [x] 3.11 Worker sync works with user-level PAT — b80f2eb
+- [x] 3.12 No-expiry tokens return expiresAt: null — b80f2eb
 
 ### Phase 4: Profile/Settings Page
 
 #### Automated
 
-- [ ] 4.1 Type checking passes (src and tests)
-- [ ] 4.2 Linting passes
-- [ ] 4.3 Build succeeds
-- [ ] 4.4 Existing tests pass
+- [x] 4.1 Type checking passes (src and tests)
+- [x] 4.2 Linting passes
+- [x] 4.3 Build succeeds
+- [x] 4.4 Existing tests pass
+- [x] 4.4a UX follow-ups from manual review: visible back-to-dashboard link, PAT-owner-login bug fix (`github_pat_login` migration), expiry visibility badge, classic-PAT scopes hint on profile page, password-change feature (endpoint + form)
 
 #### Manual
 

@@ -68,6 +68,7 @@ describe.skipIf(!canRun)("PAT non-leakage (Risk #2)", () => {
       p_raw_token: TEST_PAT,
       p_encryption_key: ENCRYPTION_KEY,
       p_expires_at: null,
+      p_github_login: `pat-leak-owner-${ts}`,
     });
     if (setPatResult.error) throw new Error(`Failed to set PAT: ${setPatResult.error.message}`);
 
