@@ -3,7 +3,7 @@ project: GitGud
 version: 1
 status: draft
 created: 2026-05-27
-updated: 2026-06-24
+updated: 2026-06-25
 prd_version: 1
 main_goal: market-feedback
 top_blocker: skills
@@ -40,7 +40,7 @@ Mentoring, code-review quality, and unblocking — the "glue work" that keeps en
 | S-05 | profile-classified-comments    | see own review comments broken down by semantic category                                      | F-03, F-04, S-04 | FR-012, Business Logic, NFR accuracy-floor, NFR data-parity                   | done     |
 | S-06 | em-switch-ic-dropdown          | switch between ICs on a board without a full page reload                                      | S-04             | FR-007, US-01                                                                 | done     |
 | S-07 | flag-classification-inaccurate | flag a comment's assigned category as inaccurate                                              | S-05             | FR-013                                                                        | blocked  |
-| S-08 | edit-board-connection          | update Board PAT and linked org; both forms re-validate accessible repos/ICs when PAT changes | S-01, S-02       | FR-018, FR-020                                                                | ready    |
+| S-08 | edit-board-connection          | update Board PAT and linked org; both forms re-validate accessible repos/ICs when PAT changes | S-01, S-02       | FR-018, FR-020                                                                | done     |
 | S-09 | manage-ic-roster               | add or remove ICs from a Board after initial setup                                            | S-03             | FR-019                                                                        | proposed |
 | S-10 | delete-board                   | delete a Board and all associated membership and profile data                                 | S-01             | FR-021                                                                        | ready    |
 | S-11 | board-pat-expiry-freeze        | see the Board frozen and be prompted to update PAT when it expires or becomes invalid         | S-08             | FR-022                                                                        | proposed |
@@ -234,7 +234,7 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **Unknowns:**
   - What should happen to a board's existing profile data if the EM switches to a PAT scoped to a different org entirely? (retain stale data vs. purge and re-sync) — Owner: user. Block: no.
 - **Risk:** PAT updates touch live credentials; the re-validation step (FR-020) must surface scope regressions (repos/ICs no longer accessible) without silently dropping data. Retroactively adding PAT-change validation to the create form (S-02, already shipped) must not regress the existing create flow.
-- **Status:** ready
+- **Status:** done
 
 ### S-09: EM manages Board IC roster
 
@@ -325,3 +325,4 @@ Foundations below assume these are present and do NOT re-scaffold them.
 
 - **F-04: (foundation) a user can connect their GitGud account to GitHub via OAuth, establishing a verified bridge between `auth.users.id` and their GitHub numeric ID. When an IC with an existing `board_contributors` record links GitHub, the system auto-matches via `github_id`.** — Archived 2026-06-23 → `context/archive/2026-06-22-link-github-account/`. Lesson: —.
 - **S-05: An IC can see their own review comments broken down by semantic category (mentoring, architecture, bug-catch, nitpick, unblocking, question) — the same breakdown an EM sees for that profile — with click-through to per-comment labels.** — Archived 2026-06-24 → `context/archive/2026-06-23-profile-classified-comments/`. Lesson: —.
+- **S-08: update Board PAT and linked org; both forms re-validate accessible repos/ICs when PAT changes** — Archived 2026-06-25 → `context/archive/2026-06-25-edit-board-connection/`. Lesson: —.

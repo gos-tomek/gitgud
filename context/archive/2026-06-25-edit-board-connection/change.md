@@ -1,10 +1,10 @@
 ---
 change_id: edit-board-connection
 title: Edit board connection
-status: impl_reviewed
+status: archived
 created: 2026-06-25
 updated: 2026-06-25
-archived_at: null
+archived_at: 2026-06-25T19:57:44Z
 ---
 
 ## Notes
