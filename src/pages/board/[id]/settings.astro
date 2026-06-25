@@ -1,7 +1,13 @@
 ---
 import Layout from "@/layouts/Layout.astro";
 import { createClient } from "@/lib/supabase";
-import { getBoardWithRole, getBoardRepos, getBoardContributors, getUserBoards } from "@/lib/services/boards";
+import {
+  getBoardWithRole,
+  getBoardRepos,
+  getBoardContributors,
+  getUserBoards,
+  getUserProfile,
+} from "@/lib/services/boards";
 import BoardTopbar from "@/components/BoardTopbar.astro";
 import BoardNav from "@/components/BoardNav.astro";
 
@@ -15,10 +21,11 @@ if (!board) {
   return Astro.redirect("/dashboard");
 }
 
-const [repos, contributors, boards] = await Promise.all([
+const [repos, contributors, boards, ownProfile] = await Promise.all([
   supabase ? getBoardRepos(supabase, board.id).catch(() => []) : [],
   supabase ? getBoardContributors(supabase, board.id).catch(() => []) : [],
   supabase && user ? getUserBoards(supabase, user.id).catch(() => []) : [],
+  supabase && user ? getUserProfile(supabase, user.id).catch(() => null) : null,
 ]);
 
 const userInitial = user?.email?.[0]?.toUpperCase() ?? "?";
@@ -26,7 +33,7 @@ const userInitial = user?.email?.[0]?.toUpperCase() ?? "?";
 
 <Layout title={`Settings — ${board.name}`}>
   <div class="bg-cosmic min-h-screen text-white">
-    <BoardTopbar board={board} boards={boards} userInitial={userInitial} />
+    <BoardTopbar board={board} boards={boards} userInitial={userInitial} avatarUrl={ownProfile?.avatarUrl} />
     <BoardNav boardId={board.id} />
 
     <div class="mx-auto max-w-6xl space-y-4 p-4">

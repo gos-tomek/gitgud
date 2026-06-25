@@ -1,7 +1,7 @@
 ---
 import Layout from "@/layouts/Layout.astro";
 import { createClient } from "@/lib/supabase";
-import { getBoardWithRole, getUserBoards } from "@/lib/services/boards";
+import { getBoardWithRole, getUserBoards, getUserProfile } from "@/lib/services/boards";
 import BoardTopbar from "@/components/BoardTopbar.astro";
 import BoardNav from "@/components/BoardNav.astro";
 
@@ -15,13 +15,16 @@ if (!board) {
   return Astro.redirect("/dashboard");
 }
 
-const boards = supabase && user ? await getUserBoards(supabase, user.id).catch(() => []) : [];
+const [boards, ownProfile] = await Promise.all([
+  supabase && user ? getUserBoards(supabase, user.id).catch(() => []) : [],
+  supabase && user ? getUserProfile(supabase, user.id).catch(() => null) : null,
+]);
 const userInitial = user?.email?.[0]?.toUpperCase() ?? "?";
 ---
 
 <Layout title={`Activity — ${board.name}`}>
   <div class="bg-cosmic min-h-screen text-white">
-    <BoardTopbar board={board} boards={boards} userInitial={userInitial} />
+    <BoardTopbar board={board} boards={boards} userInitial={userInitial} avatarUrl={ownProfile?.avatarUrl} />
     <BoardNav boardId={board.id} />
     <div class="mx-auto max-w-6xl p-4">
       <div class="rounded-lg border border-white/10 bg-white/5 px-6 py-12 text-center">

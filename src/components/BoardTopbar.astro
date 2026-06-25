@@ -5,9 +5,10 @@ interface Props {
   board: UserBoard;
   boards: UserBoard[];
   userInitial: string;
+  avatarUrl?: string | null;
 }
 
-const { board, boards, userInitial } = Astro.props;
+const { board, boards, userInitial, avatarUrl } = Astro.props;
 
 function initials(name: string) {
   return name
@@ -86,10 +87,16 @@ function initials(name: string) {
 
     <!-- right: user avatar with dropdown -->
     <details class="relative">
-      <summary
-        class="flex h-8 w-8 cursor-pointer list-none items-center justify-center rounded-full bg-purple-600 text-sm font-semibold text-white select-none hover:bg-purple-500"
-      >
-        {userInitial}
+      <summary class="flex h-8 w-8 cursor-pointer list-none items-center justify-center rounded-full select-none">
+        {
+          avatarUrl ? (
+            <img src={avatarUrl} alt="" class="h-8 w-8 rounded-full" />
+          ) : (
+            <div class="flex h-8 w-8 items-center justify-center rounded-full bg-purple-600 text-sm font-semibold text-white hover:bg-purple-500">
+              {userInitial}
+            </div>
+          )
+        }
       </summary>
 
       <div
