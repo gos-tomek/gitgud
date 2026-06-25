@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, beforeAll, afterAll } from "vitest";
 import type { APIContext, APIRoute } from "astro";
 
 // astro:env/server is a virtual module — Vitest cannot resolve it without a factory mock.
@@ -104,5 +104,56 @@ describe("optional pat + get_user_github_pat_by_user_id fallback", () => {
       expect(res.status).toBe(400);
       expect(mockMakeOctokit).not.toHaveBeenCalled();
     });
+  });
+});
+
+describe("encryption key not configured — 503 before RPC fallback", () => {
+  let reposPostNoKey: APIRoute;
+  let collaboratorsPostNoKey: APIRoute;
+  let validateRepoPostNoKey: APIRoute;
+
+  beforeAll(async () => {
+    vi.resetModules();
+    vi.doMock("astro:env/server", () => ({ GITHUB_TOKEN_ENCRYPTION_KEY: undefined }));
+    vi.doMock("@/lib/logger", () => ({ logger: mockLogger }));
+    vi.doMock("@/lib/supabase", () => ({ createClient: vi.fn(() => mockSupabase) }));
+    vi.doMock("@/lib/github", () => ({
+      makeOctokit: mockMakeOctokit,
+      GitHubAuthError: FakeGitHubAuthError,
+    }));
+    reposPostNoKey = (await import("@/pages/api/github/repos")).POST;
+    collaboratorsPostNoKey = (await import("@/pages/api/github/collaborators")).POST;
+    validateRepoPostNoKey = (await import("@/pages/api/github/validate-repo")).POST;
+  });
+
+  afterAll(() => vi.resetModules());
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockSupabase.auth.getUser.mockResolvedValue({ data: { user: { id: "user-1" } } });
+  });
+
+  it("repos: 503 before get_user_github_pat_by_user_id when key absent and no pat provided", async () => {
+    const res = await reposPostNoKey(makeContext({}));
+    expect(res.status).toBe(503);
+    const body = (await res.json()) as { error: string };
+    expect(body.error).toBe("Encryption is not configured");
+    expect(mockSupabase.rpc).not.toHaveBeenCalled();
+  });
+
+  it("collaborators: 503 before get_user_github_pat_by_user_id when key absent and no pat provided", async () => {
+    const res = await collaboratorsPostNoKey(makeContext({ repos: [{ owner: "octocat", name: "hello-world" }] }));
+    expect(res.status).toBe(503);
+    const body = (await res.json()) as { error: string };
+    expect(body.error).toBe("Encryption is not configured");
+    expect(mockSupabase.rpc).not.toHaveBeenCalled();
+  });
+
+  it("validate-repo: 503 before get_user_github_pat_by_user_id when key absent and no pat provided", async () => {
+    const res = await validateRepoPostNoKey(makeContext({ owner: "octocat", name: "hello-world" }));
+    expect(res.status).toBe(503);
+    const body = (await res.json()) as { error: string };
+    expect(body.error).toBe("Encryption is not configured");
+    expect(mockSupabase.rpc).not.toHaveBeenCalled();
   });
 });

@@ -1,4 +1,5 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, beforeAll, afterAll } from "vitest";
+import type { APIRoute } from "astro";
 import type { APIContext } from "astro";
 
 vi.mock("astro:env/server", () => ({ GITHUB_TOKEN_ENCRYPTION_KEY: "test-encryption-key" }));
@@ -114,5 +115,40 @@ describe("POST /api/profile/pat (hermetic)", () => {
       "[profile/pat] set_user_github_pat failed",
       expect.objectContaining({ userId: "user-1", detail: "db error" }),
     );
+  });
+});
+
+describe("POST /api/profile/pat — encryption key not configured", () => {
+  let patPost: APIRoute;
+
+  beforeAll(async () => {
+    vi.resetModules();
+    vi.doMock("astro:env/server", () => ({ GITHUB_TOKEN_ENCRYPTION_KEY: undefined }));
+    vi.doMock("@/lib/logger", () => ({ logger: mockLogger }));
+    vi.doMock("@/lib/supabase", () => ({ createClient: vi.fn(() => mockSupabase) }));
+    vi.doMock("@/lib/github", async () => {
+      const actual = await vi.importActual<typeof import("@/lib/github")>("@/lib/github");
+      return { ...actual, makeOctokit: mockMakeOctokit, GitHubAuthError: FakeGitHubAuthError };
+    });
+    patPost = (await import("@/pages/api/profile/pat")).POST;
+  });
+
+  afterAll(() => vi.resetModules());
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockSupabase.auth.getUser.mockResolvedValue({ data: { user: { id: "user-1" } } });
+    mockMakeOctokit.mockReturnValue({ rest: { users: { getAuthenticated: mockGetAuthenticated } } });
+  });
+
+  it("returns 503 before calling set_user_github_pat when key is absent", async () => {
+    mockGetAuthenticated.mockResolvedValue({ data: { login: "octocat" }, headers: {} });
+
+    const res = await patPost(makeContext({ pat: "ghp_validtoken" }));
+
+    expect(res.status).toBe(503);
+    const body = (await res.json()) as { error: string };
+    expect(body.error).toBe("Encryption is not configured");
+    expect(mockSupabase.rpc).not.toHaveBeenCalled();
   });
 });

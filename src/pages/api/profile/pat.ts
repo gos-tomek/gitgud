@@ -50,6 +50,8 @@ export const POST: APIRoute = async (context) => {
     const expiryHeader = headers["github-authentication-token-expiration"];
     const expiresAt = expiryHeader ? parseGitHubTokenExpiry(String(expiryHeader)) : null;
 
+    if (!GITHUB_TOKEN_ENCRYPTION_KEY) return json({ error: "Encryption is not configured" }, 503);
+
     const result = await supabase.rpc("set_user_github_pat", {
       p_user_id: user.id,
       p_raw_token: pat,

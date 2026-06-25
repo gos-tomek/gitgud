@@ -56,6 +56,7 @@ export const POST: APIRoute = async (context) => {
 
   let token = parsed.data.pat;
   if (!token) {
+    if (!GITHUB_TOKEN_ENCRYPTION_KEY) return json({ error: "Encryption is not configured" }, 503);
     const patResult = await supabase.rpc("get_user_github_pat_by_user_id", {
       p_user_id: user.id,
       p_encryption_key: GITHUB_TOKEN_ENCRYPTION_KEY,
