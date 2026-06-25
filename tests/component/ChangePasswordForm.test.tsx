@@ -35,7 +35,7 @@ describe("ChangePasswordForm", () => {
   it("shows an error and never calls the API when the new passwords don't match", async () => {
     const fetchMock = vi.fn();
     vi.stubGlobal("fetch", fetchMock);
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     render(<ChangePasswordForm />);
 
     await fillForm(user, "old-password", "new-password-1", "new-password-2");
@@ -48,7 +48,7 @@ describe("ChangePasswordForm", () => {
   it("submits and clears the form on success", async () => {
     const fetchMock = vi.fn(() => Promise.resolve(jsonResponse({ ok: true })));
     vi.stubGlobal("fetch", fetchMock);
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     render(<ChangePasswordForm />);
 
     await fillForm(user, "old-password", "new-password-123");
@@ -68,7 +68,7 @@ describe("ChangePasswordForm", () => {
   it("shows the server error when the current password is wrong", async () => {
     const fetchMock = vi.fn(() => Promise.resolve(jsonResponse({ error: "Current password is incorrect" }, 401)));
     vi.stubGlobal("fetch", fetchMock);
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     render(<ChangePasswordForm />);
 
     await fillForm(user, "wrong-password", "new-password-123");

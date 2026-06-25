@@ -112,7 +112,7 @@ describe("CreateBoardForm", () => {
 
   it("W1: blocks Step 1 -> 2 when the board name is empty and shows an error", async () => {
     installFetchMock();
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     render(<CreateBoardForm />);
 
     await user.type(screen.getByLabelText(/GitHub Personal Access Token/i), PAT);
@@ -126,7 +126,7 @@ describe("CreateBoardForm", () => {
 
   it("W2: disables Next while the PAT has not been validated", async () => {
     installFetchMock();
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     render(<CreateBoardForm />);
 
     await user.type(screen.getByLabelText(/Board name/i), "Test Board");
@@ -136,7 +136,7 @@ describe("CreateBoardForm", () => {
 
   it("W3: completes the wizard and submits data collected across all three steps", async () => {
     const fetchMock = installFetchMock();
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     render(<CreateBoardForm />);
 
     await goToStep2(user, "My Board");
@@ -177,7 +177,7 @@ describe("CreateBoardForm", () => {
 
   it("W4: clears selected repos and re-fetches them when the PAT changes after going back", async () => {
     const fetchMock = installFetchMock();
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     render(<CreateBoardForm />);
 
     await goToStep2(user);
@@ -210,7 +210,7 @@ describe("CreateBoardForm", () => {
     const fetchMock = installFetchMock({
       collaboratorResponses: [{ collaborators: [COLLAB_A, COLLAB_B] }, { collaborators: [COLLAB_A] }],
     });
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     render(<CreateBoardForm />);
 
     await goToStep2(user);
@@ -238,7 +238,7 @@ describe("CreateBoardForm", () => {
     installFetchMock({
       collaboratorResponses: [{ collaborators: [COLLAB_A, COLLAB_B] }, { collaborators: [COLLAB_A] }],
     });
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     render(<CreateBoardForm />);
 
     await goToStep2(user);
@@ -267,7 +267,7 @@ describe("CreateBoardForm", () => {
 
   it("W7: disables Next on Step 2 when no repos are selected", async () => {
     installFetchMock();
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     render(<CreateBoardForm />);
 
     await goToStep2(user);
@@ -277,7 +277,7 @@ describe("CreateBoardForm", () => {
 
   it("W8: disables Create Board on Step 3 when no contributors are selected", async () => {
     installFetchMock();
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     render(<CreateBoardForm />);
 
     await goToStep2(user);
@@ -290,7 +290,7 @@ describe("CreateBoardForm", () => {
 
   it("W9: shows 'No collaborators found' and disables Create Board when the API returns an empty list", async () => {
     installFetchMock({ collaboratorResponses: [{ collaborators: [] }] });
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     render(<CreateBoardForm />);
 
     await goToStep2(user);
@@ -304,7 +304,7 @@ describe("CreateBoardForm", () => {
   it("W10: displays PAT validation warnings returned by the API (Bug 3 fix)", async () => {
     const WARNING = "Token is missing the read:org scope";
     installFetchMock({ validatePatResponse: { login: "octocat", avatarUrl: COLLAB_A.avatarUrl, warning: WARNING } });
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     render(<CreateBoardForm />);
 
     await user.type(screen.getByLabelText(/GitHub Personal Access Token/i), PAT);
@@ -315,7 +315,7 @@ describe("CreateBoardForm", () => {
 
   it("W11: defaults to the stored PAT identity, hiding the token input, with a toggle to enter a different token", async () => {
     installFetchMock();
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     render(<CreateBoardForm storedPat={{ login: "stored-user", expiresAt: null }} />);
 
     expect(screen.getByText(/Connected as/i)).toBeInTheDocument();
@@ -338,7 +338,7 @@ describe("CreateBoardForm", () => {
 
   it("W12: proceeds with the stored PAT without re-validating or sending a raw token to repos", async () => {
     const fetchMock = installFetchMock();
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     render(<CreateBoardForm storedPat={{ login: "stored-user", expiresAt: null }} />);
 
     await user.type(screen.getByLabelText(/Board name/i), "Stored Board");
@@ -356,7 +356,7 @@ describe("CreateBoardForm", () => {
 
   it("W13: saves a freshly-entered token via /api/profile/pat before proceeding to Step 2", async () => {
     const fetchMock = installFetchMock();
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     render(<CreateBoardForm />);
 
     await goToStep2(user, "Test Board");

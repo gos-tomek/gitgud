@@ -519,6 +519,12 @@ Amend PRD functional requirements FR-018, FR-020, and FR-022 to reflect per-user
 - Layout + banner pattern: `src/layouts/Layout.astro` + `src/lib/config-status.ts`
 - Lessons: `context/foundation/lessons.md` (useFormStatus, consola, REVOKE ALL)
 
+## Addenda
+
+### A1 — connected_by dropped instead of loosened (Phase 2 deviation)
+
+Phase 2 planned `ON DELETE SET NULL` + `DROP NOT NULL` on `github_repos.connected_by`. During implementation it was confirmed that no read/write path uses `connected_by` (the column was a legacy artefact), so the migration drops it entirely instead. The intent (unblocking user deletion) is fully satisfied. Re-adding and then loosening the column would be pointless churn.
+
 ## Progress
 
 > Convention: `- [ ]` pending, `- [x]` done. Append ` — <commit sha>` when a step lands. Do not rename step titles. See `references/progress-format.md`.

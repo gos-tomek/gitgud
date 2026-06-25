@@ -67,7 +67,7 @@ describe("PatUpdateForm", () => {
   it("saves a new token and shows the updated login on success", async () => {
     const fetchMock = vi.fn(() => Promise.resolve(jsonResponse({ login: "newlogin", expiresAt: null })));
     vi.stubGlobal("fetch", fetchMock);
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     render(<PatUpdateForm hasToken={false} currentLogin={null} currentExpiresAt={null} />);
 
     await user.type(screen.getByLabelText(/Update GitHub Personal Access Token/i), "ghp_newtoken");
@@ -83,7 +83,7 @@ describe("PatUpdateForm", () => {
   it("shows an error message when the token is rejected", async () => {
     const fetchMock = vi.fn(() => Promise.resolve(jsonResponse({ error: "Token is invalid or expired" }, 401)));
     vi.stubGlobal("fetch", fetchMock);
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     render(<PatUpdateForm hasToken={false} currentLogin={null} currentExpiresAt={null} />);
 
     await user.type(screen.getByLabelText(/Update GitHub Personal Access Token/i), "ghp_badtoken");
