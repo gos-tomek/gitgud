@@ -596,17 +596,17 @@ Amend PRD functional requirements FR-018, FR-020, and FR-022 to reflect per-user
 
 #### Automated
 
-- [x] 5.1 Type checking passes
-- [x] 5.2 Linting passes
-- [x] 5.3 Build succeeds
+- [x] 5.1 Type checking passes — 1d570f9
+- [x] 5.2 Linting passes — 1d570f9
+- [x] 5.3 Build succeeds — 1d570f9
 
 #### Manual
 
-- [x] 5.4 Warning banner appears when PAT expires within 7 days
-- [x] 5.5 Banner links to /profile/settings
-- [x] 5.6 No banner for no-expiry tokens
-- [x] 5.7 No banner when expiry > 7 days
-- [x] 5.8 No banner for unauthenticated users
+- [x] 5.4 Warning banner appears when PAT expires within 7 days — 1d570f9
+- [x] 5.5 Banner links to /profile/settings — 1d570f9
+- [x] 5.6 No banner for no-expiry tokens — 1d570f9
+- [x] 5.7 No banner when expiry > 7 days — 1d570f9
+- [x] 5.8 No banner for unauthenticated users — 1d570f9
 
 ### Phase 6: PRD Update
 

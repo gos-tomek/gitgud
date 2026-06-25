@@ -1,7 +1,7 @@
 ---
 change_id: edit-board-connection
 title: Edit board connection
-status: implementing
+status: implemented
 created: 2026-06-25
 updated: 2026-06-25
 archived_at: null
@@ -9,4 +9,4 @@ archived_at: null
 
 ## Notes
 
-<!-- Free-form notes for this change: links, ad-hoc context, decisions that don't belong in research/frame/plan. -->
+`boards.github_pat_encrypted` is deprecated after this change — all PAT read/write paths now go through `user_profiles.github_pat_encrypted`. The column is kept in place for rollback safety per expand/contract convention. Its removal is a separate future migration (contract phase).

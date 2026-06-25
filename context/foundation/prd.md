@@ -95,7 +95,7 @@ Comment classification is visible to the IC: each classified comment shows its a
 
   > Socrates: No counter-argument considered; stands as written.
 
-- FR-018: EM can update a Board's GitHub connection settings (PAT, linked org). Priority: must-have
+- FR-018: EM can update their GitHub connection settings (PAT) via Profile Settings; PAT is shared across all boards they own. Priority: must-have
 
   > Socrates: No counter-argument considered; stands as written.
 
@@ -103,7 +103,7 @@ Comment classification is visible to the IC: each classified comment shows its a
 
   > Socrates: No counter-argument considered; stands as written.
 
-- FR-020: When the PAT is changed on either the Board-creation or Board-edit form, the app re-validates that the previously accessible repos and ICs remain reachable with the new credential; the EM is notified of any scope changes. Priority: must-have
+- FR-020: When the PAT is changed on the Profile Settings page or Board-creation flow, the app re-validates the new credential and captures its expiry; the EM is notified of any scope changes. Re-validation is user-level — the updated PAT applies to all boards the EM owns. Priority: must-have
 
   > Socrates: No counter-argument considered; stands as written.
 
@@ -111,7 +111,10 @@ Comment classification is visible to the IC: each classified comment shows its a
 
   > Socrates: No counter-argument considered; stands as written.
 
-- FR-022: When a Board's GitHub PAT expires or becomes invalid, the Board enters a frozen state (new data syncs are suspended); the EM is shown a persistent in-app prompt to update the PAT before data freshness degrades. Priority: must-have
+- FR-022: When the user's GitHub PAT expires or becomes invalid, all boards owned by that user enter a frozen state (new data syncs are suspended); the EM is shown a persistent in-app warning banner on all pages to update the PAT before data freshness degrades. Priority: must-have
+
+  > Known gap: users who need different PATs per board (e.g. multi-org setups) are not supported; one PAT is shared across all owned boards. This is an intentional simplification.
+
   > Socrates: No counter-argument considered; stands as written.
 
 ### Contribution profile
