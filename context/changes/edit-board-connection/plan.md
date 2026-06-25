@@ -612,6 +612,6 @@ Amend PRD functional requirements FR-018, FR-020, and FR-022 to reflect per-user
 
 #### Manual
 
-- [x] 6.1 FR-018/020/022 reflect per-user PAT semantics
-- [x] 6.2 Multi-org known gap is documented
-- [x] 6.3 change.md notes deprecated column
+- [x] 6.1 FR-018/020/022 reflect per-user PAT semantics — deaa7f9
+- [x] 6.2 Multi-org known gap is documented — deaa7f9
+- [x] 6.3 change.md notes deprecated column — deaa7f9
