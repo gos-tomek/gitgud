@@ -46,6 +46,8 @@ function installFetchMock(options: FetchMockOptions = {}) {
     switch (input) {
       case "/api/github/validate-pat":
         return Promise.resolve(jsonResponse(validatePatResponse));
+      case "/api/profile/pat":
+        return Promise.resolve(jsonResponse({ login: validatePatResponse.login, expiresAt: null }));
       case "/api/board/check-name":
         return Promise.resolve(new Response(null, { status: 204 }));
       case "/api/github/repos":
@@ -153,13 +155,13 @@ describe("CreateBoardForm", () => {
     const call = fetchMock.mock.calls.find(([url]) => url === "/api/board");
     const body = JSON.parse((call?.[1]?.body as string | undefined) ?? "{}") as {
       name: string;
-      pat: string;
+      pat?: string;
       repos: { owner: string; name: string }[];
       contributors: { githubId: number; githubLogin: string; avatarUrl?: string }[];
     };
 
     expect(body.name).toBe("My Board");
-    expect(body.pat).toBe(PAT);
+    expect(body.pat).toBeUndefined();
     expect(body.repos).toEqual([
       { owner: REPO_A.owner, name: REPO_A.name },
       { owner: REPO_B.owner, name: REPO_B.name },
@@ -309,5 +311,51 @@ describe("CreateBoardForm", () => {
     await waitFor(() => expect(screen.getByText(/Connected as/i)).toBeInTheDocument(), { timeout: 2000 });
 
     expect(screen.getByText(WARNING)).toBeInTheDocument();
+  });
+
+  it("W11: defaults to the stored PAT identity, hiding the token input, with a toggle to enter a different token", async () => {
+    installFetchMock();
+    const user = userEvent.setup();
+    render(<CreateBoardForm storedPat={{ login: "stored-user", expiresAt: null }} />);
+
+    expect(screen.getByText(/Connected as/i)).toBeInTheDocument();
+    expect(screen.getByText("@stored-user")).toBeInTheDocument();
+    expect(screen.queryByLabelText(/GitHub Personal Access Token/i)).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: /use a different token/i }));
+
+    expect(screen.getByLabelText(/GitHub Personal Access Token/i)).toBeInTheDocument();
+    expect(screen.queryByText(/Connected as/i)).not.toBeInTheDocument();
+  });
+
+  it("W12: proceeds with the stored PAT without re-validating or sending a raw token to repos", async () => {
+    const fetchMock = installFetchMock();
+    const user = userEvent.setup();
+    render(<CreateBoardForm storedPat={{ login: "stored-user", expiresAt: null }} />);
+
+    await user.type(screen.getByLabelText(/Board name/i), "Stored Board");
+    await user.click(screen.getByRole("button", { name: /next/i }));
+    await waitFor(() => expect(screen.getByText("Step 2 of 3")).toBeInTheDocument());
+    await screen.findByText(REPO_A.fullName);
+
+    expect(fetchMock).not.toHaveBeenCalledWith("/api/profile/pat", expect.anything());
+    expect(fetchMock).not.toHaveBeenCalledWith("/api/github/validate-pat", expect.anything());
+
+    const reposCall = fetchMock.mock.calls.find(([url]) => url === "/api/github/repos");
+    const reposBody = JSON.parse((reposCall?.[1]?.body as string | undefined) ?? "{}") as { pat?: string };
+    expect(reposBody.pat).toBeUndefined();
+  });
+
+  it("W13: saves a freshly-entered token via /api/profile/pat before proceeding to Step 2", async () => {
+    const fetchMock = installFetchMock();
+    const user = userEvent.setup();
+    render(<CreateBoardForm />);
+
+    await goToStep2(user, "Test Board");
+
+    const saveCall = fetchMock.mock.calls.find(([url]) => url === "/api/profile/pat");
+    expect(saveCall).toBeDefined();
+    const saveBody = JSON.parse((saveCall?.[1]?.body as string | undefined) ?? "{}") as { pat?: string };
+    expect(saveBody.pat).toBe(PAT);
   });
 });

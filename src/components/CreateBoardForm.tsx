@@ -19,10 +19,20 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Input } from "@/components/ui/input";
-import { wizardReducer, initialState, type RepoItem, type CollaboratorItem } from "./wizard-reducer";
+import { wizardReducer, initWizardState, type RepoItem, type CollaboratorItem, type StoredPat } from "./wizard-reducer";
 
-export default function CreateBoardForm() {
-  const [state, dispatch] = useReducer(wizardReducer, initialState);
+interface CreateBoardFormProps {
+  storedPat?: StoredPat | null;
+}
+
+// Repos/collaborators/validate-repo endpoints fall back to the stored PAT (decrypted
+// server-side) when no raw token is sent — omit the key entirely instead of sending "".
+function patBody(pat: string): { pat: string } | Record<string, never> {
+  return pat ? { pat } : {};
+}
+
+export default function CreateBoardForm({ storedPat }: CreateBoardFormProps) {
+  const [state, dispatch] = useReducer(wizardReducer, storedPat ?? null, initWizardState);
 
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const latestPatRef = useRef("");
@@ -45,7 +55,13 @@ export default function CreateBoardForm() {
         body: JSON.stringify({ pat: token }),
       });
       // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion -- workers-types vs DOM `Response.json()` type disagreement; tsc resolves to `unknown` (assertion required), ESLint's incremental resolver disagrees (false positive)
-      const data = (await res.json()) as { login?: string; avatarUrl?: string; warning?: string; error?: string };
+      const data = (await res.json()) as {
+        login?: string;
+        avatarUrl?: string;
+        warning?: string;
+        error?: string;
+        expiresAt?: string | null;
+      };
       if (latestPatRef.current !== token) return;
       if (res.ok && data.login) {
         dispatch({
@@ -53,6 +69,7 @@ export default function CreateBoardForm() {
           login: data.login,
           avatarUrl: data.avatarUrl,
           warnings: data.warning ? [data.warning] : undefined,
+          expiresAt: data.expiresAt,
         });
       } else {
         dispatch({ type: "VALIDATE_PAT_ERROR", message: data.error ?? "Token is invalid or expired" });
@@ -83,7 +100,7 @@ export default function CreateBoardForm() {
       const res = await fetch("/api/github/repos", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ pat }),
+        body: JSON.stringify(patBody(pat)),
       });
       // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion -- workers-types vs DOM `Response.json()` type disagreement; tsc resolves to `unknown` (assertion required), ESLint's incremental resolver disagrees (false positive)
       const data = (await res.json()) as { repos?: RepoItem[]; error?: string };
@@ -104,7 +121,7 @@ export default function CreateBoardForm() {
       const res = await fetch("/api/github/collaborators", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ pat, repos: repos.map((r) => ({ owner: r.owner, name: r.name })) }),
+        body: JSON.stringify({ ...patBody(pat), repos: repos.map((r) => ({ owner: r.owner, name: r.name })) }),
       });
       // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion -- workers-types vs DOM `Response.json()` type disagreement; tsc resolves to `unknown` (assertion required), ESLint's incremental resolver disagrees (false positive)
       const data = (await res.json()) as { collaborators?: CollaboratorItem[]; error?: string };
@@ -118,6 +135,26 @@ export default function CreateBoardForm() {
     }
   }
 
+  async function saveNewPat(pat: string): Promise<boolean> {
+    try {
+      const res = await fetch("/api/profile/pat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ pat }),
+      });
+      if (!res.ok) {
+        // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion -- workers-types vs DOM `Response.json()` type disagreement; tsc resolves to `unknown` (assertion required), ESLint's incremental resolver disagrees (false positive)
+        const data = (await res.json()) as { error?: string };
+        dispatch({ type: "VALIDATE_PAT_ERROR", message: data.error ?? "Failed to save token" });
+        return false;
+      }
+      return true;
+    } catch {
+      dispatch({ type: "VALIDATE_PAT_ERROR", message: "Network error — failed to save token" });
+      return false;
+    }
+  }
+
   async function handleNext() {
     if (state.step !== 1) return;
     if (!state.name.trim()) {
@@ -128,6 +165,17 @@ export default function CreateBoardForm() {
 
     const pat = state.pat;
     dispatch({ type: "SET_CHECKING_NAME", checking: true });
+
+    // A freshly-entered token becomes the user's stored PAT going forward — save it before
+    // moving on so create_board_atomic (which reads from user_profiles) finds it later.
+    if (!state.usingStoredPat) {
+      const saved = await saveNewPat(pat);
+      if (!saved) {
+        dispatch({ type: "SET_CHECKING_NAME", checking: false });
+        return;
+      }
+    }
+
     try {
       const res = await fetch("/api/board/check-name", {
         method: "POST",
@@ -197,7 +245,7 @@ export default function CreateBoardForm() {
       const res = await fetch("/api/github/validate-repo", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ pat: state.pat, owner, name: repoName }),
+        body: JSON.stringify({ ...patBody(state.pat), owner, name: repoName }),
       });
       // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion -- workers-types vs DOM `Response.json()` type disagreement; tsc resolves to `unknown` (assertion required), ESLint's incremental resolver disagrees (false positive)
       const data = (await res.json()) as RepoItem & { error?: string };
@@ -230,7 +278,6 @@ export default function CreateBoardForm() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           name: state.name.trim(),
-          pat: state.pat,
           repos: state.selectedRepos.map((r) => ({ owner: r.owner, name: r.name })),
           contributors: state.selectedContributors.map((c) => ({
             githubId: c.id,
@@ -280,64 +327,101 @@ export default function CreateBoardForm() {
                 icon={<LayoutIcon className="size-4" />}
               />
 
-              <FormField
-                id="pat"
-                label="GitHub Personal Access Token"
-                type={state.patVisible ? "text" : "password"}
-                value={state.pat}
-                onChange={handlePatChange}
-                placeholder="ghp_..."
-                icon={<KeyRound className="size-4" />}
-                endContent={
-                  <PasswordToggle
-                    visible={state.patVisible}
-                    onToggle={() => {
-                      dispatch({ type: "TOGGLE_PAT_VISIBLE" });
-                    }}
-                  />
-                }
-                hint={
-                  <p className="mt-1 text-xs text-blue-100/50">
-                    Requires a{" "}
-                    <a
-                      href="https://github.com/settings/tokens/new?scopes=repo,read:org&description=GitGud"
-                      target="_blank"
-                      rel="noreferrer"
-                      className="underline hover:text-blue-100/80"
-                    >
-                      classic PAT
-                    </a>{" "}
-                    with <code className="text-blue-100/70">repo</code> and{" "}
-                    <code className="text-blue-100/70">read:org</code> scopes.
-                  </p>
-                }
-              />
-
-              {state.patValidation.status === "validating" && (
-                <div className="flex items-center gap-2 text-sm text-blue-100/60">
-                  <Loader2 className="size-4 animate-spin" />
-                  Validating token…
-                </div>
-              )}
-              {state.patValidation.status === "valid" && (
-                <div className="space-y-2">
+              {state.usingStoredPat ? (
+                <div className="space-y-2 rounded-lg border border-white/10 bg-white/5 px-3 py-2.5">
                   <div className="flex items-center gap-2 text-sm text-green-400">
                     <CheckCircle2 className="size-4" />
                     Connected as <span className="font-semibold">@{state.patValidation.login}</span>
                   </div>
-                  {state.patValidation.warnings?.map((warning) => (
-                    <div
-                      key={warning}
-                      className="flex items-start gap-2 rounded-md bg-yellow-500/10 p-3 text-sm text-yellow-300"
-                    >
-                      <AlertTriangle className="mt-0.5 size-4 shrink-0" />
-                      {warning}
-                    </div>
-                  ))}
+                  <p className="text-xs text-blue-100/50">
+                    {state.patValidation.expiresAt
+                      ? `Token expires ${new Date(state.patValidation.expiresAt).toLocaleDateString()}`
+                      : "No expiration set"}
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      dispatch({ type: "USE_DIFFERENT_TOKEN" });
+                    }}
+                    className="text-xs text-blue-100/60 underline hover:text-blue-100/80"
+                  >
+                    Use a different token
+                  </button>
                 </div>
-              )}
-              {state.patValidation.status === "error" && (
-                <p className="text-sm text-red-300">{state.patValidation.message}</p>
+              ) : (
+                <>
+                  {storedPat && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        dispatch({ type: "USE_STORED_PAT", login: storedPat.login, expiresAt: storedPat.expiresAt });
+                      }}
+                      className="text-xs text-blue-100/60 underline hover:text-blue-100/80"
+                    >
+                      Use stored token (@{storedPat.login})
+                    </button>
+                  )}
+
+                  <FormField
+                    id="pat"
+                    label="GitHub Personal Access Token"
+                    type={state.patVisible ? "text" : "password"}
+                    value={state.pat}
+                    onChange={handlePatChange}
+                    placeholder="ghp_..."
+                    icon={<KeyRound className="size-4" />}
+                    endContent={
+                      <PasswordToggle
+                        visible={state.patVisible}
+                        onToggle={() => {
+                          dispatch({ type: "TOGGLE_PAT_VISIBLE" });
+                        }}
+                      />
+                    }
+                    hint={
+                      <p className="mt-1 text-xs text-blue-100/50">
+                        Requires a{" "}
+                        <a
+                          href="https://github.com/settings/tokens/new?scopes=repo,read:org&description=GitGud"
+                          target="_blank"
+                          rel="noreferrer"
+                          className="underline hover:text-blue-100/80"
+                        >
+                          classic PAT
+                        </a>{" "}
+                        with <code className="text-blue-100/70">repo</code> and{" "}
+                        <code className="text-blue-100/70">read:org</code> scopes.
+                      </p>
+                    }
+                  />
+
+                  {state.patValidation.status === "validating" && (
+                    <div className="flex items-center gap-2 text-sm text-blue-100/60">
+                      <Loader2 className="size-4 animate-spin" />
+                      Validating token…
+                    </div>
+                  )}
+                  {state.patValidation.status === "valid" && (
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2 text-sm text-green-400">
+                        <CheckCircle2 className="size-4" />
+                        Connected as <span className="font-semibold">@{state.patValidation.login}</span>
+                      </div>
+                      {state.patValidation.warnings?.map((warning) => (
+                        <div
+                          key={warning}
+                          className="flex items-start gap-2 rounded-md bg-yellow-500/10 p-3 text-sm text-yellow-300"
+                        >
+                          <AlertTriangle className="mt-0.5 size-4 shrink-0" />
+                          {warning}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  {state.patValidation.status === "error" && (
+                    <p className="text-sm text-red-300">{state.patValidation.message}</p>
+                  )}
+                </>
               )}
 
               <Button

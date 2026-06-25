@@ -2,10 +2,11 @@ import type { APIRoute } from "astro";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase";
 import { makeOctokit, GitHubAuthError } from "@/lib/github";
+import { GITHUB_TOKEN_ENCRYPTION_KEY } from "astro:env/server";
 import { logger } from "@/lib/logger";
 
 const collaboratorsSchema = z.object({
-  pat: z.string().min(1, "PAT is required"),
+  pat: z.string().min(1, "PAT is required").optional(),
   repos: z
     .array(
       z.object({
@@ -51,10 +52,22 @@ export const POST: APIRoute = async (context) => {
     return json({ error: message }, 400);
   }
 
-  const { pat, repos } = parsed.data;
+  const { repos } = parsed.data;
+
+  let token = parsed.data.pat;
+  if (!token) {
+    const patResult = await supabase.rpc("get_user_github_pat_by_user_id", {
+      p_user_id: user.id,
+      p_encryption_key: GITHUB_TOKEN_ENCRYPTION_KEY,
+    });
+    if (patResult.error || !patResult.data) {
+      return json({ error: "No GitHub token configured — save one in Profile Settings first" }, 400);
+    }
+    token = patResult.data as string;
+  }
 
   try {
-    const octokit = makeOctokit(pat);
+    const octokit = makeOctokit(token);
     const collaboratorMap = new Map<number, { login: string; id: number; avatarUrl: string; type: string }>();
     const warnings: { repo: string; message: string }[] = [];
 

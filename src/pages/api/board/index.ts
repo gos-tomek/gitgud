@@ -1,7 +1,6 @@
 import type { APIRoute } from "astro";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase";
-import { GITHUB_TOKEN_ENCRYPTION_KEY } from "astro:env/server";
 import { logger } from "@/lib/logger";
 
 function json(body: unknown, status = 200): Response {
@@ -24,7 +23,6 @@ const contributorSchema = z.object({
 
 const createBoardSchema = z.object({
   name: z.string().trim().min(1, "Board name is required").max(80, "Keep it under 80 characters"),
-  pat: z.string().min(1, "GitHub token is required"),
   repos: z.array(repoSchema).min(1, "At least one repository is required"),
   contributors: z.array(contributorSchema).min(1, "At least one contributor is required").max(200),
 });
@@ -59,8 +57,6 @@ export const POST: APIRoute = async (context) => {
     const result = await supabase.rpc("create_board_atomic", {
       p_user_id: user.id,
       p_name: parsed.data.name,
-      p_raw_token: parsed.data.pat,
-      p_encryption_key: GITHUB_TOKEN_ENCRYPTION_KEY,
       p_repos: parsed.data.repos.map((r) => ({ owner: r.owner, name: r.name })),
       p_contributors: parsed.data.contributors.map((c) => ({
         github_id: c.githubId,
@@ -72,6 +68,9 @@ export const POST: APIRoute = async (context) => {
     if (result.error) {
       if (result.error.code === "23505") {
         return json({ error: "You already have a board with that name" }, 409);
+      }
+      if (result.error.message.includes("No GitHub token configured")) {
+        return json({ error: "No GitHub token configured — save one in Profile Settings first" }, 400);
       }
       logger.error("[boards] create_board_atomic failed", {
         boardName: parsed.data.name,

@@ -52,6 +52,7 @@ function step2(overrides: Partial<Extract<WizardState, { step: 2 }>> = {}): Extr
     step: 2,
     name: "My Board",
     pat: "ghp_validtoken",
+    usingStoredPat: false,
     patValidation: VALID_PAT,
     selectedRepos: [],
     selectedContributors: [],
@@ -73,6 +74,7 @@ function step3(overrides: Partial<Extract<WizardState, { step: 3 }>> = {}): Extr
     step: 3,
     name: "My Board",
     pat: "ghp_validtoken",
+    usingStoredPat: false,
     patValidation: VALID_PAT,
     selectedRepos: [REPO_A],
     selectedContributors: [],
@@ -245,6 +247,50 @@ describe("PAT validation (Bugs 2 & 3)", () => {
     const result = wizardReducer(state, { type: "VALIDATE_PAT_ERROR", message: "Token is invalid or expired" });
 
     expect(result.patValidation).toEqual({ status: "error", message: "Token is invalid or expired" });
+  });
+});
+
+describe("stored PAT toggle", () => {
+  it("USE_STORED_PAT sets patValidation to valid with the stored identity, clears pat, and flags usingStoredPat", () => {
+    const state = step1({ pat: "ghp_sometoken", patValidation: { status: "idle" }, usingStoredPat: false });
+
+    const result = wizardReducer(state, {
+      type: "USE_STORED_PAT",
+      login: "octocat",
+      expiresAt: "2026-07-01T00:00:00.000Z",
+    });
+
+    expect(result.usingStoredPat).toBe(true);
+    expect(result.pat).toBe("");
+    expect(result.patValidation).toEqual({
+      status: "valid",
+      login: "octocat",
+      expiresAt: "2026-07-01T00:00:00.000Z",
+    });
+  });
+
+  it("USE_DIFFERENT_TOKEN clears the stored-PAT identity back to idle manual entry", () => {
+    const state = step1({
+      pat: "",
+      usingStoredPat: true,
+      patValidation: { status: "valid", login: "octocat", expiresAt: null },
+    });
+
+    const result = wizardReducer(state, { type: "USE_DIFFERENT_TOKEN" });
+
+    expect(result.usingStoredPat).toBe(false);
+    expect(result.pat).toBe("");
+    expect(result.patValidation).toEqual({ status: "idle" });
+  });
+
+  it("usingStoredPat carries through NEXT_TO_STEP_2 and BACK_TO_STEP_1", () => {
+    const stored = step1({ pat: "", usingStoredPat: true, patValidation: { status: "valid", login: "octocat" } });
+
+    const onStep2 = wizardReducer(stored, { type: "NEXT_TO_STEP_2" });
+    expect(onStep2.usingStoredPat).toBe(true);
+
+    const backOnStep1 = wizardReducer(onStep2, { type: "BACK_TO_STEP_1" });
+    expect(backOnStep1.usingStoredPat).toBe(true);
   });
 });
 

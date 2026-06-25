@@ -31,6 +31,27 @@ export class GitHubAuthError extends Error {
   }
 }
 
+// GitHub's "GitHub-Authentication-Token-Expiration" header is non-ISO and comes in two known
+// shapes: "2026-06-03 19:52:44 UTC" (named zone) and "2025-09-05 17:55:53 +0500" (numeric offset).
+// Rejecting past dates guards against a 2025 GitHub bug that returned server time instead of the
+// token's real expiry (fixed 2025-09-12) — a token that just authenticated successfully cannot
+// genuinely have expired already, so any header reporting a past date must be that bug.
+const TOKEN_EXPIRY_RE = /^(\d{4}-\d{2}-\d{2}) (\d{2}:\d{2}:\d{2}) (UTC|[+-]\d{4})$/;
+
+export function parseGitHubTokenExpiry(raw: string): Date | null {
+  const match = TOKEN_EXPIRY_RE.exec(raw.trim());
+  if (!match) return null;
+
+  const [, datePart, timePart, zone] = match;
+  const isoZone = zone === "UTC" ? "Z" : `${zone.slice(0, 3)}:${zone.slice(3)}`;
+  const date = new Date(`${datePart}T${timePart}${isoZone}`);
+
+  if (Number.isNaN(date.getTime())) return null;
+  if (date.getTime() < Date.now()) return null;
+
+  return date;
+}
+
 export function makeOctokit(token: string): Octokit {
   const octokit = new OctokitWithRetry({
     auth: token,
@@ -77,7 +98,7 @@ export async function createGitHubClient(
     throw new GitHubTokenMissingError();
   }
 
-  const result = await supabase.rpc("get_board_github_pat", {
+  const result = await supabase.rpc("get_user_github_pat", {
     p_board_id: boardId,
     p_encryption_key: key,
   });

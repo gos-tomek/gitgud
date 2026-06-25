@@ -37,10 +37,16 @@ export async function getUserBoards(supabase: SupabaseClient, userId: string): P
 export async function getUserProfile(
   supabase: SupabaseClient,
   userId: string,
-): Promise<{ githubId: number; githubLogin: string; avatarUrl: string | null } | null> {
+): Promise<{
+  githubId: number;
+  githubLogin: string;
+  avatarUrl: string | null;
+  tokenExpiresAt: string | null;
+  hasGithubPat: boolean;
+} | null> {
   const { data, error } = await supabase
     .from("user_profiles")
-    .select("github_id,github_login,avatar_url")
+    .select("github_id,github_login,avatar_url,token_expires_at,github_pat_encrypted")
     .eq("user_id", userId)
     .maybeSingle();
 
@@ -51,6 +57,8 @@ export async function getUserProfile(
     githubId: data.github_id as number,
     githubLogin: data.github_login as string,
     avatarUrl: data.avatar_url as string | null,
+    tokenExpiresAt: data.token_expires_at as string | null,
+    hasGithubPat: data.github_pat_encrypted !== null,
   };
 }
 

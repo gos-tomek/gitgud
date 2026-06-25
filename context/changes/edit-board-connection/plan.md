@@ -540,37 +540,37 @@ Amend PRD functional requirements FR-018, FR-020, and FR-022 to reflect per-user
 
 #### Automated
 
-- [x] 2.1 Migration applies cleanly
-- [x] 2.2 Type checking passes
-- [x] 2.3 Existing tests pass
-- [x] 2.4 Integration tests pass
+- [x] 2.1 Migration applies cleanly — 63260c5
+- [x] 2.2 Type checking passes — 63260c5
+- [x] 2.3 Existing tests pass — 63260c5
+- [x] 2.4 Integration tests pass — 63260c5
 
 #### Manual
 
-- [x] 2.5 user_profiles has new columns in Supabase Studio
-- [x] 2.6 Backfilled PATs present for users with boards
-- [x] 2.7 connected_by is nullable
-- [x] 2.8 Unauthenticated /profile/settings redirects to sign-in
+- [x] 2.5 user_profiles has new columns in Supabase Studio — 63260c5
+- [x] 2.6 Backfilled PATs present for users with boards — 63260c5
+- [x] 2.7 connected_by is nullable — 63260c5
+- [x] 2.8 Unauthenticated /profile/settings redirects to sign-in — 63260c5
 
 ### Phase 3: PAT Capture & Board Creation Flow
 
 #### Automated
 
-- [ ] 3.1 New migration applies cleanly
-- [ ] 3.2 Type checking passes (src and tests)
-- [ ] 3.3 Linting passes
-- [ ] 3.4 Existing tests pass
-- [ ] 3.5 Build succeeds
+- [x] 3.1 New migration applies cleanly
+- [x] 3.2 Type checking passes (src and tests)
+- [x] 3.3 Linting passes
+- [x] 3.4 Existing tests pass
+- [x] 3.5 Build succeeds
 
 #### Manual
 
-- [ ] 3.6 Board creation without stored PAT shows error
-- [ ] 3.7 Board creation with stored PAT shows identity in step 1
-- [ ] 3.8 "Use a different token" flow validates and saves
-- [ ] 3.9 POST /api/profile/pat stores encrypted token + expiry
-- [ ] 3.10 validate-pat response includes expiresAt
-- [ ] 3.11 Worker sync works with user-level PAT
-- [ ] 3.12 No-expiry tokens return expiresAt: null
+- [x] 3.6 Board creation without stored PAT shows error
+- [x] 3.7 Board creation with stored PAT shows identity in step 1
+- [x] 3.8 "Use a different token" flow validates and saves
+- [x] 3.9 POST /api/profile/pat stores encrypted token + expiry
+- [x] 3.10 validate-pat response includes expiresAt
+- [x] 3.11 Worker sync works with user-level PAT
+- [x] 3.12 No-expiry tokens return expiresAt: null
 
 ### Phase 4: Profile/Settings Page
 

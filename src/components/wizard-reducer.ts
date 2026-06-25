@@ -11,6 +11,12 @@ export interface PatValidation {
   avatarUrl?: string;
   message?: string;
   warnings?: string[];
+  expiresAt?: string | null;
+}
+
+export interface StoredPat {
+  login: string;
+  expiresAt: string | null;
 }
 
 export interface RepoItem {
@@ -35,6 +41,7 @@ export interface CollaboratorItem {
 interface WizardCore {
   name: string;
   pat: string;
+  usingStoredPat: boolean;
   patValidation: PatValidation;
   selectedRepos: RepoItem[];
   selectedContributors: CollaboratorItem[];
@@ -74,8 +81,10 @@ export type WizardAction =
   | { type: "SET_PAT"; pat: string }
   | { type: "TOGGLE_PAT_VISIBLE" }
   | { type: "VALIDATE_PAT_START" }
-  | { type: "VALIDATE_PAT_SUCCESS"; login: string; avatarUrl?: string; warnings?: string[] }
+  | { type: "VALIDATE_PAT_SUCCESS"; login: string; avatarUrl?: string; warnings?: string[]; expiresAt?: string | null }
   | { type: "VALIDATE_PAT_ERROR"; message: string }
+  | { type: "USE_STORED_PAT"; login: string; expiresAt: string | null }
+  | { type: "USE_DIFFERENT_TOKEN" }
   | { type: "NEXT_TO_STEP_2" }
   | { type: "BACK_TO_STEP_1" }
   | { type: "NEXT_TO_STEP_3" }
@@ -105,6 +114,7 @@ export const initialState: WizardState = {
   nameError: undefined,
   checkingName: false,
   pat: "",
+  usingStoredPat: false,
   patVisible: false,
   patValidation: { status: "idle" },
   selectedRepos: [],
@@ -112,6 +122,18 @@ export const initialState: WizardState = {
   apiError: undefined,
   submitting: false,
 };
+
+// useReducer lazy-initializer: when the wizard mounts with a previously-stored PAT (per-user
+// PAT model), default straight to "valid" with the stored identity instead of making the user
+// re-enter and re-validate a token we already have.
+export function initWizardState(storedPat?: StoredPat | null): WizardState {
+  if (!storedPat) return initialState;
+  return {
+    ...initialState,
+    usingStoredPat: true,
+    patValidation: { status: "valid", login: storedPat.login, expiresAt: storedPat.expiresAt },
+  };
+}
 
 const FINE_GRAINED_PAT_ERROR = "Fine-grained tokens are not supported. Please use a classic PAT (starts with ghp_).";
 
@@ -166,6 +188,7 @@ export function wizardReducer(state: WizardState, action: WizardAction): WizardS
           login: action.login,
           avatarUrl: action.avatarUrl,
           warnings: action.warnings,
+          expiresAt: action.expiresAt,
         },
       };
     }
@@ -175,6 +198,21 @@ export function wizardReducer(state: WizardState, action: WizardAction): WizardS
       return { ...state, patValidation: { status: "error", message: action.message } };
     }
 
+    case "USE_STORED_PAT": {
+      if (state.step !== 1) return state;
+      return {
+        ...state,
+        pat: "",
+        usingStoredPat: true,
+        patValidation: { status: "valid", login: action.login, expiresAt: action.expiresAt },
+      };
+    }
+
+    case "USE_DIFFERENT_TOKEN": {
+      if (state.step !== 1) return state;
+      return { ...state, pat: "", usingStoredPat: false, patValidation: { status: "idle" } };
+    }
+
     case "NEXT_TO_STEP_2": {
       if (state.step !== 1) return state;
       if (!state.name.trim() || state.patValidation.status !== "valid") return state;
@@ -182,6 +220,7 @@ export function wizardReducer(state: WizardState, action: WizardAction): WizardS
         step: 2,
         name: state.name,
         pat: state.pat,
+        usingStoredPat: state.usingStoredPat,
         patValidation: state.patValidation,
         selectedRepos: state.selectedRepos,
         selectedContributors: state.selectedContributors,
@@ -205,6 +244,7 @@ export function wizardReducer(state: WizardState, action: WizardAction): WizardS
         nameError: undefined,
         checkingName: false,
         pat: state.pat,
+        usingStoredPat: state.usingStoredPat,
         patVisible: false,
         patValidation: state.patValidation,
         selectedRepos: state.selectedRepos,
@@ -221,6 +261,7 @@ export function wizardReducer(state: WizardState, action: WizardAction): WizardS
         step: 3,
         name: state.name,
         pat: state.pat,
+        usingStoredPat: state.usingStoredPat,
         patValidation: state.patValidation,
         selectedRepos: state.selectedRepos,
         selectedContributors: state.selectedContributors,
@@ -239,6 +280,7 @@ export function wizardReducer(state: WizardState, action: WizardAction): WizardS
         step: 2,
         name: state.name,
         pat: state.pat,
+        usingStoredPat: state.usingStoredPat,
         patValidation: state.patValidation,
         selectedRepos: state.selectedRepos,
         // Bug 1 fix: contributors picked during the previous Step 3 visit
