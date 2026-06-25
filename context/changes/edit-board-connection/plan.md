@@ -527,30 +527,30 @@ Amend PRD functional requirements FR-018, FR-020, and FR-022 to reflect per-user
 
 #### Automated
 
-- [x] 1.1 Type checking passes
-- [x] 1.2 Linting passes
-- [x] 1.3 Existing tests pass
+- [x] 1.1 Type checking passes — 4cdb8b1
+- [x] 1.2 Linting passes — 4cdb8b1
+- [x] 1.3 Existing tests pass — 4cdb8b1
 
 #### Manual
 
-- [ ] 1.4 Board pages show GitHub avatar instead of letter
-- [ ] 1.5 Letter fallback works when avatar_url is null
+- [x] 1.4 Board pages show GitHub avatar instead of letter — 4cdb8b1
+- [x] 1.5 Letter fallback works when avatar_url is null — 4cdb8b1
 
 ### Phase 2: Data Model Expansion
 
 #### Automated
 
-- [ ] 2.1 Migration applies cleanly
-- [ ] 2.2 Type checking passes
-- [ ] 2.3 Existing tests pass
-- [ ] 2.4 Integration tests pass
+- [x] 2.1 Migration applies cleanly
+- [x] 2.2 Type checking passes
+- [x] 2.3 Existing tests pass
+- [x] 2.4 Integration tests pass
 
 #### Manual
 
-- [ ] 2.5 user_profiles has new columns in Supabase Studio
-- [ ] 2.6 Backfilled PATs present for users with boards
-- [ ] 2.7 connected_by is nullable
-- [ ] 2.8 Unauthenticated /profile/settings redirects to sign-in
+- [x] 2.5 user_profiles has new columns in Supabase Studio
+- [x] 2.6 Backfilled PATs present for users with boards
+- [x] 2.7 connected_by is nullable
+- [x] 2.8 Unauthenticated /profile/settings redirects to sign-in
 
 ### Phase 3: PAT Capture & Board Creation Flow
 

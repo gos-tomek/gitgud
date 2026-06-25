@@ -89,13 +89,12 @@ VALUES
 ON CONFLICT (board_id, github_id) DO NOTHING;
 
 -- F-02 seed: test GitHub repo connection for Board Alpha (no PAT — provide manually during dev)
-INSERT INTO public.github_repos (id, board_id, repo_owner, repo_name, connected_by)
+INSERT INTO public.github_repos (id, board_id, repo_owner, repo_name)
 VALUES (
   'dddddddd-0000-0000-0000-000000000001',
   '11111111-aaaa-0000-0000-000000000001',
   'octocat',
-  'Hello-World',
-  'aaaaaaaa-0000-0000-0000-000000000001'
+  'Hello-World'
 )
 ON CONFLICT (board_id, repo_owner, repo_name) DO NOTHING;
 
@@ -104,8 +103,8 @@ ON CONFLICT (board_id, repo_owner, repo_name) DO NOTHING;
 -- switching, deep-linking). Intent/domain labels assigned by hand following the classification
 -- system prompt's rules (src/lib/services/classification.ts) against the real comment text.
 
-INSERT INTO public.github_repos (id, board_id, repo_owner, repo_name, connected_by)
-VALUES ('dddddddd-0000-0000-0000-000000000002', '11111111-aaaa-0000-0000-000000000001', 'supabase', 'supabase', 'aaaaaaaa-0000-0000-0000-000000000001')
+INSERT INTO public.github_repos (id, board_id, repo_owner, repo_name)
+VALUES ('dddddddd-0000-0000-0000-000000000002', '11111111-aaaa-0000-0000-000000000001', 'supabase', 'supabase')
 ON CONFLICT (board_id, repo_owner, repo_name) DO NOTHING;
 
 INSERT INTO public.board_contributors (board_id, github_id, github_login, avatar_url)

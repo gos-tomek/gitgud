@@ -87,7 +87,6 @@ describe.skipIf(!supabaseAvailable)("Cross-board access boundary (Risk #1 + #5)"
           board_id: fixture.ownerA.boardId,
           repo_owner: "evil-org",
           repo_name: "evil-repo",
-          connected_by: fixture.ownerB.userId,
         });
         expect(error?.code).toBe("42501");
       });
@@ -319,7 +318,6 @@ describe.skipIf(!supabaseAvailable)("Cross-board access boundary (Risk #1 + #5)"
           board_id: fixture.ownerA.boardId,
           repo_owner: "contrib-org",
           repo_name: "contrib-repo",
-          connected_by: fixture.contributor.userId,
         });
         expect(error?.code).toBe("42501");
       });
