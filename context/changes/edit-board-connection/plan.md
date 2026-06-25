@@ -576,42 +576,42 @@ Amend PRD functional requirements FR-018, FR-020, and FR-022 to reflect per-user
 
 #### Automated
 
-- [x] 4.1 Type checking passes (src and tests)
-- [x] 4.2 Linting passes
-- [x] 4.3 Build succeeds
-- [x] 4.4 Existing tests pass
-- [x] 4.4a UX follow-ups from manual review: visible back-to-dashboard link, PAT-owner-login bug fix (`github_pat_login` migration), expiry visibility badge, classic-PAT scopes hint on profile page, password-change feature (endpoint + form)
+- [x] 4.1 Type checking passes (src and tests) — f40e013
+- [x] 4.2 Linting passes — f40e013
+- [x] 4.3 Build succeeds — f40e013
+- [x] 4.4 Existing tests pass — f40e013
+- [x] 4.4a UX follow-ups from manual review: visible back-to-dashboard link, PAT-owner-login bug fix (`github_pat_login` migration), expiry visibility badge, classic-PAT scopes hint on profile page, password-change feature (endpoint + form) — f40e013
 
 #### Manual
 
-- [ ] 4.5 Profile page renders all sections
-- [ ] 4.6 PAT update validates and shows login + expiry
-- [ ] 4.7 PAT update handles invalid tokens
-- [ ] 4.8 Delete account requires typing DELETE
-- [ ] 4.9 Account deletion removes user + all data
-- [ ] 4.10 After deletion, redirected to / and can't sign in
-- [ ] 4.11 Sign-out works from profile page
+- [x] 4.5 Profile page renders all sections — f40e013
+- [x] 4.6 PAT update validates and shows login + expiry — f40e013
+- [x] 4.7 PAT update handles invalid tokens — f40e013
+- [x] 4.8 Delete account requires typing DELETE — f40e013
+- [x] 4.9 Account deletion removes user + all data — f40e013
+- [x] 4.10 After deletion, redirected to / and can't sign in — f40e013
+- [x] 4.11 Sign-out works from profile page — f40e013
 
 ### Phase 5: PAT Expiry Warning Banner
 
 #### Automated
 
-- [ ] 5.1 Type checking passes
-- [ ] 5.2 Linting passes
-- [ ] 5.3 Build succeeds
+- [x] 5.1 Type checking passes
+- [x] 5.2 Linting passes
+- [x] 5.3 Build succeeds
 
 #### Manual
 
-- [ ] 5.4 Warning banner appears when PAT expires within 7 days
-- [ ] 5.5 Banner links to /profile/settings
-- [ ] 5.6 No banner for no-expiry tokens
-- [ ] 5.7 No banner when expiry > 7 days
-- [ ] 5.8 No banner for unauthenticated users
+- [x] 5.4 Warning banner appears when PAT expires within 7 days
+- [x] 5.5 Banner links to /profile/settings
+- [x] 5.6 No banner for no-expiry tokens
+- [x] 5.7 No banner when expiry > 7 days
+- [x] 5.8 No banner for unauthenticated users
 
 ### Phase 6: PRD Update
 
 #### Manual
 
-- [ ] 6.1 FR-018/020/022 reflect per-user PAT semantics
-- [ ] 6.2 Multi-org known gap is documented
-- [ ] 6.3 change.md notes deprecated column
+- [x] 6.1 FR-018/020/022 reflect per-user PAT semantics
+- [x] 6.2 Multi-org known gap is documented
+- [x] 6.3 change.md notes deprecated column
