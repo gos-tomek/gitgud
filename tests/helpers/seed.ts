@@ -50,7 +50,7 @@ export async function seedTwoBoards(): Promise<TwoBoardFixture> {
   // Seed Board A: github_repo
   const { data: repoData, error: repoError } = await adminClient
     .from("github_repos")
-    .insert({ board_id: boardIdA, repo_owner: "test-org", repo_name: "test-repo", connected_by: userIdA })
+    .insert({ board_id: boardIdA, repo_owner: "test-org", repo_name: "test-repo" })
     .select("id")
     .single();
   if (repoError) throw new Error(`Failed to create repo: ${repoError.message}`);

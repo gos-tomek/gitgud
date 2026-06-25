@@ -1,6 +1,14 @@
 ---
 import Layout from "@/layouts/Layout.astro";
 import CreateBoardForm from "@/components/CreateBoardForm";
+import { createClient } from "@/lib/supabase";
+import { getUserProfile } from "@/lib/services/boards";
+
+const { user } = Astro.locals;
+const supabase = createClient(Astro.request.headers, Astro.cookies);
+const profile = supabase && user ? await getUserProfile(supabase, user.id).catch(() => null) : null;
+
+const storedPat = profile?.hasGithubPat ? { login: profile.githubPatLogin, expiresAt: profile.tokenExpiresAt } : null;
 ---
 
 <Layout title="New board">
@@ -11,7 +19,7 @@ import CreateBoardForm from "@/components/CreateBoardForm";
       >
         New board
       </h1>
-      <CreateBoardForm client:load />
+      <CreateBoardForm client:load storedPat={storedPat} />
       <p class="mt-4 text-center text-sm text-blue-100/60">
         <a href="/dashboard" class="text-purple-300 hover:underline">← Back to dashboard</a>
       </p>

@@ -16,7 +16,6 @@ export interface GitHubRepo {
   repoOwner: string;
   repoName: string;
   connectedAt: string;
-  connectedBy: string;
 }
 
 export interface GitHubPullRequest {
@@ -52,6 +51,7 @@ export interface UserProfile {
   githubId: number;
   githubLogin: string;
   avatarUrl: string | null;
+  tokenExpiresAt: string | null;
 }
 
 export interface BoardContributor {

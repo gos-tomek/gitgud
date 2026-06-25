@@ -1,7 +1,7 @@
 import type { APIRoute } from "astro";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase";
-import { makeOctokit, GitHubAuthError } from "@/lib/github";
+import { makeOctokit, GitHubAuthError, parseGitHubTokenExpiry } from "@/lib/github";
 import { logger } from "@/lib/logger";
 
 const validatePatSchema = z.object({
@@ -49,11 +49,14 @@ export const POST: APIRoute = async (context) => {
 
   try {
     const octokit = makeOctokit(pat);
-    const { data } = await octokit.rest.users.getAuthenticated();
+    const { data, headers } = await octokit.rest.users.getAuthenticated();
+    const expiryHeader = headers["github-authentication-token-expiration"];
+    const expiresAt = expiryHeader ? parseGitHubTokenExpiry(String(expiryHeader)) : null;
     return json({
       login: data.login,
       id: data.id,
       avatarUrl: data.avatar_url,
+      expiresAt: expiresAt ? expiresAt.toISOString() : null,
       ...(warning ? { warning } : {}),
     });
   } catch (err) {

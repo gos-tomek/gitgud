@@ -55,20 +55,26 @@ describe.skipIf(!canRun)("PAT non-leakage (Risk #2)", () => {
     contributorUserId = contributorResult.userId;
     contributorClient = contributorResult.client;
 
-    // 2. Create the board, store the sentinel PAT, and link a repo in one
-    //    atomic call. create_board_atomic is a SECURITY DEFINER function that
-    //    validates p_user_id = auth.uid() — it must be called as the owner,
-    //    not the admin service role (which has auth.uid() = null). The
-    //    boards_insert_owner_as_member trigger auto-enrolls the owner.
-    //    A repo is required so the dispatched Workflow's sync-list-prs step actually has
-    //    something to sync — with zero repos, `listBoardRepos` returns empty and the Workflow
-    //    never decrypts the PAT or calls GitHub, so the auth-error log line we poll for below
-    //    would never appear.
+    // 2. Store the sentinel PAT on the owner's profile (per-user PAT model), then create the
+    //    board and link a repo. Both calls are SECURITY DEFINER functions that validate
+    //    p_user_id = auth.uid() — they must run as the owner, not the admin service role
+    //    (which has auth.uid() = null). The boards_insert_owner_as_member trigger auto-enrolls
+    //    the owner. A repo is required so the dispatched Workflow's sync-list-prs step actually
+    //    has something to sync — with zero repos, `listBoardRepos` returns empty and the
+    //    Workflow never decrypts the PAT or calls GitHub, so the auth-error log line we poll
+    //    for below would never appear.
+    const setPatResult = await ownerClient.rpc("set_user_github_pat", {
+      p_user_id: ownerUserId,
+      p_raw_token: TEST_PAT,
+      p_encryption_key: ENCRYPTION_KEY,
+      p_expires_at: null,
+      p_github_login: `pat-leak-owner-${ts}`,
+    });
+    if (setPatResult.error) throw new Error(`Failed to set PAT: ${setPatResult.error.message}`);
+
     const createResult = await ownerClient.rpc("create_board_atomic", {
       p_user_id: ownerUserId,
       p_name: `PAT Leak Test ${ts}`,
-      p_raw_token: TEST_PAT,
-      p_encryption_key: ENCRYPTION_KEY,
       p_repos: [{ owner: "test-org", name: "test-repo-pat-leak" }],
       p_contributors: [],
     });

@@ -2,12 +2,18 @@
 import "../styles/global.css";
 import Banner from "@/components/Banner.astro";
 import { missingConfigs } from "@/lib/config-status";
+import { createClient } from "@/lib/supabase";
+import { getTokenWarning } from "@/lib/token-status";
 
 interface Props {
   title?: string;
 }
 
 const { title = "10x Astro Starter" } = Astro.props;
+
+const supabase = createClient(Astro.request.headers, Astro.cookies);
+const tokenWarning =
+  supabase && Astro.locals.user ? await getTokenWarning(supabase, Astro.locals.user.id).catch(() => null) : null;
 ---
 
 <!doctype html>
@@ -34,6 +40,14 @@ const { title = "10x Astro Starter" } = Astro.props;
           )}
         </Banner>
       ))
+    }
+    {
+      tokenWarning && (
+        <Banner variant="warning">
+          {tokenWarning.message + " "}
+          <a href="/profile/settings">Update token</a>
+        </Banner>
+      )
     }
     <slot />
   </body>

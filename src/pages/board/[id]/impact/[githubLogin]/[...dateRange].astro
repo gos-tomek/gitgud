@@ -27,7 +27,7 @@ if (!board) {
 const [contributors, boards, ownProfile] = await Promise.all([
   getBoardContributors(supabase, board.id).catch(() => []),
   getUserBoards(supabase, user.id).catch(() => []),
-  board.role !== "supervisor" ? getUserProfile(supabase, user.id).catch(() => null) : Promise.resolve(null),
+  getUserProfile(supabase, user.id).catch(() => null),
 ]);
 
 const contributor = contributors.find((c) => c.githubLogin === githubLogin);
@@ -54,7 +54,7 @@ const userInitial = user.email?.[0]?.toUpperCase() ?? "?";
 
 <Layout title={`${contributor.githubLogin} — ${board.name}`}>
   <div class="bg-cosmic min-h-screen text-white">
-    <BoardTopbar board={board} boards={boards} userInitial={userInitial} />
+    <BoardTopbar board={board} boards={boards} userInitial={userInitial} avatarUrl={ownProfile?.avatarUrl} />
     <BoardNav boardId={board.id} githubLogin={contributor.githubLogin} period={period} />
     <ImpactView
       client:only="react"

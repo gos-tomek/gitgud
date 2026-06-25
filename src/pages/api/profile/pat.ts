@@ -1,14 +1,12 @@
 import type { APIRoute } from "astro";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase";
-import { makeOctokit, GitHubAuthError } from "@/lib/github";
+import { makeOctokit, GitHubAuthError, parseGitHubTokenExpiry } from "@/lib/github";
 import { GITHUB_TOKEN_ENCRYPTION_KEY } from "astro:env/server";
 import { logger } from "@/lib/logger";
 
-const validateRepoSchema = z.object({
-  pat: z.string().min(1, "PAT is required").optional(),
-  owner: z.string().min(1, "Owner is required"),
-  name: z.string().min(1, "Repo name is required"),
+const savePatSchema = z.object({
+  pat: z.string().min(1, "PAT is required"),
 });
 
 function json(body: unknown, status = 200): Response {
@@ -38,46 +36,41 @@ export const POST: APIRoute = async (context) => {
     return json({ error: "Invalid JSON body" }, 400);
   }
 
-  const parsed = validateRepoSchema.safeParse(body);
+  const parsed = savePatSchema.safeParse(body);
   if (!parsed.success) {
     const message = parsed.error.issues.at(0)?.message ?? "Invalid input";
     return json({ error: message }, 400);
   }
 
-  const { owner, name } = parsed.data;
-
-  let token = parsed.data.pat;
-  if (!token) {
-    if (!GITHUB_TOKEN_ENCRYPTION_KEY) return json({ error: "Encryption is not configured" }, 503);
-    const patResult = await supabase.rpc("get_user_github_pat_by_user_id", {
-      p_user_id: user.id,
-      p_encryption_key: GITHUB_TOKEN_ENCRYPTION_KEY,
-    });
-    if (patResult.error || !patResult.data) {
-      return json({ error: "No GitHub token configured — save one in Profile Settings first" }, 400);
-    }
-    token = patResult.data as string;
-  }
+  const { pat } = parsed.data;
 
   try {
-    const octokit = makeOctokit(token);
-    const { data } = await octokit.rest.repos.get({ owner, repo: name });
-    return json({
-      owner: data.owner.login,
-      name: data.name,
-      fullName: data.full_name,
-      private: data.private,
-      pushAccess: data.permissions?.push ?? false,
+    const octokit = makeOctokit(pat);
+    const { data, headers } = await octokit.rest.users.getAuthenticated();
+    const expiryHeader = headers["github-authentication-token-expiration"];
+    const expiresAt = expiryHeader ? parseGitHubTokenExpiry(String(expiryHeader)) : null;
+
+    if (!GITHUB_TOKEN_ENCRYPTION_KEY) return json({ error: "Encryption is not configured" }, 503);
+
+    const result = await supabase.rpc("set_user_github_pat", {
+      p_user_id: user.id,
+      p_raw_token: pat,
+      p_encryption_key: GITHUB_TOKEN_ENCRYPTION_KEY,
+      p_expires_at: expiresAt ? expiresAt.toISOString() : null,
+      p_github_login: data.login,
     });
+
+    if (result.error) {
+      logger.error("[profile/pat] set_user_github_pat failed", { userId: user.id, detail: result.error.message });
+      return json({ error: "Failed to save token. Please try again." }, 500);
+    }
+
+    return json({ login: data.login, expiresAt: expiresAt ? expiresAt.toISOString() : null });
   } catch (err) {
     if (err instanceof GitHubAuthError) {
       return json({ error: "Token is invalid or expired" }, 401);
     }
-    const status = (err as { status?: number }).status ?? 0;
-    if (status === 404) {
-      return json({ error: "Repository not found or not accessible with this token" }, 404);
-    }
-    logger.error("[validate-repo]", err);
-    return json({ error: "Failed to validate repository" }, 500);
+    logger.error("[profile/pat]", err);
+    return json({ error: "Failed to validate token" }, 500);
   }
 };

@@ -1,0 +1,124 @@
+---
+import Layout from "@/layouts/Layout.astro";
+import { createClient } from "@/lib/supabase";
+import { getUserProfile } from "@/lib/services/boards";
+import PatUpdateForm from "@/components/PatUpdateForm";
+import ChangePasswordForm from "@/components/ChangePasswordForm";
+import DeleteAccountDialog from "@/components/DeleteAccountDialog";
+
+const { user } = Astro.locals;
+
+const supabase = createClient(Astro.request.headers, Astro.cookies);
+const profile = supabase && user ? await getUserProfile(supabase, user.id).catch(() => null) : null;
+
+const userInitial = user?.email?.[0]?.toUpperCase() ?? "?";
+---
+
+<Layout title="Profile settings">
+  <div class="bg-cosmic min-h-screen text-white">
+    <header class="sticky top-0 z-20 border-b border-white/10 bg-black/60 backdrop-blur-md">
+      <div class="mx-auto flex h-14 max-w-6xl items-center justify-between gap-4 px-4">
+        <a href="/dashboard" class="flex items-center gap-1.5 text-white/70 hover:text-white">
+          <div class="flex h-7 w-7 items-center justify-center rounded-md bg-white text-sm font-black text-black">
+            g
+          </div>
+          <span class="text-sm font-semibold text-white">GitGud</span>
+        </a>
+
+        <details class="relative">
+          <summary class="flex h-8 w-8 cursor-pointer list-none items-center justify-center rounded-full select-none">
+            {
+              profile?.avatarUrl ? (
+                <img src={profile.avatarUrl} alt="" class="h-8 w-8 rounded-full" />
+              ) : (
+                <div class="flex h-8 w-8 items-center justify-center rounded-full bg-purple-600 text-sm font-semibold text-white hover:bg-purple-500">
+                  {userInitial}
+                </div>
+              )
+            }
+          </summary>
+
+          <div
+            class="absolute top-full right-0 z-50 mt-1.5 w-48 overflow-hidden rounded-xl border border-white/10 bg-gray-950 py-1.5 shadow-2xl"
+          >
+            <a
+              href="/dashboard"
+              class="flex items-center gap-2 px-3 py-2 text-sm text-white/70 transition-colors hover:bg-white/5 hover:text-white"
+            >
+              Back to dashboard
+            </a>
+            <div class="mx-3 my-1 border-t border-white/10"></div>
+            <form method="POST" action="/api/auth/signout">
+              <button
+                type="submit"
+                class="flex w-full items-center gap-2 px-3 py-2 text-sm text-white/70 transition-colors hover:bg-white/5 hover:text-white"
+              >
+                Sign out
+              </button>
+            </form>
+          </div>
+        </details>
+      </div>
+    </header>
+
+    <div class="mx-auto max-w-2xl space-y-4 p-4">
+      <div class="flex items-center justify-between">
+        <h1 class="text-xl font-semibold text-white">Profile settings</h1>
+        <a href="/dashboard" class="text-sm text-purple-300 transition-colors hover:text-purple-100 hover:underline">
+          ← Back to dashboard
+        </a>
+      </div>
+
+      <div class="rounded-lg border border-white/10 bg-white/5 px-4 py-3">
+        <p class="text-xs font-semibold tracking-wide text-blue-100/40 uppercase">GitHub identity</p>
+        <div class="mt-2 flex items-center gap-3">
+          {
+            profile?.avatarUrl ? (
+              <img src={profile.avatarUrl} alt="" class="h-12 w-12 rounded-full" />
+            ) : (
+              <div class="flex h-12 w-12 items-center justify-center rounded-full bg-purple-600 text-lg font-semibold text-white">
+                {userInitial}
+              </div>
+            )
+          }
+          <div>
+            {
+              profile?.githubLogin ? (
+                <p class="font-medium text-white">@{profile.githubLogin}</p>
+              ) : (
+                <p class="text-sm text-blue-100/50 italic">No GitHub account linked</p>
+              )
+            }
+            <p class="text-sm text-blue-100/50">{user?.email}</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="rounded-lg border border-white/10 bg-white/5 px-4 py-3">
+        <p class="text-xs font-semibold tracking-wide text-blue-100/40 uppercase">GitHub token</p>
+        <div class="mt-2">
+          <PatUpdateForm
+            client:load
+            hasToken={profile?.hasGithubPat ?? false}
+            currentLogin={profile?.githubPatLogin ?? null}
+            currentExpiresAt={profile?.tokenExpiresAt ?? null}
+          />
+        </div>
+      </div>
+
+      <div class="rounded-lg border border-white/10 bg-white/5 px-4 py-3">
+        <p class="text-xs font-semibold tracking-wide text-blue-100/40 uppercase">Password</p>
+        <div class="mt-2">
+          <ChangePasswordForm client:load />
+        </div>
+      </div>
+
+      <div class="rounded-lg border border-red-500/30 bg-red-900/10 px-4 py-3">
+        <p class="text-xs font-semibold tracking-wide text-red-300/70 uppercase">Danger zone</p>
+        <div class="mt-2">
+          <DeleteAccountDialog client:load />
+        </div>
+      </div>
+    </div>
+  </div>
+</Layout>

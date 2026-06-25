@@ -1,13 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import type { APIContext } from "astro";
 
-// astro:env/server is a virtual module — Vitest cannot resolve it without a factory mock.
-vi.mock("astro:env/server", () => ({
-  GITHUB_TOKEN_ENCRYPTION_KEY: "test-encryption-key",
-  SUPABASE_URL: "https://example.supabase.co",
-  SUPABASE_KEY: "test-supabase-key",
-}));
-
 const mockLogger = vi.hoisted(() => ({
   error: vi.fn(),
   warn: vi.fn(),
@@ -25,14 +18,12 @@ const { POST } = await import("@/pages/api/board/index");
 
 interface CreateBoardBody {
   name: string;
-  pat: string;
   repos: { owner: string; name: string }[];
   contributors: { githubId: number; githubLogin: string; avatarUrl?: string }[];
 }
 
 const validBody: CreateBoardBody = {
   name: "Test Board",
-  pat: "ghp_testtoken123",
   repos: [{ owner: "octocat", name: "hello-world" }],
   contributors: [{ githubId: 1, githubLogin: "octocat", avatarUrl: "https://avatars.example/octocat.png" }],
 };
@@ -63,11 +54,22 @@ describe("POST /api/board (hermetic)", () => {
     expect(mockSupabase.rpc).toHaveBeenCalledWith("create_board_atomic", {
       p_user_id: "user-1",
       p_name: "Test Board",
-      p_raw_token: "ghp_testtoken123",
-      p_encryption_key: "test-encryption-key",
       p_repos: [{ owner: "octocat", name: "hello-world" }],
       p_contributors: [{ github_id: 1, github_login: "octocat", avatar_url: "https://avatars.example/octocat.png" }],
     });
+  });
+
+  it("no stored PAT: rpc raises the no-token exception, returns 400 with a friendly message", async () => {
+    mockSupabase.rpc.mockResolvedValueOnce({
+      data: null,
+      error: { code: "P0001", message: "No GitHub token configured — save one in Profile Settings first" },
+    });
+
+    const res = await POST(makeContext(validBody));
+
+    expect(res.status).toBe(400);
+    const body = (await res.json()) as { error: string };
+    expect(body.error).toBe("No GitHub token configured — save one in Profile Settings first");
   });
 
   it("duplicate name: rpc returns 23505 returns 409 with the duplicate-name message", async () => {
@@ -118,7 +120,6 @@ describe("POST /api/board (hermetic)", () => {
   describe("validation: missing/empty fields", () => {
     it.each<[string, CreateBoardBody, string]>([
       ["name", { ...validBody, name: "" }, "Board name is required"],
-      ["pat", { ...validBody, pat: "" }, "GitHub token is required"],
       ["repos", { ...validBody, repos: [] }, "At least one repository is required"],
       ["contributors", { ...validBody, contributors: [] }, "At least one contributor is required"],
     ])(
