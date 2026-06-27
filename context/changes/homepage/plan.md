@@ -501,26 +501,26 @@ Migrate all existing app pages and components from the dark cosmic theme to the 
 
 #### Manual
 
-- [ ] 0.4 Homepage renders with light green background, branded nav, hero, features, stats placeholder, and CTAs
-- [ ] 0.5 Sign In / Sign Up links navigate to correct auth pages
-- [ ] 0.6 Authenticated users still redirect to `/dashboard`
-- [ ] 0.7 Page looks reasonable on mobile viewports
-- [ ] 0.8 Logo displays correctly in the nav
+- [x] 0.4 Homepage renders with light green background, branded nav, hero, features, stats placeholder, and CTAs
+- [x] 0.5 Sign In / Sign Up links navigate to correct auth pages
+- [x] 0.6 Authenticated users still redirect to `/dashboard`
+- [x] 0.7 Page looks reasonable on mobile viewports
+- [x] 0.8 Logo displays correctly in the nav
 
 ### Phase 1: Brand Tokens & Favicon
 
 #### Automated
 
-- [ ] 1.1 Build succeeds: `npm run build`
-- [ ] 1.2 Type checking passes: `npx tsc --noEmit`
-- [ ] 1.3 Lint passes: `npm run lint`
+- [x] 1.1 Build succeeds: `npm run build`
+- [x] 1.2 Type checking passes: `npx tsc --noEmit`
+- [x] 1.3 Lint passes: `npm run lint`
 
 #### Manual
 
-- [ ] 1.4 Browser tab shows new favicon (white cat in green circle)
-- [ ] 1.5 Homepage uses green primary color for CTAs and accents
-- [ ] 1.6 shadcn/ui components pick up green primary automatically
-- [ ] 1.7 Page title reads "GitGud" in browser tab
+- [x] 1.4 Browser tab shows new favicon (white cat in green circle)
+- [x] 1.5 Homepage uses green primary color for CTAs and accents
+- [x] 1.6 shadcn/ui components pick up green primary automatically
+- [x] 1.7 Page title reads "GitGud" in browser tab
 
 ### Phase 2: Stats Data Pipeline
 
