@@ -1,5 +1,27 @@
 ---
 import HomepageNav from "@/components/HomepageNav.astro";
+import type { HomepageStats } from "@/lib/services/homepage-stats";
+
+const FALLBACK: HomepageStats = {
+  boards: 0,
+  contributors: 0,
+  repos: 0,
+  prsTracked: 0,
+  threadsClassified: 0,
+  deepDiscussions: 0,
+  multiPersonThreads: 0,
+  highImpactPercent: 0,
+};
+
+let stats = FALLBACK;
+try {
+  const res = await fetch(new URL("/api/stats", Astro.url));
+  if (res.ok) {
+    stats = await res.json();
+  }
+} catch {
+  // network or parse error — fall back to zeros
+}
 ---
 
 <style is:global>
@@ -82,7 +104,7 @@ import HomepageNav from "@/components/HomepageNav.astro";
           class="leading-none font-bold text-green-500"
           style="font-size: clamp(48px, 6vw, 72px); letter-spacing: -0.03em;"
         >
-          0%
+          {stats.highImpactPercent}%
         </div>
         <div class="mt-2 text-base font-medium text-[#4a5e4a]">of review threads classified as high-impact</div>
         <div class="mt-1 text-[13px] text-slate-400">architecture · mentoring · bug-catch · unblocking</div>
@@ -91,15 +113,21 @@ import HomepageNav from "@/components/HomepageNav.astro";
       <!-- 3 medium stats -->
       <div class="mb-4 grid grid-cols-1 gap-4 sm:grid-cols-3">
         <div class="rounded-[14px] border border-green-100 bg-white px-5 py-7 text-center">
-          <div class="text-[40px] leading-none font-bold text-[#0f1f0f]" style="letter-spacing: -0.03em;">0</div>
+          <div class="text-[40px] leading-none font-bold text-[#0f1f0f]" style="letter-spacing: -0.03em;">
+            {stats.contributors}
+          </div>
           <div class="mt-1.5 text-[13px] font-medium text-[#6b7e6b]">Contributors</div>
         </div>
         <div class="rounded-[14px] border border-green-100 bg-white px-5 py-7 text-center">
-          <div class="text-[40px] leading-none font-bold text-[#0f1f0f]" style="letter-spacing: -0.03em;">0</div>
+          <div class="text-[40px] leading-none font-bold text-[#0f1f0f]" style="letter-spacing: -0.03em;">
+            {stats.prsTracked}
+          </div>
           <div class="mt-1.5 text-[13px] font-medium text-[#6b7e6b]">PRs tracked</div>
         </div>
         <div class="rounded-[14px] border border-green-100 bg-white px-5 py-7 text-center">
-          <div class="text-[40px] leading-none font-bold text-[#0f1f0f]" style="letter-spacing: -0.03em;">0</div>
+          <div class="text-[40px] leading-none font-bold text-[#0f1f0f]" style="letter-spacing: -0.03em;">
+            {stats.repos}
+          </div>
           <div class="mt-1.5 text-[13px] font-medium text-[#6b7e6b]">Repos connected</div>
         </div>
       </div>
@@ -107,21 +135,29 @@ import HomepageNav from "@/components/HomepageNav.astro";
       <!-- 4 small stats -->
       <div class="grid grid-cols-2 gap-4 sm:grid-cols-4">
         <div class="rounded-[14px] border border-green-100 bg-white px-4 py-[22px] text-center">
-          <div class="text-[32px] leading-none font-bold text-[#0f1f0f]" style="letter-spacing: -0.02em;">0</div>
+          <div class="text-[32px] leading-none font-bold text-[#0f1f0f]" style="letter-spacing: -0.02em;">
+            {stats.threadsClassified}
+          </div>
           <div class="mt-1 text-[12px] font-medium text-[#6b7e6b]">Threads classified</div>
         </div>
         <div class="rounded-[14px] border border-green-100 bg-white px-4 py-[22px] text-center">
-          <div class="text-[32px] leading-none font-bold text-[#0f1f0f]" style="letter-spacing: -0.02em;">0</div>
+          <div class="text-[32px] leading-none font-bold text-[#0f1f0f]" style="letter-spacing: -0.02em;">
+            {stats.deepDiscussions}
+          </div>
           <div class="mt-1 text-[12px] font-medium text-[#6b7e6b]">Deep discussions</div>
           <div class="mt-0.5 text-[10px] text-slate-400">3+ messages</div>
         </div>
         <div class="rounded-[14px] border border-green-100 bg-white px-4 py-[22px] text-center">
-          <div class="text-[32px] leading-none font-bold text-[#0f1f0f]" style="letter-spacing: -0.02em;">0</div>
+          <div class="text-[32px] leading-none font-bold text-[#0f1f0f]" style="letter-spacing: -0.02em;">
+            {stats.multiPersonThreads}
+          </div>
           <div class="mt-1 text-[12px] font-medium text-[#6b7e6b]">Multi-person threads</div>
           <div class="mt-0.5 text-[10px] text-slate-400">2+ participants</div>
         </div>
         <div class="rounded-[14px] border border-green-100 bg-white px-4 py-[22px] text-center">
-          <div class="text-[32px] leading-none font-bold text-[#0f1f0f]" style="letter-spacing: -0.02em;">0</div>
+          <div class="text-[32px] leading-none font-bold text-[#0f1f0f]" style="letter-spacing: -0.02em;">
+            {stats.boards}
+          </div>
           <div class="mt-1 text-[12px] font-medium text-[#6b7e6b]">Boards</div>
         </div>
       </div>

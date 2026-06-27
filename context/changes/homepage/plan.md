@@ -526,29 +526,29 @@ Migrate all existing app pages and components from the dark cosmic theme to the 
 
 #### Automated
 
-- [x] 2.1 Build succeeds: `npm run build`
-- [x] 2.2 Type checking passes: `npx tsc --noEmit`
-- [x] 2.3 Lint passes: `npm run lint`
+- [x] 2.1 Build succeeds: `npm run build` — 69ac70f
+- [x] 2.2 Type checking passes: `npx tsc --noEmit` — 69ac70f
+- [x] 2.3 Lint passes: `npm run lint` — 69ac70f
 
 #### Manual
 
-- [x] 2.4 `curl localhost:4321/api/stats` returns JSON with correct fields
-- [x] 2.5 Second request within 1h returns cached data
-- [x] 2.6 Stats reflect actual table counts with local Supabase
+- [x] 2.4 `curl localhost:4321/api/stats` returns JSON with correct fields — 69ac70f
+- [x] 2.5 Second request within 1h returns cached data — 69ac70f
+- [x] 2.6 Stats reflect actual table counts with local Supabase — 69ac70f
 
 ### Phase 3: Stats Integration & Polish
 
 #### Automated
 
-- [ ] 3.1 Build succeeds: `npm run build`
-- [ ] 3.2 Type checking passes: `npx tsc --noEmit`
-- [ ] 3.3 Lint passes: `npm run lint`
+- [x] 3.1 Build succeeds: `npm run build`
+- [x] 3.2 Type checking passes: `npx tsc --noEmit`
+- [x] 3.3 Lint passes: `npm run lint`
 
 #### Manual
 
-- [ ] 3.4 Homepage stats section shows live data from database
-- [ ] 3.5 With Supabase stopped, homepage renders with "0" values
-- [ ] 3.6 Stats update after KV cache expires
+- [x] 3.4 Homepage stats section shows live data from database
+- [x] 3.5 With Supabase stopped, homepage renders with "0" values
+- [x] 3.6 Stats update after KV cache expires
 
 ### Phase 4: App-Wide Brand Color Migration
 
