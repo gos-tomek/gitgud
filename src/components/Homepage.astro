@@ -1,0 +1,257 @@
+---
+import HomepageNav from "@/components/HomepageNav.astro";
+---
+
+<style is:global>
+  @import url("https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap");
+</style>
+
+<div
+  class="overflow-x-hidden bg-green-50"
+  style="min-height: 100vh; font-family: 'DM Sans', system-ui, -apple-system, sans-serif; color: #1a2e1a;"
+>
+  <HomepageNav />
+
+  <!-- HERO -->
+  <section class="px-8 pt-[72px] pb-12">
+    <div class="mx-auto max-w-[1120px] text-center">
+      <!-- Icon -->
+      <div class="mx-auto mb-7 flex h-[72px] w-[72px] items-center justify-center">
+        <img src="/gitgud-icon.png" alt="" class="h-16 w-16" />
+      </div>
+
+      <!-- Badge -->
+      <div
+        class="mb-6 inline-flex items-center gap-2 rounded-full border border-green-200 bg-white py-1.5 pr-4 pl-2 text-[13px] font-medium text-green-600"
+      >
+        <a
+          href="https://github.com/gos-tomek/gitgud"
+          target="_blank"
+          rel="noopener noreferrer"
+          class="rounded-full bg-green-100 px-2 py-0.5 text-[11px] font-semibold tracking-wider text-green-600 uppercase transition-colors hover:bg-green-200"
+        >
+          OPEN SOURCE
+        </a>
+        Self-hosted · Transparent · No ranking
+      </div>
+
+      <!-- Headline -->
+      <h1
+        class="mx-auto mb-5 max-w-[720px] leading-[1.1] font-bold tracking-tight text-balance text-[#0f1f0f]"
+        style="font-size: clamp(36px, 5vw, 56px);"
+      >
+        See your engineering contributions. Grow from them.
+      </h1>
+
+      <!-- Subheadline -->
+      <p class="mx-auto mb-9 max-w-[560px] leading-relaxed text-[#4a5e4a]" style="font-size: clamp(17px, 2vw, 19px);">
+        GitGud reads your GitHub activity, classifies every review comment by intent, and builds your contribution
+        profile — so you can see where your energy goes.
+      </p>
+
+      <!-- CTAs -->
+      <div class="flex flex-wrap items-center justify-center gap-3">
+        <a
+          href="/auth/signup"
+          class="rounded-[10px] bg-green-500 px-8 py-3.5 text-base font-semibold text-white transition-all hover:-translate-y-px hover:bg-green-600"
+          style="box-shadow: 0 1px 2px rgba(22,163,74,0.3), 0 4px 12px rgba(22,163,74,0.15);"
+        >
+          Get Started
+        </a>
+        <a
+          href="/auth/signin"
+          class="rounded-[10px] border bg-white px-8 py-3.5 text-base font-medium transition-all hover:border-green-200 hover:bg-[#f7fef7]"
+          style="color: #1a2e1a; border-color: #d1ddd1;"
+        >
+          Sign In
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <!-- STATS -->
+  <section class="px-8 pt-4 pb-[72px]">
+    <div class="mx-auto max-w-[1040px]">
+      <p class="mb-6 text-center text-[13px] font-semibold tracking-[0.08em] text-green-500 uppercase">
+        On this instance right now
+      </p>
+
+      <!-- Big stat: high-impact % -->
+      <div class="mb-4 rounded-2xl border border-green-200 bg-white p-9 text-center">
+        <div
+          class="leading-none font-bold text-green-500"
+          style="font-size: clamp(48px, 6vw, 72px); letter-spacing: -0.03em;"
+        >
+          0%
+        </div>
+        <div class="mt-2 text-base font-medium text-[#4a5e4a]">of review threads classified as high-impact</div>
+        <div class="mt-1 text-[13px] text-slate-400">architecture · mentoring · bug-catch · unblocking</div>
+      </div>
+
+      <!-- 3 medium stats -->
+      <div class="mb-4 grid grid-cols-1 gap-4 sm:grid-cols-3">
+        <div class="rounded-[14px] border border-green-100 bg-white px-5 py-7 text-center">
+          <div class="text-[40px] leading-none font-bold text-[#0f1f0f]" style="letter-spacing: -0.03em;">0</div>
+          <div class="mt-1.5 text-[13px] font-medium text-[#6b7e6b]">Contributors</div>
+        </div>
+        <div class="rounded-[14px] border border-green-100 bg-white px-5 py-7 text-center">
+          <div class="text-[40px] leading-none font-bold text-[#0f1f0f]" style="letter-spacing: -0.03em;">0</div>
+          <div class="mt-1.5 text-[13px] font-medium text-[#6b7e6b]">PRs tracked</div>
+        </div>
+        <div class="rounded-[14px] border border-green-100 bg-white px-5 py-7 text-center">
+          <div class="text-[40px] leading-none font-bold text-[#0f1f0f]" style="letter-spacing: -0.03em;">0</div>
+          <div class="mt-1.5 text-[13px] font-medium text-[#6b7e6b]">Repos connected</div>
+        </div>
+      </div>
+
+      <!-- 4 small stats -->
+      <div class="grid grid-cols-2 gap-4 sm:grid-cols-4">
+        <div class="rounded-[14px] border border-green-100 bg-white px-4 py-[22px] text-center">
+          <div class="text-[32px] leading-none font-bold text-[#0f1f0f]" style="letter-spacing: -0.02em;">0</div>
+          <div class="mt-1 text-[12px] font-medium text-[#6b7e6b]">Threads classified</div>
+        </div>
+        <div class="rounded-[14px] border border-green-100 bg-white px-4 py-[22px] text-center">
+          <div class="text-[32px] leading-none font-bold text-[#0f1f0f]" style="letter-spacing: -0.02em;">0</div>
+          <div class="mt-1 text-[12px] font-medium text-[#6b7e6b]">Deep discussions</div>
+          <div class="mt-0.5 text-[10px] text-slate-400">3+ messages</div>
+        </div>
+        <div class="rounded-[14px] border border-green-100 bg-white px-4 py-[22px] text-center">
+          <div class="text-[32px] leading-none font-bold text-[#0f1f0f]" style="letter-spacing: -0.02em;">0</div>
+          <div class="mt-1 text-[12px] font-medium text-[#6b7e6b]">Multi-person threads</div>
+          <div class="mt-0.5 text-[10px] text-slate-400">2+ participants</div>
+        </div>
+        <div class="rounded-[14px] border border-green-100 bg-white px-4 py-[22px] text-center">
+          <div class="text-[32px] leading-none font-bold text-[#0f1f0f]" style="letter-spacing: -0.02em;">0</div>
+          <div class="mt-1 text-[12px] font-medium text-[#6b7e6b]">Boards</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FEATURES: What you can do -->
+  <section class="border-y border-green-100 bg-white px-8 py-14">
+    <div class="mx-auto max-w-[1120px]">
+      <div class="mb-12 text-center">
+        <h2 class="font-bold tracking-[-0.02em] text-[#0f1f0f]" style="font-size: clamp(26px, 3.5vw, 36px);">
+          What you can do with it
+        </h2>
+      </div>
+      <div class="grid grid-cols-1 gap-6 md:grid-cols-3">
+        <!-- Card 1: Growth conversations -->
+        <div class="rounded-[14px] border border-green-100 bg-[#f8fdf8] p-8 transition-colors hover:border-green-200">
+          <div class="mb-5 flex h-11 w-11 items-center justify-center rounded-[10px] bg-green-100">
+            <svg
+              width="22"
+              height="22"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="#16a34a"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <path
+                d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"
+              ></path>
+            </svg>
+          </div>
+          <h3 class="mb-2 text-[18px] font-bold text-[#0f1f0f]">Growth conversations</h3>
+          <p class="text-[14px] leading-relaxed text-[#4a5e4a]">
+            Walk into your 1:1 with your supervisor with data. "38% of my reviews are high-signal — architecture,
+            mentoring, bug catches." Talk about where you want to go, grounded in where you are.
+          </p>
+        </div>
+
+        <!-- Card 2: Spot your patterns -->
+        <div class="rounded-[14px] border border-green-100 bg-[#f8fdf8] p-8 transition-colors hover:border-green-200">
+          <div class="mb-5 flex h-11 w-11 items-center justify-center rounded-[10px] bg-green-100">
+            <svg
+              width="22"
+              height="22"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="#16a34a"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline>
+            </svg>
+          </div>
+          <h3 class="mb-2 text-[18px] font-bold text-[#0f1f0f]">Spot your patterns</h3>
+          <p class="text-[14px] leading-relaxed text-[#4a5e4a]">
+            Mostly nitpicks? All in one repo? Discussion-sparking ratio at 12%? See where your review energy clusters
+            and decide if that's where you want it to be.
+          </p>
+        </div>
+
+        <!-- Card 3: Find areas to grow -->
+        <div class="rounded-[14px] border border-green-100 bg-[#f8fdf8] p-8 transition-colors hover:border-green-200">
+          <div class="mb-5 flex h-11 w-11 items-center justify-center rounded-[10px] bg-green-100">
+            <svg
+              width="22"
+              height="22"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="#16a34a"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <circle cx="11" cy="11" r="8"></circle>
+              <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+              <line x1="11" y1="8" x2="11" y2="14"></line>
+              <line x1="8" y1="11" x2="14" y2="11"></line>
+            </svg>
+          </div>
+          <h3 class="mb-2 text-[18px] font-bold text-[#0f1f0f]">Find areas to grow</h3>
+          <p class="text-[14px] leading-relaxed text-[#4a5e4a]">
+            Low involvement %? Pickup time creeping up? Author engagement falling? GitGud gives you the specifics — you
+            decide what to do with them.
+          </p>
+        </div>
+      </div>
+
+      <div class="mx-auto mt-9 max-w-[640px] text-center">
+        <p class="text-[14px] leading-relaxed text-[#6b7e6b]">
+          Your supervisor may have already set up a board for your team. If not, create one yourself — connect a GitHub
+          org and add your co-contributors.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <!-- BOTTOM CTA -->
+  <section class="px-8 pt-16 pb-20 text-center">
+    <div class="mx-auto max-w-[600px]">
+      <h2 class="mb-3 font-bold tracking-[-0.02em] text-[#0f1f0f]" style="font-size: clamp(24px, 3vw, 32px);">
+        See where your energy goes
+      </h2>
+      <p class="mb-7 text-base text-[#4a5e4a]">Your contributions are already in GitHub. Sign up and explore them.</p>
+      <a
+        href="/auth/signup"
+        class="inline-block rounded-[10px] bg-green-500 px-9 py-3.5 text-base font-semibold text-white transition-all hover:-translate-y-px hover:bg-green-600"
+        style="box-shadow: 0 1px 2px rgba(22,163,74,0.3), 0 4px 12px rgba(22,163,74,0.15);"
+      >
+        Get Started
+      </a>
+    </div>
+  </section>
+
+  <!-- FOOTER -->
+  <footer class="border-t border-green-100 px-8 py-6">
+    <div class="mx-auto flex max-w-[1120px] items-center justify-between">
+      <a href="https://github.com/gos-tomek/gitgud" target="_blank" rel="noopener noreferrer">
+        <img src="/logo_gitgud.png" alt="GitGud" class="h-6 w-auto opacity-50 transition-opacity hover:opacity-80" />
+      </a>
+      <p class="text-[13px] text-slate-400">
+        <a
+          href="https://github.com/gos-tomek/gitgud"
+          target="_blank"
+          rel="noopener noreferrer"
+          class="transition-colors hover:text-green-600">Open source</a
+        > · Self-hosted · No ranking · Full transparency
+      </p>
+    </div>
+  </footer>
+</div>
