@@ -501,40 +501,40 @@ Migrate all existing app pages and components from the dark cosmic theme to the 
 
 #### Manual
 
-- [x] 0.4 Homepage renders with light green background, branded nav, hero, features, stats placeholder, and CTAs
-- [x] 0.5 Sign In / Sign Up links navigate to correct auth pages
-- [x] 0.6 Authenticated users still redirect to `/dashboard`
-- [x] 0.7 Page looks reasonable on mobile viewports
-- [x] 0.8 Logo displays correctly in the nav
+- [x] 0.4 Homepage renders with light green background, branded nav, hero, features, stats placeholder, and CTAs — 9c6a2f6
+- [x] 0.5 Sign In / Sign Up links navigate to correct auth pages — 9c6a2f6
+- [x] 0.6 Authenticated users still redirect to `/dashboard` — 9c6a2f6
+- [x] 0.7 Page looks reasonable on mobile viewports — 9c6a2f6
+- [x] 0.8 Logo displays correctly in the nav — 9c6a2f6
 
 ### Phase 1: Brand Tokens & Favicon
 
 #### Automated
 
-- [x] 1.1 Build succeeds: `npm run build`
-- [x] 1.2 Type checking passes: `npx tsc --noEmit`
-- [x] 1.3 Lint passes: `npm run lint`
+- [x] 1.1 Build succeeds: `npm run build` — 9c6a2f6
+- [x] 1.2 Type checking passes: `npx tsc --noEmit` — 9c6a2f6
+- [x] 1.3 Lint passes: `npm run lint` — 9c6a2f6
 
 #### Manual
 
-- [x] 1.4 Browser tab shows new favicon (white cat in green circle)
-- [x] 1.5 Homepage uses green primary color for CTAs and accents
-- [x] 1.6 shadcn/ui components pick up green primary automatically
-- [x] 1.7 Page title reads "GitGud" in browser tab
+- [x] 1.4 Browser tab shows new favicon (white cat in green circle) — 9c6a2f6
+- [x] 1.5 Homepage uses green primary color for CTAs and accents — 9c6a2f6
+- [x] 1.6 shadcn/ui components pick up green primary automatically — 9c6a2f6
+- [x] 1.7 Page title reads "GitGud" in browser tab — 9c6a2f6
 
 ### Phase 2: Stats Data Pipeline
 
 #### Automated
 
-- [ ] 2.1 Build succeeds: `npm run build`
-- [ ] 2.2 Type checking passes: `npx tsc --noEmit`
-- [ ] 2.3 Lint passes: `npm run lint`
+- [x] 2.1 Build succeeds: `npm run build`
+- [x] 2.2 Type checking passes: `npx tsc --noEmit`
+- [x] 2.3 Lint passes: `npm run lint`
 
 #### Manual
 
-- [ ] 2.4 `curl localhost:4321/api/stats` returns JSON with correct fields
-- [ ] 2.5 Second request within 1h returns cached data
-- [ ] 2.6 Stats reflect actual table counts with local Supabase
+- [x] 2.4 `curl localhost:4321/api/stats` returns JSON with correct fields
+- [x] 2.5 Second request within 1h returns cached data
+- [x] 2.6 Stats reflect actual table counts with local Supabase
 
 ### Phase 3: Stats Integration & Polish
 

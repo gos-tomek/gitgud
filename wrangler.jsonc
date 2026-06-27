@@ -15,6 +15,13 @@
   "ai": {
     "binding": "AI",
   },
+  "kv_namespaces": [
+    {
+      "binding": "HOMEPAGE_CACHE",
+      // Run `wrangler kv namespace create HOMEPAGE_CACHE` and replace this ID before deploying.
+      "id": "00000000000000000000000000000001",
+    },
+  ],
   "workflows": [
     {
       "name": "classification-batch",
