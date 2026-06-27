@@ -495,9 +495,9 @@ Migrate all existing app pages and components from the dark cosmic theme to the 
 
 #### Automated
 
-- [x] 0.1 Build succeeds: `npm run build`
-- [x] 0.2 Type checking passes: `npx tsc --noEmit`
-- [x] 0.3 Lint passes: `npm run lint`
+- [x] 0.1 Build succeeds: `npm run build` — 2393a0d
+- [x] 0.2 Type checking passes: `npx tsc --noEmit` — 2393a0d
+- [x] 0.3 Lint passes: `npm run lint` — 2393a0d
 
 #### Manual
 
