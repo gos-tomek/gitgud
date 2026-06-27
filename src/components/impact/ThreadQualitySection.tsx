@@ -25,13 +25,13 @@ interface MetricCardProps {
 
 function MetricCard({ label, value, sub, description, categoryBreakdown }: MetricCardProps) {
   return (
-    <div className="rounded-lg border border-purple-500/20 bg-purple-500/5 p-3">
+    <div className="border-primary/20 bg-primary/5 rounded-lg border p-3">
       <div className="flex items-center gap-1">
-        <p className="text-xs text-purple-200/50">{label}</p>
+        <p className="text-muted-foreground text-xs">{label}</p>
         {description && (
           <Tooltip>
             <TooltipTrigger asChild>
-              <button className="flex-shrink-0 text-purple-300/30 transition-colors hover:text-purple-300/60">
+              <button className="text-muted-foreground hover:text-foreground flex-shrink-0 transition-colors">
                 <Info className="size-3" />
               </button>
             </TooltipTrigger>
@@ -39,12 +39,12 @@ function MetricCard({ label, value, sub, description, categoryBreakdown }: Metri
           </Tooltip>
         )}
       </div>
-      <p className="mt-1 text-xl font-bold text-purple-100">{value}</p>
-      {sub && <p className="text-xs text-purple-200/40">{sub}</p>}
+      <p className="text-foreground mt-1 text-xl font-bold">{value}</p>
+      {sub && <p className="text-muted-foreground text-xs">{sub}</p>}
       {categoryBreakdown && categoryBreakdown.length > 0 && (
         <div className="mt-1.5 space-y-0.5">
           {categoryBreakdown.map(({ label: l, count }) => (
-            <div key={l} className="flex justify-between text-xs text-purple-200/40">
+            <div key={l} className="text-muted-foreground flex justify-between text-xs">
               <span>{l}</span>
               <span>{count}</span>
             </div>
@@ -63,23 +63,21 @@ interface Props {
 export function ThreadQualitySection({ data, loading }: Props) {
   return (
     <TooltipProvider>
-      <section className="rounded-xl border border-purple-500/30 bg-purple-500/5 p-5 backdrop-blur-sm">
+      <section className="border-primary/30 bg-primary/5 rounded-xl border p-5">
         <div className="mb-4 flex items-center gap-2">
-          <span className="h-2 w-2 rounded-full bg-purple-400" />
-          <h2 className="text-sm font-semibold tracking-wide text-purple-200/80 uppercase">Review thread quality</h2>
-          <span className="rounded bg-purple-500/20 px-1.5 py-0.5 text-xs font-medium text-purple-300">
-            GitGud signal
-          </span>
+          <span className="bg-primary h-2 w-2 rounded-full" />
+          <h2 className="text-primary text-sm font-semibold tracking-wide uppercase">Review thread quality</h2>
+          <span className="bg-primary/20 text-primary rounded px-1.5 py-0.5 text-xs font-medium">GitGud signal</span>
         </div>
 
         {loading ? (
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
             {Array.from({ length: 8 }).map((_, i) => (
-              <Skeleton key={i} className="h-16 bg-purple-500/10" />
+              <Skeleton key={i} className="bg-primary/10 h-16" />
             ))}
           </div>
         ) : !data || data.threadsStarted === 0 ? (
-          <p className="text-sm text-purple-200/30 italic">No review threads started in this period</p>
+          <p className="text-muted-foreground text-sm italic">No review threads started in this period</p>
         ) : (
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
             <MetricCard

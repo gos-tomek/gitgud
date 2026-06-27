@@ -61,7 +61,7 @@ const userInitial = user.email?.[0]?.toUpperCase() ?? "?";
 ---
 
 <Layout title={`Threads — ${contributor.githubLogin} — ${board.name}`}>
-  <div class="bg-cosmic min-h-screen text-white">
+  <div class="bg-background text-foreground min-h-screen">
     <BoardTopbar board={board} boards={boards} userInitial={userInitial} avatarUrl={ownProfile?.avatarUrl} />
     <BoardNav boardId={board.id} githubLogin={contributor.githubLogin} period={period} />
     <ThreadsView

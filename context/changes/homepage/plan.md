@@ -540,31 +540,31 @@ Migrate all existing app pages and components from the dark cosmic theme to the 
 
 #### Automated
 
-- [x] 3.1 Build succeeds: `npm run build`
-- [x] 3.2 Type checking passes: `npx tsc --noEmit`
-- [x] 3.3 Lint passes: `npm run lint`
+- [x] 3.1 Build succeeds: `npm run build` — dad62f6
+- [x] 3.2 Type checking passes: `npx tsc --noEmit` — dad62f6
+- [x] 3.3 Lint passes: `npm run lint` — dad62f6
 
 #### Manual
 
-- [x] 3.4 Homepage stats section shows live data from database
-- [x] 3.5 With Supabase stopped, homepage renders with "0" values
-- [x] 3.6 Stats update after KV cache expires
+- [x] 3.4 Homepage stats section shows live data from database — dad62f6
+- [x] 3.5 With Supabase stopped, homepage renders with "0" values — dad62f6
+- [x] 3.6 Stats update after KV cache expires — dad62f6
 
 ### Phase 4: App-Wide Brand Color Migration
 
 #### Automated
 
-- [ ] 4.1 Build succeeds: `npm run build`
-- [ ] 4.2 Type checking passes: `npx tsc --noEmit`
-- [ ] 4.3 Lint passes: `npm run lint`
-- [ ] 4.4 Tests pass: `npm test` (excluding integration)
-- [ ] 4.5 No `bg-cosmic` references in `src/`
-- [ ] 4.6 No `text-purple-` references in `src/`
+- [x] 4.1 Build succeeds: `npm run build`
+- [x] 4.2 Type checking passes: `npx tsc --noEmit`
+- [x] 4.3 Lint passes: `npm run lint`
+- [x] 4.4 Tests pass: `npm test` (excluding integration)
+- [x] 4.5 No `bg-cosmic` references in `src/`
+- [x] 4.6 No `text-purple-` references in `src/`
 
 #### Manual
 
-- [ ] 4.7 All app pages render with light theme
-- [ ] 4.8 Auth pages look clean with green brand colors
-- [ ] 4.9 Board pages use light theme consistently
-- [ ] 4.10 Impact view charts and tables readable on light background
-- [ ] 4.11 No visual regressions in interactive components
+- [x] 4.7 All app pages render with light theme
+- [x] 4.8 Auth pages look clean with green brand colors
+- [x] 4.9 Board pages use light theme consistently
+- [x] 4.10 Impact view charts and tables readable on light background
+- [x] 4.11 No visual regressions in interactive components

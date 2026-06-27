@@ -81,15 +81,15 @@ export function SyncIndicator({ lastSyncedAt, boardId, onSyncComplete }: Props) 
   }
 
   return (
-    <div className="flex items-center gap-2 text-sm text-blue-100/50">
+    <div className="text-muted-foreground flex items-center gap-2 text-sm">
       <span>{lastSyncedAt ? `Synced ${formatRelativeTime(lastSyncedAt)}` : "Never synced"}</span>
-      {error && <span className="text-xs text-red-400">{error}</span>}
+      {error && <span className="text-xs text-red-500">{error}</span>}
       <Button
         variant="ghost"
         size="icon"
         onClick={triggerSync}
         disabled={syncing}
-        className="h-7 w-7 text-blue-100/50 hover:bg-white/10 hover:text-white"
+        className="text-muted-foreground hover:bg-accent hover:text-foreground h-7 w-7"
         title="Refresh data"
       >
         <RefreshCw className={cn("size-3.5", syncing && "animate-spin")} />

@@ -39,7 +39,7 @@ export default function DeleteAccountDialog() {
         onClick={() => {
           setOpen(true);
         }}
-        className="border-red-500/40 bg-transparent text-red-300 hover:bg-red-900/30 hover:text-red-200"
+        className="border-red-500/40 bg-transparent text-red-500 hover:bg-red-50 hover:text-red-600"
       >
         Delete account
       </Button>
@@ -48,11 +48,11 @@ export default function DeleteAccountDialog() {
 
   return (
     <div className="space-y-3">
-      <p className="text-sm text-red-200">
+      <p className="text-sm text-red-600">
         This permanently deletes your account, all boards you own, and all associated data. This cannot be undone.
       </p>
       <div>
-        <label htmlFor="confirm-delete" className="mb-1 block text-xs text-red-200/80">
+        <label htmlFor="confirm-delete" className="mb-1 block text-xs text-red-600/80">
           Type <span className="font-mono font-semibold">{CONFIRM_PHRASE}</span> to confirm
         </label>
         <input
@@ -62,11 +62,11 @@ export default function DeleteAccountDialog() {
             setConfirmText(e.target.value);
           }}
           placeholder={CONFIRM_PHRASE}
-          className="w-full rounded-lg border border-red-500/40 bg-black/30 px-3 py-2 text-white placeholder-white/30 focus:ring-2 focus:ring-red-400 focus:outline-none"
+          className="bg-background text-foreground placeholder:text-muted-foreground w-full rounded-lg border border-red-500/40 px-3 py-2 focus:ring-2 focus:ring-red-400 focus:outline-none"
         />
       </div>
       {error && (
-        <p className="flex items-center gap-2 text-sm text-red-300">
+        <p className="flex items-center gap-2 text-sm text-red-500">
           <AlertTriangle className="size-4" />
           {error}
         </p>
@@ -80,7 +80,7 @@ export default function DeleteAccountDialog() {
             setConfirmText("");
             setError(null);
           }}
-          className="border-white/20 bg-white/5 text-white hover:bg-white/10"
+          className="border-border bg-card text-foreground hover:bg-accent"
         >
           Cancel
         </Button>

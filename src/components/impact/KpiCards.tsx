@@ -25,16 +25,16 @@ function formatValue(value: number | null, unit?: string): string {
 }
 
 function Delta({ delta }: { delta: number | null }) {
-  if (delta === null) return <span className="text-xs text-blue-100/30">—</span>;
+  if (delta === null) return <span className="text-muted-foreground text-xs">—</span>;
   const positive = delta > 0;
   const zero = delta === 0;
   return (
     <span
       className={cn(
         "text-xs font-medium",
-        zero && "text-blue-100/40",
-        positive && "text-emerald-400",
-        !positive && !zero && "text-red-400",
+        zero && "text-muted-foreground",
+        positive && "text-emerald-500",
+        !positive && !zero && "text-red-500",
       )}
     >
       {positive ? "+" : ""}
@@ -46,13 +46,13 @@ function Delta({ delta }: { delta: number | null }) {
 function KpiCard({ label, metric, unit }: { label: string; metric: KpiMetric | undefined; unit?: string }) {
   const description = DESCRIPTIONS[label];
   return (
-    <div className="rounded-xl border border-white/10 bg-white/5 p-4 backdrop-blur-sm">
+    <div className="border-border bg-card rounded-xl border p-4">
       <div className="flex items-center gap-1">
-        <p className="text-xs font-medium tracking-wide text-blue-100/50 uppercase">{label}</p>
+        <p className="text-muted-foreground text-xs font-medium tracking-wide uppercase">{label}</p>
         {description && (
           <Tooltip>
             <TooltipTrigger asChild>
-              <button className="flex-shrink-0 text-blue-100/30 transition-colors hover:text-blue-100/60">
+              <button className="text-muted-foreground hover:text-foreground flex-shrink-0 transition-colors">
                 <Info className="size-3" />
               </button>
             </TooltipTrigger>
@@ -62,12 +62,12 @@ function KpiCard({ label, metric, unit }: { label: string; metric: KpiMetric | u
       </div>
       {metric === undefined ? (
         <>
-          <Skeleton className="mt-2 h-7 w-16 bg-white/10" />
-          <Skeleton className="mt-1 h-4 w-10 bg-white/10" />
+          <Skeleton className="bg-muted mt-2 h-7 w-16" />
+          <Skeleton className="bg-muted mt-1 h-4 w-10" />
         </>
       ) : (
         <>
-          <p className="mt-1 text-2xl font-bold text-white">{formatValue(metric.value, unit)}</p>
+          <p className="text-foreground mt-1 text-2xl font-bold">{formatValue(metric.value, unit)}</p>
           <div className="mt-1">
             <Delta delta={metric.delta} />
           </div>

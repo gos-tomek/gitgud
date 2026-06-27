@@ -67,7 +67,9 @@ function ContributorAvatar({ c, size = "md" }: { c: ContributorInfo; size?: "sm"
   return c.avatarUrl ? (
     <img src={c.avatarUrl} alt={c.githubLogin} className={`${dim} rounded-full`} />
   ) : (
-    <div className={`${dim} flex items-center justify-center rounded-full bg-purple-600 font-bold text-white`}>
+    <div
+      className={`${dim} bg-primary text-primary-foreground flex items-center justify-center rounded-full font-bold`}
+    >
       {c.githubLogin[0].toUpperCase()}
     </div>
   );
@@ -101,12 +103,12 @@ export function ContributorSelector({
       <div className="flex items-center gap-2">
         <ContributorAvatar c={current} size="lg" />
         <div>
-          <h1 className="text-xl font-bold text-white">@{current.githubLogin}</h1>
+          <h1 className="text-foreground text-xl font-bold">@{current.githubLogin}</h1>
           <a
             href={`https://github.com/${current.githubLogin}`}
             target="_blank"
             rel="noopener noreferrer"
-            className="text-xs text-blue-100/50 hover:text-white"
+            className="text-muted-foreground hover:text-foreground text-xs"
           >
             github.com/{current.githubLogin}
           </a>
@@ -121,13 +123,13 @@ export function ContributorSelector({
         onClick={() => {
           setOpen((o) => !o);
         }}
-        className="flex items-center gap-2.5 rounded-lg px-2 py-1.5 transition-colors hover:bg-white/10"
+        className="hover:bg-accent flex items-center gap-2.5 rounded-lg px-2 py-1.5 transition-colors"
       >
         <ContributorAvatar c={current} size="lg" />
         <div className="text-left">
           <div className="flex items-center gap-1.5">
-            <h1 className="text-xl font-bold text-white">@{current.githubLogin}</h1>
-            <svg className="h-4 w-4 text-white/40" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <h1 className="text-foreground text-xl font-bold">@{current.githubLogin}</h1>
+            <svg className="text-muted-foreground h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 9l-7 7-7-7" />
             </svg>
           </div>
@@ -138,7 +140,7 @@ export function ContributorSelector({
             onClick={(e) => {
               e.stopPropagation();
             }}
-            className="text-xs text-blue-100/50 hover:text-white"
+            className="text-muted-foreground hover:text-foreground text-xs"
           >
             github.com/{current.githubLogin}
           </a>
@@ -146,7 +148,7 @@ export function ContributorSelector({
       </button>
 
       {open && (
-        <div className="absolute top-full left-0 z-50 mt-1.5 w-64 overflow-hidden rounded-xl border border-white/10 bg-gray-950 py-1.5 shadow-2xl">
+        <div className="border-border bg-popover absolute top-full left-0 z-50 mt-1.5 w-64 overflow-hidden rounded-xl border py-1.5 shadow-2xl">
           {contributors.map((c) => (
             <button
               key={c.githubLogin}
@@ -154,14 +156,18 @@ export function ContributorSelector({
                 onContributorChange(c.githubLogin);
                 setOpen(false);
               }}
-              className="flex w-full items-center gap-2.5 px-3 py-2 text-left text-sm transition-colors hover:bg-white/5"
+              className="hover:bg-accent flex w-full items-center gap-2.5 px-3 py-2 text-left text-sm transition-colors"
             >
               <ContributorAvatar c={c} size="sm" />
-              <span className={c.githubLogin === current.githubLogin ? "font-semibold text-white" : "text-white/70"}>
+              <span
+                className={
+                  c.githubLogin === current.githubLogin ? "text-foreground font-semibold" : "text-muted-foreground"
+                }
+              >
                 @{c.githubLogin}
               </span>
               {c.githubLogin === current.githubLogin && (
-                <svg className="ml-auto h-4 w-4 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="text-primary ml-auto h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
                 </svg>
               )}
@@ -293,24 +299,18 @@ export default function ImpactView({
       />
 
       {/* heatmap */}
-      <section className="rounded-xl border border-white/10 bg-white/5 p-5 backdrop-blur-sm">
+      <section className="border-border bg-card rounded-xl border p-5">
         <div className="mb-4 flex items-start justify-between gap-4">
           <div>
-            <h2 className="text-sm font-semibold tracking-wide text-blue-100/60 uppercase">Daily activity</h2>
-            <p className="mt-0.5 text-xs text-blue-100/40">
+            <h2 className="text-muted-foreground text-sm font-semibold tracking-wide uppercase">Daily activity</h2>
+            <p className="text-muted-foreground mt-0.5 text-xs">
               PR, review, and comment activity by day — last 52 weeks for context
             </p>
           </div>
-          <div className="flex shrink-0 items-center gap-1 text-xs text-blue-100/40">
+          <div className="text-muted-foreground flex shrink-0 items-center gap-1 text-xs">
             <span>Less</span>
             {(
-              [
-                "fill-white/5",
-                "fill-purple-500/20",
-                "fill-purple-500/40",
-                "fill-purple-500/60",
-                "fill-purple-500/90",
-              ] as const
+              ["fill-gray-100", "fill-primary/20", "fill-primary/40", "fill-primary/60", "fill-primary/90"] as const
             ).map((cls, i) => (
               <svg key={i} width={11} height={11}>
                 <rect width={11} height={11} rx={2} className={cls} />

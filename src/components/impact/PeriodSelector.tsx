@@ -31,7 +31,7 @@ export function PeriodSelector({ period, onPeriodChange }: Props) {
         <Button
           variant="outline"
           size="sm"
-          className="gap-2 border-white/20 bg-white/5 text-white hover:bg-white/10 hover:text-white"
+          className="border-border bg-card text-foreground hover:bg-accent hover:text-foreground gap-2"
         >
           {LABELS[period]}
           <ChevronDown className="size-3.5 opacity-70" />

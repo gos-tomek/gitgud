@@ -305,13 +305,13 @@ export default function CreateBoardForm({ storedPat }: CreateBoardFormProps) {
         {[1, 2, 3].map((n) => (
           <div
             key={n}
-            className={`size-2 rounded-full transition-colors ${state.step === n ? "bg-purple-400" : "bg-white/20"}`}
+            className={`size-2 rounded-full transition-colors ${state.step === n ? "bg-primary" : "bg-muted-foreground/20"}`}
           />
         ))}
-        <span className="ml-2 text-xs text-blue-100/50">Step {state.step} of 3</span>
+        <span className="text-muted-foreground ml-2 text-xs">Step {state.step} of 3</span>
       </div>
 
-      <Card className="border-white/10 bg-white/5">
+      <Card className="border-border bg-card">
         <CardContent className="pt-6">
           {state.step === 1 && (
             <div className="space-y-4">
@@ -328,8 +328,8 @@ export default function CreateBoardForm({ storedPat }: CreateBoardFormProps) {
               />
 
               {state.usingStoredPat ? (
-                <div className="space-y-2 rounded-lg border border-white/10 bg-white/5 px-3 py-2.5">
-                  <div className="flex items-center gap-2 text-sm text-green-400">
+                <div className="border-border bg-muted/50 space-y-2 rounded-lg border px-3 py-2.5">
+                  <div className="flex items-center gap-2 text-sm text-green-600">
                     <CheckCircle2 className="size-4" />
                     {state.patValidation.login ? (
                       <>
@@ -339,7 +339,7 @@ export default function CreateBoardForm({ storedPat }: CreateBoardFormProps) {
                       "Using saved token"
                     )}
                   </div>
-                  <p className="text-xs text-blue-100/50">
+                  <p className="text-muted-foreground text-xs">
                     {state.patValidation.expiresAt
                       ? `Token expires ${new Date(state.patValidation.expiresAt).toLocaleDateString()}`
                       : "No expiration set"}
@@ -349,7 +349,7 @@ export default function CreateBoardForm({ storedPat }: CreateBoardFormProps) {
                     onClick={() => {
                       dispatch({ type: "USE_DIFFERENT_TOKEN" });
                     }}
-                    className="text-xs text-blue-100/60 underline hover:text-blue-100/80"
+                    className="text-muted-foreground hover:text-foreground text-xs underline"
                   >
                     Use a different token
                   </button>
@@ -362,7 +362,7 @@ export default function CreateBoardForm({ storedPat }: CreateBoardFormProps) {
                       onClick={() => {
                         dispatch({ type: "USE_STORED_PAT", login: storedPat.login, expiresAt: storedPat.expiresAt });
                       }}
-                      className="text-xs text-blue-100/60 underline hover:text-blue-100/80"
+                      className="text-muted-foreground hover:text-foreground text-xs underline"
                     >
                       {storedPat.login ? `Use stored token (@${storedPat.login})` : "Use saved token"}
                     </button>
@@ -385,38 +385,38 @@ export default function CreateBoardForm({ storedPat }: CreateBoardFormProps) {
                       />
                     }
                     hint={
-                      <p className="mt-1 text-xs text-blue-100/50">
+                      <p className="text-muted-foreground mt-1 text-xs">
                         Requires a{" "}
                         <a
                           href="https://github.com/settings/tokens/new?scopes=repo,read:org&description=GitGud"
                           target="_blank"
                           rel="noreferrer"
-                          className="underline hover:text-blue-100/80"
+                          className="hover:text-foreground underline"
                         >
                           classic PAT
                         </a>{" "}
-                        with <code className="text-blue-100/70">repo</code> and{" "}
-                        <code className="text-blue-100/70">read:org</code> scopes.
+                        with <code className="text-foreground">repo</code> and{" "}
+                        <code className="text-foreground">read:org</code> scopes.
                       </p>
                     }
                   />
 
                   {state.patValidation.status === "validating" && (
-                    <div className="flex items-center gap-2 text-sm text-blue-100/60">
+                    <div className="text-muted-foreground flex items-center gap-2 text-sm">
                       <Loader2 className="size-4 animate-spin" />
                       Validating token…
                     </div>
                   )}
                   {state.patValidation.status === "valid" && (
                     <div className="space-y-2">
-                      <div className="flex items-center gap-2 text-sm text-green-400">
+                      <div className="flex items-center gap-2 text-sm text-green-600">
                         <CheckCircle2 className="size-4" />
                         Connected as <span className="font-semibold">@{state.patValidation.login}</span>
                       </div>
                       {state.patValidation.warnings?.map((warning) => (
                         <div
                           key={warning}
-                          className="flex items-start gap-2 rounded-md bg-yellow-500/10 p-3 text-sm text-yellow-300"
+                          className="flex items-start gap-2 rounded-md bg-yellow-50 p-3 text-sm text-yellow-700"
                         >
                           <AlertTriangle className="mt-0.5 size-4 shrink-0" />
                           {warning}
@@ -425,7 +425,7 @@ export default function CreateBoardForm({ storedPat }: CreateBoardFormProps) {
                     </div>
                   )}
                   {state.patValidation.status === "error" && (
-                    <p className="text-sm text-red-300">{state.patValidation.message}</p>
+                    <p className="text-sm text-red-500">{state.patValidation.message}</p>
                   )}
                 </>
               )}
@@ -434,11 +434,11 @@ export default function CreateBoardForm({ storedPat }: CreateBoardFormProps) {
                 type="button"
                 onClick={() => void handleNext()}
                 disabled={state.checkingName || state.patValidation.status !== "valid"}
-                className="w-full rounded-lg bg-purple-600 px-4 py-2 font-medium text-white transition-colors hover:bg-purple-500 disabled:opacity-50"
+                className="bg-primary text-primary-foreground hover:bg-primary/90 w-full rounded-lg px-4 py-2 font-medium transition-colors disabled:opacity-50"
               >
                 {state.checkingName ? (
                   <span className="flex items-center gap-2">
-                    <span className="size-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
+                    <span className="border-primary-foreground/30 border-t-primary-foreground size-4 animate-spin rounded-full border-2" />
                     Checking...
                   </span>
                 ) : (
@@ -457,19 +457,19 @@ export default function CreateBoardForm({ storedPat }: CreateBoardFormProps) {
               {state.reposLoading && (
                 <div className="space-y-2">
                   {[1, 2, 3].map((i) => (
-                    <Skeleton key={i} className="h-10 w-full bg-white/10" />
+                    <Skeleton key={i} className="bg-muted h-10 w-full" />
                   ))}
                 </div>
               )}
 
               {/* Repo fetch error */}
               {!state.reposLoading && state.reposError && (
-                <div className="rounded-md bg-red-500/10 p-3">
-                  <p className="text-sm text-red-300">{state.reposError}</p>
+                <div className="rounded-md bg-red-50 p-3">
+                  <p className="text-sm text-red-600">{state.reposError}</p>
                   <button
                     type="button"
                     onClick={() => void fetchRepos(state.pat)}
-                    className="mt-1 text-xs text-blue-100/60 underline hover:text-blue-100/80"
+                    className="text-muted-foreground hover:text-foreground mt-1 text-xs underline"
                   >
                     Retry
                   </button>
@@ -480,27 +480,27 @@ export default function CreateBoardForm({ storedPat }: CreateBoardFormProps) {
               {!state.reposLoading && !state.reposError && state.repos.length > 0 && (
                 <>
                   <div className="relative">
-                    <Search className="absolute top-1/2 left-3 size-4 -translate-y-1/2 text-blue-100/40" />
+                    <Search className="text-muted-foreground absolute top-1/2 left-3 size-4 -translate-y-1/2" />
                     <Input
                       placeholder="Filter repositories..."
                       value={state.repoFilter}
                       onChange={(e) => {
                         dispatch({ type: "SET_REPO_FILTER", filter: e.target.value });
                       }}
-                      className="border-white/10 bg-white/5 pl-9 text-white placeholder:text-blue-100/40 focus-visible:ring-purple-500"
+                      className="border-border bg-background text-foreground placeholder:text-muted-foreground focus-visible:ring-primary pl-9"
                     />
                   </div>
 
-                  <div className="max-h-60 space-y-0.5 overflow-y-auto rounded-lg border border-white/10 p-1">
+                  <div className="border-border max-h-60 space-y-0.5 overflow-y-auto rounded-lg border p-1">
                     {filteredRepos.length === 0 ? (
-                      <p className="px-3 py-2 text-sm text-blue-100/50">No repositories match your filter.</p>
+                      <p className="text-muted-foreground px-3 py-2 text-sm">No repositories match your filter.</p>
                     ) : (
                       filteredRepos.map((repo) => {
                         const isSelected = state.selectedRepos.some((r) => r.fullName === repo.fullName);
                         return (
                           <label
                             key={repo.fullName}
-                            className="flex cursor-pointer items-center gap-3 rounded-md px-3 py-2 hover:bg-white/5"
+                            className="hover:bg-muted flex cursor-pointer items-center gap-3 rounded-md px-3 py-2"
                           >
                             <Checkbox
                               checked={isSelected}
@@ -508,10 +508,10 @@ export default function CreateBoardForm({ storedPat }: CreateBoardFormProps) {
                                 dispatch({ type: "TOGGLE_REPO_SELECTION", repo });
                               }}
                             />
-                            <span className="flex-1 truncate text-sm text-white">{repo.fullName}</span>
+                            <span className="text-foreground flex-1 truncate text-sm">{repo.fullName}</span>
                             <div className="flex shrink-0 gap-1">
                               {repo.private && (
-                                <Badge variant="outline" className="border-white/20 text-xs text-blue-100/50">
+                                <Badge variant="outline" className="border-border text-muted-foreground text-xs">
                                   Private
                                 </Badge>
                               )}
@@ -528,7 +528,7 @@ export default function CreateBoardForm({ storedPat }: CreateBoardFormProps) {
                   </div>
 
                   {state.selectedRepos.length > 0 && (
-                    <p className="text-xs text-blue-100/50">
+                    <p className="text-muted-foreground text-xs">
                       {state.selectedRepos.length} repo{state.selectedRepos.length !== 1 ? "s" : ""} selected
                     </p>
                   )}
@@ -537,7 +537,7 @@ export default function CreateBoardForm({ storedPat }: CreateBoardFormProps) {
 
               {/* Manual repo entry */}
               <div className="space-y-2">
-                <p className="text-xs text-blue-100/60">Add a public repo manually:</p>
+                <p className="text-muted-foreground text-xs">Add a public repo manually:</p>
                 <div className="flex gap-2">
                   <Input
                     placeholder="owner/name (e.g. facebook/react)"
@@ -548,14 +548,14 @@ export default function CreateBoardForm({ storedPat }: CreateBoardFormProps) {
                     onKeyDown={(e) => {
                       if (e.key === "Enter") void handleAddManual();
                     }}
-                    className="flex-1 border-white/10 bg-white/5 text-white placeholder:text-blue-100/40 focus-visible:ring-purple-500"
+                    className="border-border bg-background text-foreground placeholder:text-muted-foreground focus-visible:ring-primary flex-1"
                   />
                   <Button
                     type="button"
                     onClick={() => void handleAddManual()}
                     disabled={!state.manualEntry.trim() || state.manualEntryLoading}
                     variant="outline"
-                    className="border-white/20 bg-white/5 text-white hover:bg-white/10"
+                    className="border-border bg-card text-foreground hover:bg-accent"
                   >
                     {state.manualEntryLoading ? (
                       <Loader2 className="size-4 animate-spin" />
@@ -564,17 +564,17 @@ export default function CreateBoardForm({ storedPat }: CreateBoardFormProps) {
                     )}
                   </Button>
                 </div>
-                {state.manualEntryError && <p className="text-sm text-red-300">{state.manualEntryError}</p>}
+                {state.manualEntryError && <p className="text-sm text-red-500">{state.manualEntryError}</p>}
               </div>
 
-              {state.apiError && <p className="rounded-md bg-red-500/10 p-3 text-sm text-red-300">{state.apiError}</p>}
+              {state.apiError && <p className="rounded-md bg-red-50 p-3 text-sm text-red-600">{state.apiError}</p>}
 
               <div className="flex gap-2">
                 <Button
                   type="button"
                   onClick={handleBack}
                   variant="outline"
-                  className="flex-1 rounded-lg border-white/20 bg-white/5 text-white hover:bg-white/10"
+                  className="border-border bg-card text-foreground hover:bg-accent flex-1 rounded-lg"
                 >
                   <span className="flex items-center gap-2">
                     <ArrowLeft className="size-4" />
@@ -585,7 +585,7 @@ export default function CreateBoardForm({ storedPat }: CreateBoardFormProps) {
                   type="button"
                   onClick={handleNextToStep3}
                   disabled={state.selectedRepos.length === 0}
-                  className="flex-1 rounded-lg bg-purple-600 px-4 py-2 font-medium text-white transition-colors hover:bg-purple-500 disabled:opacity-50"
+                  className="bg-primary text-primary-foreground hover:bg-primary/90 flex-1 rounded-lg px-4 py-2 font-medium transition-colors disabled:opacity-50"
                 >
                   <span className="flex items-center gap-2">
                     Next
@@ -593,9 +593,9 @@ export default function CreateBoardForm({ storedPat }: CreateBoardFormProps) {
                   </span>
                 </Button>
               </div>
-              <p className="text-sm text-blue-100/60">
+              <p className="text-muted-foreground text-sm">
                 {"You'll be the "}
-                <span className="font-semibold text-white">Supervisor</span> of this board.
+                <span className="text-foreground font-semibold">Supervisor</span> of this board.
               </p>
             </div>
           )}
@@ -606,19 +606,19 @@ export default function CreateBoardForm({ storedPat }: CreateBoardFormProps) {
               {state.collaboratorsLoading && (
                 <div className="space-y-2">
                   {[1, 2, 3].map((i) => (
-                    <Skeleton key={i} className="h-10 w-full bg-white/10" />
+                    <Skeleton key={i} className="bg-muted h-10 w-full" />
                   ))}
                 </div>
               )}
 
               {/* Collaborator fetch error */}
               {!state.collaboratorsLoading && state.collaboratorsError && (
-                <div className="rounded-md bg-red-500/10 p-3">
-                  <p className="text-sm text-red-300">{state.collaboratorsError}</p>
+                <div className="rounded-md bg-red-50 p-3">
+                  <p className="text-sm text-red-600">{state.collaboratorsError}</p>
                   <button
                     type="button"
                     onClick={() => void fetchCollaborators(state.pat, state.selectedRepos)}
-                    className="mt-1 text-xs text-blue-100/60 underline hover:text-blue-100/80"
+                    className="text-muted-foreground hover:text-foreground mt-1 text-xs underline"
                   >
                     Retry
                   </button>
@@ -631,27 +631,27 @@ export default function CreateBoardForm({ storedPat }: CreateBoardFormProps) {
                   {state.collaborators.length > 0 ? (
                     <>
                       <div className="relative">
-                        <Search className="absolute top-1/2 left-3 size-4 -translate-y-1/2 text-blue-100/40" />
+                        <Search className="text-muted-foreground absolute top-1/2 left-3 size-4 -translate-y-1/2" />
                         <Input
                           placeholder="Filter contributors..."
                           value={state.contributorFilter}
                           onChange={(e) => {
                             dispatch({ type: "SET_CONTRIBUTOR_FILTER", filter: e.target.value });
                           }}
-                          className="border-white/10 bg-white/5 pl-9 text-white placeholder:text-blue-100/40 focus-visible:ring-purple-500"
+                          className="border-border bg-background text-foreground placeholder:text-muted-foreground focus-visible:ring-primary pl-9"
                         />
                       </div>
 
-                      <div className="max-h-60 space-y-0.5 overflow-y-auto rounded-lg border border-white/10 p-1">
+                      <div className="border-border max-h-60 space-y-0.5 overflow-y-auto rounded-lg border p-1">
                         {filteredCollaborators.length === 0 ? (
-                          <p className="px-3 py-2 text-sm text-blue-100/50">No contributors match your filter.</p>
+                          <p className="text-muted-foreground px-3 py-2 text-sm">No contributors match your filter.</p>
                         ) : (
                           filteredCollaborators.map((collab) => {
                             const isSelected = state.selectedContributors.some((c) => c.id === collab.id);
                             return (
                               <label
                                 key={collab.id}
-                                className="flex cursor-pointer items-center gap-3 rounded-md px-3 py-2 hover:bg-white/5"
+                                className="hover:bg-muted flex cursor-pointer items-center gap-3 rounded-md px-3 py-2"
                               >
                                 <Checkbox
                                   checked={isSelected}
@@ -666,8 +666,8 @@ export default function CreateBoardForm({ storedPat }: CreateBoardFormProps) {
                                   width={32}
                                   height={32}
                                 />
-                                <span className="flex-1 truncate text-sm text-white">@{collab.login}</span>
-                                <span className="shrink-0 text-xs text-blue-100/40">{collab.type}</span>
+                                <span className="text-foreground flex-1 truncate text-sm">@{collab.login}</span>
+                                <span className="text-muted-foreground shrink-0 text-xs">{collab.type}</span>
                               </label>
                             );
                           })
@@ -675,14 +675,14 @@ export default function CreateBoardForm({ storedPat }: CreateBoardFormProps) {
                       </div>
 
                       {state.selectedContributors.length > 0 && (
-                        <p className="text-xs text-blue-100/50">
+                        <p className="text-muted-foreground text-xs">
                           {state.selectedContributors.length} contributor
                           {state.selectedContributors.length !== 1 ? "s" : ""} selected
                         </p>
                       )}
                     </>
                   ) : (
-                    <div className="flex flex-col items-center gap-2 py-6 text-blue-100/50">
+                    <div className="text-muted-foreground flex flex-col items-center gap-2 py-6">
                       <Users className="size-8" />
                       <p className="text-sm">No collaborators found for the selected repositories.</p>
                     </div>
@@ -690,14 +690,14 @@ export default function CreateBoardForm({ storedPat }: CreateBoardFormProps) {
                 </>
               )}
 
-              {state.apiError && <p className="rounded-md bg-red-500/10 p-3 text-sm text-red-300">{state.apiError}</p>}
+              {state.apiError && <p className="rounded-md bg-red-50 p-3 text-sm text-red-600">{state.apiError}</p>}
 
               <div className="flex gap-2">
                 <Button
                   type="button"
                   onClick={handleBackToStep2}
                   variant="outline"
-                  className="flex-1 rounded-lg border-white/20 bg-white/5 text-white hover:bg-white/10"
+                  className="border-border bg-card text-foreground hover:bg-accent flex-1 rounded-lg"
                 >
                   <span className="flex items-center gap-2">
                     <ArrowLeft className="size-4" />
@@ -708,11 +708,11 @@ export default function CreateBoardForm({ storedPat }: CreateBoardFormProps) {
                   type="button"
                   onClick={() => void handleCreate()}
                   disabled={state.submitting || state.selectedContributors.length === 0}
-                  className="flex-1 rounded-lg bg-purple-600 px-4 py-2 font-medium text-white transition-colors hover:bg-purple-500 disabled:opacity-50"
+                  className="bg-primary text-primary-foreground hover:bg-primary/90 flex-1 rounded-lg px-4 py-2 font-medium transition-colors disabled:opacity-50"
                 >
                   {state.submitting ? (
                     <span className="flex items-center gap-2">
-                      <span className="size-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
+                      <span className="border-primary-foreground/30 border-t-primary-foreground size-4 animate-spin rounded-full border-2" />
                       Creating...
                     </span>
                   ) : (

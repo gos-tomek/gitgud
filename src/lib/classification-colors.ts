@@ -24,7 +24,7 @@ export const DOMAIN_CATEGORIES: TechnicalDomain[] = [
 
 export const INTENT_COLORS: Record<IntentCategory, string> = {
   architecture: "#3b82f6",
-  "bug-catch": "#ef4444",
+  "bug-catch": "#f97316",
   mentoring: "#10b981",
   unblocking: "#06b6d4",
   nitpick: "#f59e0b",

@@ -27,11 +27,11 @@ function StatLabel({ label }: { label: string }) {
   const description = STAT_DESCRIPTIONS[label];
   return (
     <div className="flex items-center gap-1">
-      <p className="text-xs text-blue-100/40">{label}</p>
+      <p className="text-muted-foreground text-xs">{label}</p>
       {description && (
         <Tooltip>
           <TooltipTrigger asChild>
-            <button className="flex-shrink-0 text-blue-100/20 transition-colors hover:text-blue-100/50">
+            <button className="text-muted-foreground/50 hover:text-muted-foreground flex-shrink-0 transition-colors">
               <Info className="size-3" />
             </button>
           </TooltipTrigger>
@@ -50,30 +50,30 @@ interface Props {
 export function ReviewerSection({ data, loading }: Props) {
   return (
     <TooltipProvider>
-      <section className="rounded-xl border border-white/10 bg-white/5 p-5 backdrop-blur-sm">
-        <h2 className="mb-4 text-sm font-semibold tracking-wide text-blue-100/60 uppercase">As a reviewer</h2>
+      <section className="border-border bg-card rounded-xl border p-5">
+        <h2 className="text-muted-foreground mb-4 text-sm font-semibold tracking-wide uppercase">As a reviewer</h2>
 
         {loading ? (
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
             {Array.from({ length: 8 }).map((_, i) => (
-              <Skeleton key={i} className="h-14 bg-white/10" />
+              <Skeleton key={i} className="bg-muted h-14" />
             ))}
           </div>
         ) : !data || data.uniquePrsReviewed === 0 ? (
-          <p className="text-sm text-blue-100/40 italic">No reviews given in this period</p>
+          <p className="text-muted-foreground text-sm italic">No reviews given in this period</p>
         ) : (
           <div className="space-y-4">
             {/* verdict mix */}
             {data.reviewsByVerdict.total > 0 && (
               <div>
-                <p className="mb-1.5 text-xs text-blue-100/40">Review verdict mix</p>
+                <p className="text-muted-foreground mb-1.5 text-xs">Review verdict mix</p>
                 <div className="flex h-3 overflow-hidden rounded-full">
                   {(
                     [
                       ["approved", "bg-emerald-500"],
                       ["changesRequested", "bg-orange-500"],
                       ["commented", "bg-blue-400"],
-                      ["dismissed", "bg-white/20"],
+                      ["dismissed", "bg-muted"],
                     ] as const
                   ).map(([key, color]) => {
                     const pct = (data.reviewsByVerdict[key] / data.reviewsByVerdict.total) * 100;
@@ -87,7 +87,7 @@ export function ReviewerSection({ data, loading }: Props) {
                     ) : null;
                   })}
                 </div>
-                <div className="mt-1 flex flex-wrap gap-3 text-xs text-blue-100/50">
+                <div className="text-muted-foreground mt-1 flex flex-wrap gap-3 text-xs">
                   <span className="flex items-center gap-1">
                     <span className="inline-block h-2 w-2 rounded-full bg-emerald-500" />
                     Approved {data.reviewsByVerdict.approved}
@@ -106,30 +106,30 @@ export function ReviewerSection({ data, loading }: Props) {
 
             {/* stats grid */}
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-              <div className="rounded-lg border border-white/5 bg-white/5 p-3">
+              <div className="border-border/50 bg-muted/50 rounded-lg border p-3">
                 <StatLabel label="Pickup time (p50)" />
-                <p className="mt-1 text-lg font-bold text-white">{fmt(data.pickupTime.p50, "h")}</p>
-                <p className="text-xs text-blue-100/30">p90: {fmt(data.pickupTime.p90, "h")}</p>
+                <p className="text-foreground mt-1 text-lg font-bold">{fmt(data.pickupTime.p50, "h")}</p>
+                <p className="text-muted-foreground text-xs">p90: {fmt(data.pickupTime.p90, "h")}</p>
               </div>
-              <div className="rounded-lg border border-white/5 bg-white/5 p-3">
+              <div className="border-border/50 bg-muted/50 rounded-lg border p-3">
                 <StatLabel label="Involvement" />
-                <p className="mt-1 text-lg font-bold text-white">{fmt(data.involvementPercent, "%")}</p>
-                <p className="text-xs text-blue-100/30">of board PRs</p>
+                <p className="text-foreground mt-1 text-lg font-bold">{fmt(data.involvementPercent, "%")}</p>
+                <p className="text-muted-foreground text-xs">of board PRs</p>
               </div>
-              <div className="rounded-lg border border-white/5 bg-white/5 p-3">
+              <div className="border-border/50 bg-muted/50 rounded-lg border p-3">
                 <StatLabel label="PRs reviewed" />
-                <p className="mt-1 text-lg font-bold text-white">{data.uniquePrsReviewed}</p>
+                <p className="text-foreground mt-1 text-lg font-bold">{data.uniquePrsReviewed}</p>
               </div>
-              <div className="rounded-lg border border-white/5 bg-white/5 p-3">
+              <div className="border-border/50 bg-muted/50 rounded-lg border p-3">
                 <StatLabel label="Collaborators" />
-                <p className="mt-1 text-lg font-bold text-white">{data.uniqueCollaborators}</p>
+                <p className="text-foreground mt-1 text-lg font-bold">{data.uniqueCollaborators}</p>
               </div>
             </div>
 
             {/* pickup time histogram */}
             {data.pickupTime.p50 !== null && (
               <div>
-                <p className="mb-1.5 text-xs text-blue-100/40">Pickup time distribution</p>
+                <p className="text-muted-foreground mb-1.5 text-xs">Pickup time distribution</p>
                 <div className="flex h-10 items-end gap-1">
                   {[
                     data.pickupTime.histogram.under1h,
@@ -147,7 +147,7 @@ export function ReviewerSection({ data, loading }: Props) {
                           style={{ height: `${Math.max(pct * 0.4, count > 0 ? 2 : 0)}px` }}
                           title={`${BUCKET_LABELS[i]}: ${count}`}
                         />
-                        <span className="text-[9px] text-blue-100/30">{BUCKET_LABELS[i]}</span>
+                        <span className="text-muted-foreground text-[9px]">{BUCKET_LABELS[i]}</span>
                       </div>
                     );
                   })}

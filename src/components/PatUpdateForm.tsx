@@ -16,8 +16,8 @@ const EXPIRY_WARNING_WINDOW_MS = 7 * 24 * 60 * 60 * 1000;
 
 function expiryBadgeClass(expiresAt: string): string {
   const msUntilExpiry = new Date(expiresAt).getTime() - Date.now();
-  if (msUntilExpiry <= EXPIRY_WARNING_WINDOW_MS) return "bg-red-500/15 text-red-300";
-  return "bg-white/10 text-blue-100/90";
+  if (msUntilExpiry <= EXPIRY_WARNING_WINDOW_MS) return "bg-red-500/15 text-red-500";
+  return "bg-muted text-foreground";
 }
 
 export default function PatUpdateForm({ hasToken, currentLogin, currentExpiresAt }: PatUpdateFormProps) {
@@ -63,7 +63,7 @@ export default function PatUpdateForm({ hasToken, currentLogin, currentExpiresAt
     <div className="space-y-3">
       {tokenSaved ? (
         <div className="flex flex-wrap items-center gap-2 text-sm">
-          <span className="flex items-center gap-2 text-green-400">
+          <span className="flex items-center gap-2 text-green-600">
             <CheckCircle2 className="size-4" />
             {login ? (
               <>
@@ -74,14 +74,14 @@ export default function PatUpdateForm({ hasToken, currentLogin, currentExpiresAt
             )}
           </span>
           <span
-            className={`flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium ${expiresAt ? expiryBadgeClass(expiresAt) : "bg-white/10 text-blue-100/70"}`}
+            className={`flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium ${expiresAt ? expiryBadgeClass(expiresAt) : "bg-muted text-muted-foreground"}`}
           >
             <CalendarClock className="size-3" />
             {expiresAt ? `Expires ${new Date(expiresAt).toLocaleDateString()}` : "No expiration"}
           </span>
         </div>
       ) : (
-        <p className="text-sm text-blue-100/50 italic">No token configured</p>
+        <p className="text-muted-foreground text-sm italic">No token configured</p>
       )}
 
       <FormField
@@ -105,35 +105,35 @@ export default function PatUpdateForm({ hasToken, currentLogin, currentExpiresAt
           />
         }
         hint={
-          <p className="mt-1 text-xs text-blue-100/50">
+          <p className="text-muted-foreground mt-1 text-xs">
             Requires a{" "}
             <a
               href="https://github.com/settings/tokens/new?scopes=repo,read:org&description=GitGud"
               target="_blank"
               rel="noreferrer"
-              className="underline hover:text-blue-100/80"
+              className="hover:text-foreground underline"
             >
               classic PAT
             </a>{" "}
-            with <code className="text-blue-100/70">repo</code> and <code className="text-blue-100/70">read:org</code>{" "}
+            with <code className="text-foreground">repo</code> and <code className="text-foreground">read:org</code>{" "}
             scopes.
           </p>
         }
       />
 
       {status === "error" && message && (
-        <p className="flex items-center gap-2 text-sm text-red-300">
+        <p className="flex items-center gap-2 text-sm text-red-500">
           <AlertTriangle className="size-4" />
           {message}
         </p>
       )}
-      {status === "success" && <p className="text-sm text-green-400">Token updated successfully.</p>}
+      {status === "success" && <p className="text-sm text-green-600">Token updated successfully.</p>}
 
       <Button
         type="button"
         onClick={() => void handleSubmit()}
         disabled={!pat.trim() || status === "submitting"}
-        className="rounded-lg bg-purple-600 px-4 py-2 font-medium text-white transition-colors hover:bg-purple-500 disabled:opacity-50"
+        className="bg-primary text-primary-foreground hover:bg-primary/90 rounded-lg px-4 py-2 font-medium transition-colors disabled:opacity-50"
       >
         {status === "submitting" ? (
           <span className="flex items-center gap-2">

@@ -115,10 +115,10 @@ function DomainBadge({ domain }: { domain: TechnicalDomain }) {
 type ThreadRole = "started" | "received" | "self" | "joined";
 
 const ROLE_BADGE_STYLES: Record<ThreadRole, string> = {
-  started: "bg-emerald-500/15 text-emerald-300",
-  received: "bg-sky-500/15 text-sky-300",
-  self: "bg-amber-500/15 text-amber-300",
-  joined: "bg-violet-500/15 text-violet-300",
+  started: "bg-emerald-500/15 text-emerald-700",
+  received: "bg-sky-500/15 text-sky-700",
+  self: "bg-amber-500/15 text-amber-700",
+  joined: "bg-violet-500/15 text-violet-700",
 };
 
 const ROLE_BADGE_LABELS: Record<ThreadRole, string> = {
@@ -158,16 +158,16 @@ function ThreadDiscussion({
     return (
       <div className="space-y-2 py-3">
         {Array.from({ length: 2 }).map((_, i) => (
-          <Skeleton key={i} className="h-8 bg-white/10" />
+          <Skeleton key={i} className="bg-muted h-8" />
         ))}
       </div>
     );
   }
   if (state.error) {
-    return <p className="py-3 text-sm text-red-400">{state.error}</p>;
+    return <p className="py-3 text-sm text-red-500">{state.error}</p>;
   }
   if (!state.data || state.data.messages.length === 0) {
-    return <p className="py-3 text-sm text-blue-100/40 italic">No messages found for this thread</p>;
+    return <p className="text-muted-foreground py-3 text-sm italic">No messages found for this thread</p>;
   }
 
   return (
@@ -175,13 +175,13 @@ function ThreadDiscussion({
       {state.data.messages.map((message) => (
         <div
           key={message.id}
-          className={cn("rounded-lg border border-white/10 bg-white/5 p-3", message.inReplyToId && "ml-6")}
+          className={cn("border-border bg-card rounded-lg border p-3", message.inReplyToId && "ml-6")}
         >
           <div className="mb-1 flex items-center gap-2">
-            <span className="font-mono text-xs font-medium text-blue-100/70">@{message.commenterLogin}</span>
-            <span className="text-xs text-blue-100/30">{new Date(message.createdAt).toLocaleString("en-GB")}</span>
+            <span className="text-foreground font-mono text-xs font-medium">@{message.commenterLogin}</span>
+            <span className="text-muted-foreground text-xs">{new Date(message.createdAt).toLocaleString("en-GB")}</span>
           </div>
-          <p className="text-sm whitespace-pre-wrap text-blue-100/80">{message.body}</p>
+          <p className="text-foreground text-sm whitespace-pre-wrap">{message.body}</p>
         </div>
       ))}
     </div>
@@ -206,7 +206,7 @@ function ThreadRow({
 
   return (
     <>
-      <tr className="border-t border-white/5 hover:bg-white/5">
+      <tr className="border-border/50 hover:bg-muted border-t">
         <td className="py-2 pr-1 align-top">
           <button
             onClick={() => {
@@ -214,17 +214,17 @@ function ThreadRow({
             }}
             aria-label={expanded ? "Collapse discussion" : "Expand discussion"}
             aria-expanded={expanded}
-            className="text-blue-100/40 hover:text-white"
+            className="text-muted-foreground hover:text-foreground"
           >
             {expanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
           </button>
         </td>
         <td className="max-w-[320px] py-2 pr-3">
-          <p className="line-clamp-2 text-sm text-blue-100/80">{thread.commentSnippet}</p>
+          <p className="text-foreground line-clamp-2 text-sm">{thread.commentSnippet}</p>
           <div className="flex items-center gap-2">
-            <span className="font-mono text-xs text-blue-100/40">@{thread.commenterLogin}</span>
+            <span className="text-muted-foreground font-mono text-xs">@{thread.commenterLogin}</span>
             <RoleBadge role={role} />
-            <span className="flex items-center gap-1 text-xs text-blue-100/40">
+            <span className="text-muted-foreground flex items-center gap-1 text-xs">
               <MessageSquare size={12} />
               {thread.messageCount}
             </span>
@@ -235,11 +235,11 @@ function ThreadRow({
             href={thread.prUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="block truncate text-sm font-medium text-blue-100/80 hover:text-white"
+            className="text-foreground hover:text-primary block truncate text-sm font-medium"
           >
             #{thread.prNumber} {thread.prTitle}
           </a>
-          <span className="font-mono text-xs text-blue-100/40">
+          <span className="text-muted-foreground font-mono text-xs">
             {thread.prRepo} · by @{thread.prAuthorLogin}
           </span>
         </td>
@@ -249,10 +249,10 @@ function ThreadRow({
         <td className="py-2 pr-3">
           <DomainBadge domain={thread.domain} />
         </td>
-        <td className="py-2 text-xs text-blue-100/30">{new Date(thread.createdAt).toLocaleDateString("en-GB")}</td>
+        <td className="text-muted-foreground py-2 text-xs">{new Date(thread.createdAt).toLocaleDateString("en-GB")}</td>
       </tr>
       {expanded && (
-        <tr className="border-t border-white/5 bg-black/20">
+        <tr className="border-border/50 bg-muted/30 border-t">
           <td colSpan={6} className="px-3">
             <ThreadDiscussion
               boardId={boardId}
@@ -352,13 +352,11 @@ export default function ThreadsView({
           onChange={(e) => {
             updateFilters({ intent: e.target.value ? (e.target.value as IntentCategory) : undefined });
           }}
-          className="rounded-lg border border-white/10 bg-white/5 px-2 py-1.5 text-sm text-white"
+          className="border-border bg-card text-foreground rounded-lg border px-2 py-1.5 text-sm"
         >
-          <option value="" className="text-black">
-            All intents
-          </option>
+          <option value="">All intents</option>
           {INTENT_CATEGORIES.map((c) => (
-            <option key={c} value={c} className="text-black">
+            <option key={c} value={c}>
               {INTENT_LABELS[c]}
             </option>
           ))}
@@ -369,13 +367,11 @@ export default function ThreadsView({
           onChange={(e) => {
             updateFilters({ domain: e.target.value ? (e.target.value as TechnicalDomain) : undefined });
           }}
-          className="rounded-lg border border-white/10 bg-white/5 px-2 py-1.5 text-sm text-white"
+          className="border-border bg-card text-foreground rounded-lg border px-2 py-1.5 text-sm"
         >
-          <option value="" className="text-black">
-            All domains
-          </option>
+          <option value="">All domains</option>
           {DOMAIN_CATEGORIES.map((d) => (
-            <option key={d} value={d} className="text-black">
+            <option key={d} value={d}>
               {DOMAIN_LABELS[d]}
             </option>
           ))}
@@ -387,10 +383,10 @@ export default function ThreadsView({
             updateFilters({ role: e.target.value as Role });
           }}
           title="Started: threads this contributor opened on someone else's PR. Received: threads someone else opened on this contributor's own PR. Self-reviewed: threads this contributor opened on their own PR. Joined: threads someone else started where this contributor left a reply."
-          className="rounded-lg border border-white/10 bg-white/5 px-2 py-1.5 text-sm text-white"
+          className="border-border bg-card text-foreground rounded-lg border px-2 py-1.5 text-sm"
         >
           {(["all", "started", "received", "self", "joined"] as const).map((r) => (
-            <option key={r} value={r} className="text-black">
+            <option key={r} value={r}>
               {ROLE_LABELS[r]}
             </option>
           ))}
@@ -401,7 +397,7 @@ export default function ThreadsView({
             onClick={() => {
               updateFilters({ prId: undefined });
             }}
-            className="rounded-lg border border-purple-400/30 bg-purple-500/10 px-2 py-1.5 text-sm text-purple-300 transition-colors hover:bg-purple-500/20"
+            className="border-primary/30 bg-primary/10 text-primary hover:bg-primary/20 rounded-lg border px-2 py-1.5 text-sm transition-colors"
           >
             PR #{filters.prId} ×
           </button>
@@ -409,20 +405,20 @@ export default function ThreadsView({
       </div>
 
       {/* thread table */}
-      <section className="rounded-xl border border-white/10 bg-white/5 p-5 backdrop-blur-sm">
+      <section className="border-border bg-card rounded-xl border p-5">
         {state.loading ? (
           <div className="space-y-2">
             {Array.from({ length: 8 }).map((_, i) => (
-              <Skeleton key={i} className="h-10 bg-white/10" />
+              <Skeleton key={i} className="bg-muted h-10" />
             ))}
           </div>
         ) : state.error ? (
-          <p className="text-sm text-red-400">{state.error}</p>
+          <p className="text-sm text-red-500">{state.error}</p>
         ) : !state.data || state.data.threads.length === 0 ? (
-          <p className="text-sm text-blue-100/40 italic">No classified threads match these filters</p>
+          <p className="text-muted-foreground text-sm italic">No classified threads match these filters</p>
         ) : (
           <>
-            <p className="mb-3 text-xs text-blue-100/40">
+            <p className="text-muted-foreground mb-3 text-xs">
               {state.data.total} of {state.data.totalRootComments} threads classified
             </p>
             <div className="overflow-x-auto">
@@ -430,11 +426,11 @@ export default function ThreadsView({
                 <thead>
                   <tr className="text-left">
                     <th className="pb-2"></th>
-                    <th className="pb-2 text-xs font-medium text-blue-100/40">Comment</th>
-                    <th className="pr-3 pb-2 text-xs font-medium text-blue-100/40">PR</th>
-                    <th className="pr-3 pb-2 text-xs font-medium text-blue-100/40">Intent</th>
-                    <th className="pr-3 pb-2 text-xs font-medium text-blue-100/40">Domain</th>
-                    <th className="pb-2 text-xs font-medium text-blue-100/40">Date</th>
+                    <th className="text-muted-foreground pb-2 text-xs font-medium">Comment</th>
+                    <th className="text-muted-foreground pr-3 pb-2 text-xs font-medium">PR</th>
+                    <th className="text-muted-foreground pr-3 pb-2 text-xs font-medium">Intent</th>
+                    <th className="text-muted-foreground pr-3 pb-2 text-xs font-medium">Domain</th>
+                    <th className="text-muted-foreground pb-2 text-xs font-medium">Date</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -451,7 +447,7 @@ export default function ThreadsView({
             </div>
 
             {/* pagination */}
-            <div className="mt-4 flex items-center justify-between border-t border-white/10 pt-3">
+            <div className="border-border mt-4 flex items-center justify-between border-t pt-3">
               <Button
                 variant="outline"
                 size="sm"
@@ -459,11 +455,11 @@ export default function ThreadsView({
                 onClick={() => {
                   setPage((p) => p - 1);
                 }}
-                className="border-white/20 bg-white/5 text-white hover:bg-white/10 hover:text-white"
+                className="border-border bg-card text-foreground hover:bg-accent hover:text-foreground"
               >
                 Previous
               </Button>
-              <span className="text-xs text-blue-100/40">
+              <span className="text-muted-foreground text-xs">
                 Page {page} of {totalPages}
               </span>
               <Button
@@ -473,7 +469,7 @@ export default function ThreadsView({
                 onClick={() => {
                   setPage((p) => p + 1);
                 }}
-                className={cn("border-white/20 bg-white/5 text-white hover:bg-white/10 hover:text-white")}
+                className={cn("border-border bg-card text-foreground hover:bg-accent hover:text-foreground")}
               >
                 Next
               </Button>
