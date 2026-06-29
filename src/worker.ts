@@ -143,7 +143,7 @@ export class ClassificationBatchWorkflow extends WorkflowEntrypoint<Env, Classif
         });
 
         // syncPrBatch now uses GraphQL (not REST core quota). The graphql quota is 5000 pts/hr;
-        // each query fetches 10 PRs and costs ~10 pts, so a 150-PR chunk costs ~150 pts — well
+        // each query fetches 100 PRs and costs ~100 pts, so a 150-PR chunk costs ~200 pts — well
         // within budget for any realistic board. We still guard the core quota with a small
         // buffer to ensure the upcoming listReviewCommentsForRepo step (REST) can complete.
         if (rateLimit.graphql.remaining < 200) {

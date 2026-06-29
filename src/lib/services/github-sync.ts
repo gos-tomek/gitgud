@@ -8,10 +8,10 @@ import { logger } from "@/lib/logger";
 // since durable steps have no such timeout constraint.
 const MAX_PRS_PER_REPO = 200;
 
-// PRs batched per GraphQL query via field aliases. GitHub's query complexity limit is generous,
-// but aliasing too many nodes in one query risks hitting the 500,000-node ceiling on large repos
-// with many reviews. 10 is safe: 10 PRs × 100 review nodes = 1,000 nodes/query.
-const GQL_PRS_PER_QUERY = 10;
+// PRs batched per GraphQL query via field aliases. GitHub's node ceiling is 500,000 per query;
+// 100 PRs × 100 review nodes = 10,000 nodes — well within the limit and 10× fewer subrequests
+// than the previous value of 10.
+const GQL_PRS_PER_QUERY = 100;
 
 type SupabaseClient = NonNullable<ReturnType<typeof createClient>>;
 
