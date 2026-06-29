@@ -103,17 +103,44 @@ export async function syncReviewCommentsForRepo(
   owner: string,
   repoName: string,
   since?: Date,
-): Promise<{ comments: number }> {
+  // Limits REST pages fetched per call so Workflow steps stay under the 50-subrequest budget
+  // (1 mapPrNumbersToIds + maxPages REST pages + 1 upsert). When truncated, nextSince carries
+  // the cursor — the caller re-invokes in a new step with since=nextSince to continue.
+  maxPages?: number,
+): Promise<{ comments: number; nextSince?: Date }> {
   const numberToId = await mapPrNumbersToIds(supabase, repoId);
 
-  const allComments: RepoCommentItem[] = await octokit.paginate(octokit.rest.pulls.listReviewCommentsForRepo, {
-    owner,
-    repo: repoName,
-    sort: "updated",
-    direction: "desc",
-    since: since?.toISOString(),
-    per_page: 100,
-  });
+  // `asc` ordering lets us use the last comment's updated_at as a resumable cursor: the next
+  // call with since=cursor picks up exactly where this one stopped (GitHub's `since` is inclusive;
+  // dedupeById below handles the one-comment overlap at the boundary).
+  const allComments: RepoCommentItem[] = [];
+  let lastUpdatedAt: string | undefined;
+  let truncated = false;
+
+  for (let page = 1; ; page++) {
+    const response = await octokit.rest.pulls.listReviewCommentsForRepo({
+      owner,
+      repo: repoName,
+      sort: "updated",
+      direction: "asc",
+      since: since?.toISOString(),
+      per_page: 100,
+      page,
+    });
+
+    allComments.push(...response.data);
+
+    if (response.data.length > 0) {
+      lastUpdatedAt = response.data[response.data.length - 1].updated_at;
+    }
+
+    if (response.data.length < 100) break;
+
+    if (maxPages !== undefined && page >= maxPages) {
+      truncated = true;
+      break;
+    }
+  }
 
   const now = new Date().toISOString();
   const rows = dedupeById(allComments)
@@ -139,10 +166,15 @@ export async function syncReviewCommentsForRepo(
     })
     .filter((row): row is NonNullable<typeof row> => row !== null);
 
-  if (rows.length === 0) return { comments: 0 };
-  const { error } = await supabase.from("github_review_comments").upsert(rows, { onConflict: "id" });
-  if (error) throw error;
-  return { comments: rows.length };
+  if (rows.length > 0) {
+    const { error } = await supabase.from("github_review_comments").upsert(rows, { onConflict: "id" });
+    if (error) throw error;
+  }
+
+  return {
+    comments: rows.length,
+    nextSince: truncated && lastUpdatedAt !== undefined ? new Date(lastUpdatedAt) : undefined,
+  };
 }
 
 export async function listBoardRepos(supabase: SupabaseClient, boardId: string): Promise<RepoRow[]> {
