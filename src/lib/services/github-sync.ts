@@ -205,7 +205,7 @@ interface GqlReviewNode {
   databaseId: number;
   state: string;
   submittedAt: string | null;
-  author: { login: string; databaseId: number } | null;
+  author: { login: string; databaseId?: number } | null;
 }
 
 interface GqlPrData {
@@ -222,7 +222,7 @@ interface GqlPrData {
 // PRs in one round trip using field aliases. PR numbers are inlined (not variables) because
 // GraphQL variables cannot be used inside alias positions.
 function buildBatchPrDetailsQuery(prs: PrRef[]): string {
-  const reviewFields = `nodes { databaseId state submittedAt author { login databaseId } } pageInfo { hasNextPage endCursor }`;
+  const reviewFields = `nodes { databaseId state submittedAt author { login ... on User { databaseId } } } pageInfo { hasNextPage endCursor }`;
   const prFragment = `additions deletions changedFiles reviews(first: 100) { ${reviewFields} }`;
   const aliases = prs.map((pr, i) => `pr_${i}: pullRequest(number: ${pr.number}) { ${prFragment} }`).join(" ");
   return `query BatchPrDetails($owner: String!, $name: String!) { repository(owner: $owner, name: $name) { ${aliases} } }`;
@@ -286,7 +286,7 @@ export async function syncPrBatch(
               repository(owner: $owner, name: $name) {
                 pr: pullRequest(number: $number) {
                   reviews(first: 100, after: $cursor) {
-                    nodes { databaseId state submittedAt author { login databaseId } }
+                    nodes { databaseId state submittedAt author { login ... on User { databaseId } } }
                     pageInfo { hasNextPage endCursor }
                   }
                 }
