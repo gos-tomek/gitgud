@@ -20,9 +20,11 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Input } from "@/components/ui/input";
 import { wizardReducer, initWizardState, type RepoItem, type CollaboratorItem, type StoredPat } from "./wizard-reducer";
+import { cn } from "@/lib/utils";
 
 interface CreateBoardFormProps {
   storedPat?: StoredPat | null;
+  serverTime?: number;
 }
 
 // Repos/collaborators/validate-repo endpoints fall back to the stored PAT (decrypted
@@ -31,12 +33,16 @@ function patBody(pat: string): { pat: string } | Record<string, never> {
   return pat ? { pat } : {};
 }
 
-export default function CreateBoardForm({ storedPat }: CreateBoardFormProps) {
+export default function CreateBoardForm({ storedPat, serverTime = 0 }: CreateBoardFormProps) {
   const [state, dispatch] = useReducer(wizardReducer, storedPat ?? null, initWizardState);
 
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const latestPatRef = useRef("");
   const lastFetchedPat = useRef("");
+
+  const tokenExpired = Boolean(
+    serverTime > 0 && state.patValidation.expiresAt && new Date(state.patValidation.expiresAt).getTime() < serverTime,
+  );
 
   const filteredRepos =
     state.step === 2
@@ -328,28 +334,50 @@ export default function CreateBoardForm({ storedPat }: CreateBoardFormProps) {
               />
 
               {state.usingStoredPat ? (
-                <div className="border-border bg-muted/50 space-y-2 rounded-lg border px-3 py-2.5">
-                  <div className="flex items-center gap-2 text-sm text-green-600">
-                    <CheckCircle2 className="size-4" />
+                <div
+                  className={cn(
+                    "space-y-2 rounded-lg border px-3 py-2.5",
+                    tokenExpired ? "border-red-300 bg-red-50" : "border-border bg-muted/50",
+                  )}
+                >
+                  <div
+                    className={cn("flex items-center gap-2 text-sm", tokenExpired ? "text-red-600" : "text-green-600")}
+                  >
+                    {tokenExpired ? <AlertTriangle className="size-4" /> : <CheckCircle2 className="size-4" />}
                     {state.patValidation.login ? (
                       <>
-                        Connected as <span className="font-semibold">@{state.patValidation.login}</span>
+                        {tokenExpired ? "Expired token for" : "Connected as"}{" "}
+                        <span className="font-semibold">@{state.patValidation.login}</span>
                       </>
+                    ) : tokenExpired ? (
+                      "Token expired"
                     ) : (
                       "Using saved token"
                     )}
                   </div>
-                  <p className="text-muted-foreground text-xs">
-                    {state.patValidation.expiresAt
-                      ? `Token expires ${new Date(state.patValidation.expiresAt).toLocaleDateString()}`
-                      : "No expiration set"}
-                  </p>
+                  {state.patValidation.expiresAt ? (
+                    <p className={cn("text-xs", tokenExpired ? "text-red-500" : "text-muted-foreground")}>
+                      {tokenExpired
+                        ? `Expired on ${new Date(state.patValidation.expiresAt).toLocaleDateString()}`
+                        : `Token expires ${new Date(state.patValidation.expiresAt).toLocaleDateString()}`}
+                    </p>
+                  ) : (
+                    <p className="text-muted-foreground text-xs">No expiration set</p>
+                  )}
+                  {tokenExpired && (
+                    <p className="text-xs font-medium text-red-600">Use a different token to continue.</p>
+                  )}
                   <button
                     type="button"
                     onClick={() => {
                       dispatch({ type: "USE_DIFFERENT_TOKEN" });
                     }}
-                    className="text-muted-foreground hover:text-foreground text-xs underline"
+                    className={cn(
+                      "text-xs underline",
+                      tokenExpired
+                        ? "font-medium text-red-600 hover:text-red-700"
+                        : "text-muted-foreground hover:text-foreground",
+                    )}
                   >
                     Use a different token
                   </button>
@@ -433,7 +461,7 @@ export default function CreateBoardForm({ storedPat }: CreateBoardFormProps) {
               <Button
                 type="button"
                 onClick={() => void handleNext()}
-                disabled={state.checkingName || state.patValidation.status !== "valid"}
+                disabled={state.checkingName || state.patValidation.status !== "valid" || tokenExpired}
                 className="bg-primary text-primary-foreground hover:bg-primary/90 w-full rounded-lg px-4 py-2 font-medium transition-colors disabled:opacity-50"
               >
                 {state.checkingName ? (
@@ -507,6 +535,7 @@ export default function CreateBoardForm({ storedPat }: CreateBoardFormProps) {
                               onCheckedChange={() => {
                                 dispatch({ type: "TOGGLE_REPO_SELECTION", repo });
                               }}
+                              className="border-slate-300"
                             />
                             <img
                               src={`https://github.com/${repo.owner}.png?size=48`}
@@ -665,6 +694,7 @@ export default function CreateBoardForm({ storedPat }: CreateBoardFormProps) {
                                   onCheckedChange={() => {
                                     dispatch({ type: "TOGGLE_CONTRIBUTOR_SELECTION", contributor: collab });
                                   }}
+                                  className="border-slate-300"
                                 />
                                 <img
                                   src={collab.avatarUrl}

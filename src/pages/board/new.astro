@@ -37,10 +37,10 @@ const userInitial = user?.email?.[0]?.toUpperCase() ?? "?";
             class="border-border bg-popover absolute top-full right-0 z-50 mt-1.5 w-48 overflow-hidden rounded-xl border py-1.5 shadow-2xl"
           >
             <a
-              href="/dashboard"
+              href="/profile/settings"
               class="text-muted-foreground hover:bg-accent hover:text-foreground flex items-center gap-2 px-3 py-2 text-sm transition-colors"
             >
-              Back to dashboard
+              Profile settings
             </a>
             <div class="border-border mx-3 my-1 border-t"></div>
             <form method="POST" action="/api/auth/signout">
@@ -56,14 +56,14 @@ const userInitial = user?.email?.[0]?.toUpperCase() ?? "?";
       </div>
     </header>
 
-    <div class="mx-auto max-w-lg space-y-4 p-4">
+    <div class="mx-auto max-w-2xl space-y-4 p-4">
       <div class="flex items-center justify-between">
         <h1 class="text-foreground text-xl font-semibold">New board</h1>
         <a href="/dashboard" class="text-primary hover:text-primary/80 text-sm transition-colors hover:underline">
           ← Back to dashboard
         </a>
       </div>
-      <CreateBoardForm client:load storedPat={storedPat} />
+      <CreateBoardForm client:load storedPat={storedPat} serverTime={Date.now()} />
     </div>
   </div>
 </Layout>
