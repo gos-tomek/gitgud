@@ -559,7 +559,7 @@ Migrate all existing app pages and components from the dark cosmic theme to the 
 - [x] 4.3 Lint passes: `npm run lint` — 0950bbf
 - [x] 4.4 Tests pass: `npm test` (excluding integration) — 0950bbf
 - [x] 4.5 No `bg-cosmic` references in `src/` — 0950bbf
-- [x] 4.6 No `text-purple-` references in `src/` — 0950bbf
+- [x] 4.6 No `text-purple-` references in `src/` — 0950bbf _(exception: `PrTable.tsx` uses `bg-purple-100 text-purple-700` for GitHub "merged" badge — this is GitHub's own color convention, not a cosmic theme remnant)_
 
 #### Manual
 
@@ -568,3 +568,7 @@ Migrate all existing app pages and components from the dark cosmic theme to the 
 - [x] 4.9 Board pages use light theme consistently — 0950bbf
 - [x] 4.10 Impact view charts and tables readable on light background — 0950bbf
 - [x] 4.11 No visual regressions in interactive components — 0950bbf
+
+## Addendum: CommentBody Markdown Rendering (out-of-scope, shipped on branch)
+
+`src/components/threads/CommentBody.tsx` was added during this branch alongside two new dependencies (`marked`, `isomorphic-dompurify`). It renders review comment bodies as markdown with GitHub suggestion-block support. Not described in the original plan; shipped as an opportunistic improvement while working in the threads area. No plan phases were modified to accommodate it.

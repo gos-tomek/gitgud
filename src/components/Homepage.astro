@@ -9,13 +9,9 @@ interface Props {
 const { stats } = Astro.props;
 ---
 
-<style is:global>
-  @import url("https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap");
-</style>
-
 <div
-  class="overflow-x-hidden bg-green-50"
-  style="min-height: 100vh; font-family: 'DM Sans', system-ui, -apple-system, sans-serif; color: #1a2e1a;"
+  class="text-homepage-text overflow-x-hidden bg-green-50"
+  style="min-height: 100vh; font-family: 'DM Sans', system-ui, -apple-system, sans-serif;"
 >
   <HomepageNav />
 
@@ -44,14 +40,17 @@ const { stats } = Astro.props;
 
       <!-- Headline -->
       <h1
-        class="mx-auto mb-5 max-w-[720px] leading-[1.1] font-bold tracking-tight text-balance text-[#0f1f0f]"
+        class="text-homepage-heading mx-auto mb-5 max-w-[720px] leading-[1.1] font-bold tracking-tight text-balance"
         style="font-size: clamp(36px, 5vw, 56px);"
       >
         See your engineering contributions. Grow from them.
       </h1>
 
       <!-- Subheadline -->
-      <p class="mx-auto mb-9 max-w-[560px] leading-relaxed text-[#4a5e4a]" style="font-size: clamp(17px, 2vw, 19px);">
+      <p
+        class="text-homepage-muted mx-auto mb-9 max-w-[560px] leading-relaxed"
+        style="font-size: clamp(17px, 2vw, 19px);"
+      >
         GitGud reads your GitHub activity, classifies every review comment by intent, and builds your contribution
         profile — so you can see where your energy goes.
       </p>
@@ -67,8 +66,7 @@ const { stats } = Astro.props;
         </a>
         <a
           href="/auth/signin"
-          class="rounded-[10px] border bg-white px-8 py-3.5 text-base font-medium transition-all hover:border-green-200 hover:bg-[#f7fef7]"
-          style="color: #1a2e1a; border-color: #d1ddd1;"
+          class="text-homepage-text border-homepage-border hover:bg-homepage-surface-hover rounded-[10px] border bg-white px-8 py-3.5 text-base font-medium transition-all hover:border-green-200"
         >
           Sign In
         </a>
@@ -91,59 +89,59 @@ const { stats } = Astro.props;
         >
           {stats.highImpactPercent}%
         </div>
-        <div class="mt-2 text-base font-medium text-[#4a5e4a]">of review threads classified as high-impact</div>
+        <div class="text-homepage-muted mt-2 text-base font-medium">of review threads classified as high-impact</div>
         <div class="mt-1 text-[13px] text-slate-400">architecture · mentoring · bug-catch · unblocking</div>
       </div>
 
       <!-- 3 medium stats -->
       <div class="mb-4 grid grid-cols-1 gap-4 sm:grid-cols-3">
         <div class="rounded-[14px] border border-green-100 bg-white px-5 py-7 text-center">
-          <div class="text-[40px] leading-none font-bold text-[#0f1f0f]" style="letter-spacing: -0.03em;">
+          <div class="text-homepage-heading text-[40px] leading-none font-bold" style="letter-spacing: -0.03em;">
             {stats.contributors}
           </div>
-          <div class="mt-1.5 text-[13px] font-medium text-[#6b7e6b]">Contributors</div>
+          <div class="text-homepage-subtle mt-1.5 text-[13px] font-medium">Contributors</div>
         </div>
         <div class="rounded-[14px] border border-green-100 bg-white px-5 py-7 text-center">
-          <div class="text-[40px] leading-none font-bold text-[#0f1f0f]" style="letter-spacing: -0.03em;">
+          <div class="text-homepage-heading text-[40px] leading-none font-bold" style="letter-spacing: -0.03em;">
             {stats.prsTracked}
           </div>
-          <div class="mt-1.5 text-[13px] font-medium text-[#6b7e6b]">PRs tracked</div>
+          <div class="text-homepage-subtle mt-1.5 text-[13px] font-medium">PRs tracked</div>
         </div>
         <div class="rounded-[14px] border border-green-100 bg-white px-5 py-7 text-center">
-          <div class="text-[40px] leading-none font-bold text-[#0f1f0f]" style="letter-spacing: -0.03em;">
+          <div class="text-homepage-heading text-[40px] leading-none font-bold" style="letter-spacing: -0.03em;">
             {stats.repos}
           </div>
-          <div class="mt-1.5 text-[13px] font-medium text-[#6b7e6b]">Repos connected</div>
+          <div class="text-homepage-subtle mt-1.5 text-[13px] font-medium">Repos connected</div>
         </div>
       </div>
 
       <!-- 4 small stats -->
       <div class="grid grid-cols-2 gap-4 sm:grid-cols-4">
         <div class="rounded-[14px] border border-green-100 bg-white px-4 py-[22px] text-center">
-          <div class="text-[32px] leading-none font-bold text-[#0f1f0f]" style="letter-spacing: -0.02em;">
+          <div class="text-homepage-heading text-[32px] leading-none font-bold" style="letter-spacing: -0.02em;">
             {stats.threadsClassified}
           </div>
-          <div class="mt-1 text-[12px] font-medium text-[#6b7e6b]">Threads classified</div>
+          <div class="text-homepage-subtle mt-1 text-[12px] font-medium">Threads classified</div>
         </div>
         <div class="rounded-[14px] border border-green-100 bg-white px-4 py-[22px] text-center">
-          <div class="text-[32px] leading-none font-bold text-[#0f1f0f]" style="letter-spacing: -0.02em;">
+          <div class="text-homepage-heading text-[32px] leading-none font-bold" style="letter-spacing: -0.02em;">
             {stats.deepDiscussions}
           </div>
-          <div class="mt-1 text-[12px] font-medium text-[#6b7e6b]">Deep discussions</div>
+          <div class="text-homepage-subtle mt-1 text-[12px] font-medium">Deep discussions</div>
           <div class="mt-0.5 text-[10px] text-slate-400">3+ messages</div>
         </div>
         <div class="rounded-[14px] border border-green-100 bg-white px-4 py-[22px] text-center">
-          <div class="text-[32px] leading-none font-bold text-[#0f1f0f]" style="letter-spacing: -0.02em;">
+          <div class="text-homepage-heading text-[32px] leading-none font-bold" style="letter-spacing: -0.02em;">
             {stats.multiPersonThreads}
           </div>
-          <div class="mt-1 text-[12px] font-medium text-[#6b7e6b]">Multi-person threads</div>
+          <div class="text-homepage-subtle mt-1 text-[12px] font-medium">Multi-person threads</div>
           <div class="mt-0.5 text-[10px] text-slate-400">2+ participants</div>
         </div>
         <div class="rounded-[14px] border border-green-100 bg-white px-4 py-[22px] text-center">
-          <div class="text-[32px] leading-none font-bold text-[#0f1f0f]" style="letter-spacing: -0.02em;">
+          <div class="text-homepage-heading text-[32px] leading-none font-bold" style="letter-spacing: -0.02em;">
             {stats.boards}
           </div>
-          <div class="mt-1 text-[12px] font-medium text-[#6b7e6b]">Boards</div>
+          <div class="text-homepage-subtle mt-1 text-[12px] font-medium">Boards</div>
         </div>
       </div>
     </div>
@@ -153,13 +151,15 @@ const { stats } = Astro.props;
   <section class="border-y border-green-100 bg-white px-8 py-14">
     <div class="mx-auto max-w-[1120px]">
       <div class="mb-12 text-center">
-        <h2 class="font-bold tracking-[-0.02em] text-[#0f1f0f]" style="font-size: clamp(26px, 3.5vw, 36px);">
+        <h2 class="text-homepage-heading font-bold tracking-[-0.02em]" style="font-size: clamp(26px, 3.5vw, 36px);">
           What you can do with it
         </h2>
       </div>
       <div class="grid grid-cols-1 gap-6 md:grid-cols-3">
         <!-- Card 1: Growth conversations -->
-        <div class="rounded-[14px] border border-green-100 bg-[#f8fdf8] p-8 transition-colors hover:border-green-200">
+        <div
+          class="bg-homepage-surface rounded-[14px] border border-green-100 p-8 transition-colors hover:border-green-200"
+        >
           <div class="mb-5 flex h-11 w-11 items-center justify-center rounded-[10px] bg-green-100">
             <svg
               width="22"
@@ -176,15 +176,17 @@ const { stats } = Astro.props;
               ></path>
             </svg>
           </div>
-          <h3 class="mb-2 text-[18px] font-bold text-[#0f1f0f]">Growth conversations</h3>
-          <p class="text-[14px] leading-relaxed text-[#4a5e4a]">
+          <h3 class="text-homepage-heading mb-2 text-[18px] font-bold">Growth conversations</h3>
+          <p class="text-homepage-muted text-[14px] leading-relaxed">
             Walk into your 1:1 with your supervisor with data. "38% of my reviews are high-signal — architecture,
             mentoring, bug catches." Talk about where you want to go, grounded in where you are.
           </p>
         </div>
 
         <!-- Card 2: Spot your patterns -->
-        <div class="rounded-[14px] border border-green-100 bg-[#f8fdf8] p-8 transition-colors hover:border-green-200">
+        <div
+          class="bg-homepage-surface rounded-[14px] border border-green-100 p-8 transition-colors hover:border-green-200"
+        >
           <div class="mb-5 flex h-11 w-11 items-center justify-center rounded-[10px] bg-green-100">
             <svg
               width="22"
@@ -199,15 +201,17 @@ const { stats } = Astro.props;
               <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline>
             </svg>
           </div>
-          <h3 class="mb-2 text-[18px] font-bold text-[#0f1f0f]">Spot your patterns</h3>
-          <p class="text-[14px] leading-relaxed text-[#4a5e4a]">
+          <h3 class="text-homepage-heading mb-2 text-[18px] font-bold">Spot your patterns</h3>
+          <p class="text-homepage-muted text-[14px] leading-relaxed">
             Mostly nitpicks? All in one repo? Discussion-sparking ratio at 12%? See where your review energy clusters
             and decide if that's where you want it to be.
           </p>
         </div>
 
         <!-- Card 3: Find areas to grow -->
-        <div class="rounded-[14px] border border-green-100 bg-[#f8fdf8] p-8 transition-colors hover:border-green-200">
+        <div
+          class="bg-homepage-surface rounded-[14px] border border-green-100 p-8 transition-colors hover:border-green-200"
+        >
           <div class="mb-5 flex h-11 w-11 items-center justify-center rounded-[10px] bg-green-100">
             <svg
               width="22"
@@ -225,8 +229,8 @@ const { stats } = Astro.props;
               <line x1="8" y1="11" x2="14" y2="11"></line>
             </svg>
           </div>
-          <h3 class="mb-2 text-[18px] font-bold text-[#0f1f0f]">Find areas to grow</h3>
-          <p class="text-[14px] leading-relaxed text-[#4a5e4a]">
+          <h3 class="text-homepage-heading mb-2 text-[18px] font-bold">Find areas to grow</h3>
+          <p class="text-homepage-muted text-[14px] leading-relaxed">
             Low involvement %? Pickup time creeping up? Author engagement falling? GitGud gives you the specifics — you
             decide what to do with them.
           </p>
@@ -234,7 +238,7 @@ const { stats } = Astro.props;
       </div>
 
       <div class="mx-auto mt-9 max-w-[640px] text-center">
-        <p class="text-[14px] leading-relaxed text-[#6b7e6b]">
+        <p class="text-homepage-subtle text-[14px] leading-relaxed">
           Your supervisor may have already set up a board for your team. If not, create one yourself — connect a GitHub
           org and add your co-contributors.
         </p>
@@ -245,10 +249,12 @@ const { stats } = Astro.props;
   <!-- BOTTOM CTA -->
   <section class="px-8 pt-16 pb-20 text-center">
     <div class="mx-auto max-w-[600px]">
-      <h2 class="mb-3 font-bold tracking-[-0.02em] text-[#0f1f0f]" style="font-size: clamp(24px, 3vw, 32px);">
+      <h2 class="text-homepage-heading mb-3 font-bold tracking-[-0.02em]" style="font-size: clamp(24px, 3vw, 32px);">
         See where your energy goes
       </h2>
-      <p class="mb-7 text-base text-[#4a5e4a]">Your contributions are already in GitHub. Sign up and explore them.</p>
+      <p class="text-homepage-muted mb-7 text-base">
+        Your contributions are already in GitHub. Sign up and explore them.
+      </p>
       <a
         href="/auth/signup"
         class="inline-block rounded-[10px] bg-green-600 px-9 py-3.5 text-base font-semibold text-white transition-all hover:-translate-y-px hover:bg-green-700"

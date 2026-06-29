@@ -1,9 +1,9 @@
 ---
 change_id: homepage
 title: Homepage
-status: implemented
+status: impl_reviewed
 created: 2026-06-26
-updated: 2026-06-27
+updated: 2026-06-29
 
 archived_at: null
 ---
