@@ -2,26 +2,11 @@
 import HomepageNav from "@/components/HomepageNav.astro";
 import type { HomepageStats } from "@/lib/services/homepage-stats";
 
-const FALLBACK: HomepageStats = {
-  boards: 0,
-  contributors: 0,
-  repos: 0,
-  prsTracked: 0,
-  threadsClassified: 0,
-  deepDiscussions: 0,
-  multiPersonThreads: 0,
-  highImpactPercent: 0,
-};
-
-let stats = FALLBACK;
-try {
-  const res = await fetch(new URL("/api/stats", Astro.url));
-  if (res.ok) {
-    stats = await res.json();
-  }
-} catch {
-  // network or parse error — fall back to zeros
+interface Props {
+  stats: HomepageStats;
 }
+
+const { stats } = Astro.props;
 ---
 
 <style is:global>
