@@ -25,7 +25,7 @@ interface MetricCardProps {
 
 function MetricCard({ label, value, sub, description, categoryBreakdown }: MetricCardProps) {
   return (
-    <div className="border-primary/20 bg-primary/5 rounded-lg border p-3">
+    <div className="border-border bg-card rounded-lg border p-3">
       <div className="flex items-center gap-1">
         <p className="text-muted-foreground text-xs">{label}</p>
         {description && (

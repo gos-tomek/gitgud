@@ -79,7 +79,7 @@ describe("KpiCards", () => {
   it("KC3: shows positive delta in green and negative delta in red", () => {
     render(<KpiCards summary={MOCK_SUMMARY} loading={false} />);
     const positive = screen.getByText("+20%");
-    expect(positive).toHaveClass("text-emerald-500");
+    expect(positive).toHaveClass("text-emerald-600");
     const negative = screen.getByText("-10%");
     expect(negative).toHaveClass("text-red-500");
   });

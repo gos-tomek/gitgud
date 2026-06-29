@@ -554,17 +554,17 @@ Migrate all existing app pages and components from the dark cosmic theme to the 
 
 #### Automated
 
-- [x] 4.1 Build succeeds: `npm run build`
-- [x] 4.2 Type checking passes: `npx tsc --noEmit`
-- [x] 4.3 Lint passes: `npm run lint`
-- [x] 4.4 Tests pass: `npm test` (excluding integration)
-- [x] 4.5 No `bg-cosmic` references in `src/`
-- [x] 4.6 No `text-purple-` references in `src/`
+- [x] 4.1 Build succeeds: `npm run build` — 0950bbf
+- [x] 4.2 Type checking passes: `npx tsc --noEmit` — 0950bbf
+- [x] 4.3 Lint passes: `npm run lint` — 0950bbf
+- [x] 4.4 Tests pass: `npm test` (excluding integration) — 0950bbf
+- [x] 4.5 No `bg-cosmic` references in `src/` — 0950bbf
+- [x] 4.6 No `text-purple-` references in `src/` — 0950bbf
 
 #### Manual
 
-- [x] 4.7 All app pages render with light theme
-- [x] 4.8 Auth pages look clean with green brand colors
-- [x] 4.9 Board pages use light theme consistently
-- [x] 4.10 Impact view charts and tables readable on light background
-- [x] 4.11 No visual regressions in interactive components
+- [x] 4.7 All app pages render with light theme — 0950bbf
+- [x] 4.8 Auth pages look clean with green brand colors — 0950bbf
+- [x] 4.9 Board pages use light theme consistently — 0950bbf
+- [x] 4.10 Impact view charts and tables readable on light background — 0950bbf
+- [x] 4.11 No visual regressions in interactive components — 0950bbf

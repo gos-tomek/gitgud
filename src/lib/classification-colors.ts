@@ -23,24 +23,46 @@ export const DOMAIN_CATEGORIES: TechnicalDomain[] = [
 ];
 
 export const INTENT_COLORS: Record<IntentCategory, string> = {
-  architecture: "#3b82f6",
-  "bug-catch": "#f97316",
-  mentoring: "#10b981",
-  unblocking: "#06b6d4",
-  nitpick: "#f59e0b",
-  question: "#8b5cf6",
-  praise: "#eab308",
-  joke: "#ec4899",
-  "self-review": "#a1a1aa",
-  unknown: "#d4d4d8",
+  architecture: "#16a34a",
+  "bug-catch": "#22c55e",
+  mentoring: "#4ade80",
+  unblocking: "#86efac",
+  nitpick: "#2563eb",
+  question: "#3b82f6",
+  praise: "#93c5fd",
+  joke: "#94a3b8",
+  "self-review": "#cbd5e1",
+  unknown: "#e2e8f0",
 };
 
 export const DOMAIN_COLORS: Record<TechnicalDomain, string> = {
-  functional: "#7c3aed",
-  refactoring: "#0ea5e9",
-  documentation: "#10b981",
-  discussion: "#f59e0b",
-  "false-positive": "#d4d4d8",
+  functional: "#f97316",
+  refactoring: "#eab308",
+  documentation: "#a855f7",
+  discussion: "#ec4899",
+  "false-positive": "#94a3b8",
+};
+
+// Darker shades for badge text — ensures readable contrast on the light tinted background.
+export const INTENT_TEXT_COLORS: Record<IntentCategory, string> = {
+  architecture: "#14532d",
+  "bug-catch": "#15803d",
+  mentoring: "#16a34a",
+  unblocking: "#16a34a",
+  nitpick: "#1e40af",
+  question: "#1d4ed8",
+  praise: "#1d4ed8",
+  joke: "#475569",
+  "self-review": "#475569",
+  unknown: "#64748b",
+};
+
+export const DOMAIN_TEXT_COLORS: Record<TechnicalDomain, string> = {
+  functional: "#c2410c",
+  refactoring: "#854d0e",
+  documentation: "#6b21a8",
+  discussion: "#9d174d",
+  "false-positive": "#475569",
 };
 
 export const INTENT_TIERS: Record<IntentCategory, IntentTier> = {

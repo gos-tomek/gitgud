@@ -6,9 +6,10 @@ import { cn } from "@/lib/utils";
 const MAX_SHOW = 10;
 
 const STATE_STYLE: Record<string, string> = {
-  merged: "bg-primary/20 text-primary",
-  open: "bg-emerald-500/30 text-emerald-700",
-  closed: "bg-red-500/30 text-red-700",
+  merged: "bg-purple-100 text-purple-700",
+  open: "bg-green-100 text-green-800",
+  closed: "bg-red-100 text-red-700",
+  draft: "bg-slate-100 text-slate-500",
 };
 
 function fmtHours(n: number | null): string {

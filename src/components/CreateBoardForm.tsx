@@ -311,7 +311,7 @@ export default function CreateBoardForm({ storedPat }: CreateBoardFormProps) {
         <span className="text-muted-foreground ml-2 text-xs">Step {state.step} of 3</span>
       </div>
 
-      <Card className="border-border bg-card">
+      <Card className="border-border bg-card rounded-2xl">
         <CardContent className="pt-6">
           {state.step === 1 && (
             <div className="space-y-4">
@@ -508,6 +508,13 @@ export default function CreateBoardForm({ storedPat }: CreateBoardFormProps) {
                                 dispatch({ type: "TOGGLE_REPO_SELECTION", repo });
                               }}
                             />
+                            <img
+                              src={`https://github.com/${repo.owner}.png?size=48`}
+                              alt={repo.owner}
+                              className="size-6 shrink-0 rounded-full"
+                              width={24}
+                              height={24}
+                            />
                             <span className="text-foreground flex-1 truncate text-sm">{repo.fullName}</span>
                             <div className="flex shrink-0 gap-1">
                               {repo.private && (
@@ -555,7 +562,7 @@ export default function CreateBoardForm({ storedPat }: CreateBoardFormProps) {
                     onClick={() => void handleAddManual()}
                     disabled={!state.manualEntry.trim() || state.manualEntryLoading}
                     variant="outline"
-                    className="border-border bg-card text-foreground hover:bg-accent"
+                    className="border-primary/30 bg-card text-primary hover:bg-primary/10"
                   >
                     {state.manualEntryLoading ? (
                       <Loader2 className="size-4 animate-spin" />

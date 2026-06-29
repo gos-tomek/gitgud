@@ -33,7 +33,7 @@ function Delta({ delta }: { delta: number | null }) {
       className={cn(
         "text-xs font-medium",
         zero && "text-muted-foreground",
-        positive && "text-emerald-500",
+        positive && "text-emerald-600",
         !positive && !zero && "text-red-500",
       )}
     >
@@ -46,7 +46,7 @@ function Delta({ delta }: { delta: number | null }) {
 function KpiCard({ label, metric, unit }: { label: string; metric: KpiMetric | undefined; unit?: string }) {
   const description = DESCRIPTIONS[label];
   return (
-    <div className="border-border bg-card rounded-xl border p-4">
+    <div className="border-primary/20 bg-card rounded-xl border p-4">
       <div className="flex items-center gap-1">
         <p className="text-muted-foreground text-xs font-medium tracking-wide uppercase">{label}</p>
         {description && (

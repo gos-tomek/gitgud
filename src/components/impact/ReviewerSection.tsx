@@ -70,7 +70,7 @@ export function ReviewerSection({ data, loading }: Props) {
                 <div className="flex h-3 overflow-hidden rounded-full">
                   {(
                     [
-                      ["approved", "bg-emerald-500"],
+                      ["approved", "bg-emerald-600"],
                       ["changesRequested", "bg-orange-500"],
                       ["commented", "bg-blue-400"],
                       ["dismissed", "bg-muted"],
@@ -89,7 +89,7 @@ export function ReviewerSection({ data, loading }: Props) {
                 </div>
                 <div className="text-muted-foreground mt-1 flex flex-wrap gap-3 text-xs">
                   <span className="flex items-center gap-1">
-                    <span className="inline-block h-2 w-2 rounded-full bg-emerald-500" />
+                    <span className="inline-block h-2 w-2 rounded-full bg-emerald-600" />
                     Approved {data.reviewsByVerdict.approved}
                   </span>
                   <span className="flex items-center gap-1">

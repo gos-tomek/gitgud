@@ -1,5 +1,11 @@
 import { useState, useEffect } from "react";
-import { ChevronRight, ChevronDown, MessageSquare } from "lucide-react";
+import { ChevronRight, ChevronDown, MessageSquare, Check } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import type {
   ClassifiedThread,
   ClassifiedThreadsPage,
@@ -19,6 +25,8 @@ import {
   DOMAIN_CATEGORIES,
   INTENT_COLORS,
   DOMAIN_COLORS,
+  INTENT_TEXT_COLORS,
+  DOMAIN_TEXT_COLORS,
   INTENT_LABELS,
   DOMAIN_LABELS,
 } from "@/lib/classification-colors";
@@ -95,20 +103,62 @@ function buildQuery(period: PeriodSlug, filters: Filters, page: number): string 
 }
 
 function IntentBadge({ intent }: { intent: IntentCategory }) {
-  const color = INTENT_COLORS[intent];
+  const bg = INTENT_COLORS[intent];
+  const text = INTENT_TEXT_COLORS[intent];
   return (
-    <span className="rounded px-1.5 py-0.5 text-xs font-semibold" style={{ backgroundColor: `${color}26`, color }}>
+    <span className="rounded px-1.5 py-0.5 text-xs font-semibold" style={{ backgroundColor: `${bg}33`, color: text }}>
       {INTENT_LABELS[intent]}
     </span>
   );
 }
 
 function DomainBadge({ domain }: { domain: TechnicalDomain }) {
-  const color = DOMAIN_COLORS[domain];
+  const bg = DOMAIN_COLORS[domain];
+  const text = DOMAIN_TEXT_COLORS[domain];
   return (
-    <span className="rounded px-1.5 py-0.5 text-xs font-semibold" style={{ backgroundColor: `${color}26`, color }}>
+    <span className="rounded px-1.5 py-0.5 text-xs font-semibold" style={{ backgroundColor: `${bg}33`, color: text }}>
       {DOMAIN_LABELS[domain]}
     </span>
+  );
+}
+
+function FilterDropdown({
+  value,
+  options,
+  onChange,
+}: {
+  value: string;
+  options: { value: string; label: string }[];
+  onChange: (v: string) => void;
+}) {
+  const current = options.find((o) => o.value === value) ?? options[0];
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button
+          variant="outline"
+          size="sm"
+          className="border-border bg-card text-foreground hover:bg-accent hover:text-foreground gap-1.5"
+        >
+          {current.label}
+          <ChevronDown className="size-3.5 opacity-70" />
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="start" className="min-w-[160px]">
+        {options.map((o) => (
+          <DropdownMenuItem
+            key={o.value}
+            onClick={() => {
+              onChange(o.value);
+            }}
+            className={cn("gap-2", o.value === value && "font-medium")}
+          >
+            <Check className={cn("size-3.5", o.value === value ? "opacity-100" : "opacity-0")} />
+            {o.label}
+          </DropdownMenuItem>
+        ))}
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }
 
@@ -175,7 +225,7 @@ function ThreadDiscussion({
       {state.data.messages.map((message) => (
         <div
           key={message.id}
-          className={cn("border-border bg-card rounded-lg border p-3", message.inReplyToId && "ml-6")}
+          className={cn("rounded-lg border border-slate-200 bg-white p-3 shadow-sm", message.inReplyToId && "ml-6")}
         >
           <div className="mb-1 flex items-center gap-2">
             <span className="text-foreground font-mono text-xs font-medium">@{message.commenterLogin}</span>
@@ -347,50 +397,36 @@ export default function ThreadsView({
 
       {/* filter bar */}
       <div className="flex flex-wrap items-center gap-2">
-        <select
+        <FilterDropdown
           value={filters.intent ?? ""}
-          onChange={(e) => {
-            updateFilters({ intent: e.target.value ? (e.target.value as IntentCategory) : undefined });
+          options={[
+            { value: "", label: "All intents" },
+            ...INTENT_CATEGORIES.map((c) => ({ value: c, label: INTENT_LABELS[c] })),
+          ]}
+          onChange={(v) => {
+            updateFilters({ intent: v ? (v as IntentCategory) : undefined });
           }}
-          className="border-border bg-card text-foreground rounded-lg border px-2 py-1.5 text-sm"
-        >
-          <option value="">All intents</option>
-          {INTENT_CATEGORIES.map((c) => (
-            <option key={c} value={c}>
-              {INTENT_LABELS[c]}
-            </option>
-          ))}
-        </select>
-
-        <select
+        />
+        <FilterDropdown
           value={filters.domain ?? ""}
-          onChange={(e) => {
-            updateFilters({ domain: e.target.value ? (e.target.value as TechnicalDomain) : undefined });
+          options={[
+            { value: "", label: "All domains" },
+            ...DOMAIN_CATEGORIES.map((d) => ({ value: d, label: DOMAIN_LABELS[d] })),
+          ]}
+          onChange={(v) => {
+            updateFilters({ domain: v ? (v as TechnicalDomain) : undefined });
           }}
-          className="border-border bg-card text-foreground rounded-lg border px-2 py-1.5 text-sm"
-        >
-          <option value="">All domains</option>
-          {DOMAIN_CATEGORIES.map((d) => (
-            <option key={d} value={d}>
-              {DOMAIN_LABELS[d]}
-            </option>
-          ))}
-        </select>
-
-        <select
+        />
+        <FilterDropdown
           value={filters.role}
-          onChange={(e) => {
-            updateFilters({ role: e.target.value as Role });
+          options={(["all", "started", "received", "self", "joined"] as const).map((r) => ({
+            value: r,
+            label: ROLE_LABELS[r],
+          }))}
+          onChange={(v) => {
+            updateFilters({ role: (v || "all") as Role });
           }}
-          title="Started: threads this contributor opened on someone else's PR. Received: threads someone else opened on this contributor's own PR. Self-reviewed: threads this contributor opened on their own PR. Joined: threads someone else started where this contributor left a reply."
-          className="border-border bg-card text-foreground rounded-lg border px-2 py-1.5 text-sm"
-        >
-          {(["all", "started", "received", "self", "joined"] as const).map((r) => (
-            <option key={r} value={r}>
-              {ROLE_LABELS[r]}
-            </option>
-          ))}
-        </select>
+        />
 
         {filters.prId !== undefined && (
           <button
@@ -455,7 +491,7 @@ export default function ThreadsView({
                 onClick={() => {
                   setPage((p) => p - 1);
                 }}
-                className="border-border bg-card text-foreground hover:bg-accent hover:text-foreground"
+                className="border-primary/30 bg-card text-primary hover:bg-primary/10"
               >
                 Previous
               </Button>
@@ -469,7 +505,7 @@ export default function ThreadsView({
                 onClick={() => {
                   setPage((p) => p + 1);
                 }}
-                className={cn("border-border bg-card text-foreground hover:bg-accent hover:text-foreground")}
+                className="border-primary/30 bg-card text-primary hover:bg-primary/10"
               >
                 Next
               </Button>

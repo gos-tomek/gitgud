@@ -7,10 +7,10 @@ import type { ChartConfig } from "@/components/ui/chart";
 import type { AuthorMetrics } from "@/types";
 
 const PIE_CONFIG = {
-  merged: { label: "Merged", color: "hsl(270 60% 55%)" },
-  open: { label: "Open", color: "hsl(142 72% 42%)" },
-  closed: { label: "Closed", color: "hsl(0 68% 50%)" },
-  draft: { label: "Draft", color: "hsl(215 16% 50%)" },
+  merged: { label: "Merged", color: "#8957e5" },
+  open: { label: "Open", color: "#1a7f37" },
+  closed: { label: "Closed", color: "#cf222e" },
+  draft: { label: "Draft", color: "#6e7781" },
 } satisfies ChartConfig;
 
 const SIZE_LABELS = ["0–10", "10–50", "50–200", "200–500", "500+"];
