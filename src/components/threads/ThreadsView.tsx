@@ -14,6 +14,7 @@ import type {
   TechnicalDomain,
   PeriodSlug,
 } from "@/types";
+import { CommentBody } from "@/components/threads/CommentBody";
 import { PeriodSelector } from "@/components/impact/PeriodSelector";
 import { ContributorSelector } from "@/components/impact/ImpactView";
 import { SyncIndicator } from "@/components/impact/SyncIndicator";
@@ -231,7 +232,7 @@ function ThreadDiscussion({
             <span className="text-foreground font-mono text-xs font-medium">@{message.commenterLogin}</span>
             <span className="text-muted-foreground text-xs">{new Date(message.createdAt).toLocaleString("en-GB")}</span>
           </div>
-          <p className="text-foreground text-sm whitespace-pre-wrap">{message.body}</p>
+          <CommentBody body={message.body} />
         </div>
       ))}
     </div>
