@@ -262,6 +262,29 @@ function buildBatchPrDetailsQuery(prs: PrRef[]): string {
   return `query BatchPrDetails($owner: String!, $name: String!) { repository(owner: $owner, name: $name) { ${aliases} } }`;
 }
 
+// Builds a query that fetches the next review page for multiple PRs in one round trip.
+// PR numbers are inlined (alias positions); cursors use typed variables ($c0, $c1, …) since
+// they appear as field arguments where variables are permitted.
+function buildBatchReviewPageQuery(items: { number: number; cursor: string }[]): {
+  query: string;
+  variables: Record<string, string>;
+} {
+  const reviewFields = `nodes { databaseId state submittedAt author { login ... on User { databaseId } } } pageInfo { hasNextPage endCursor }`;
+  const varDecls = items.map((_, i) => `$c${i}: String!`).join(", ");
+  const aliases = items
+    .map(
+      (item, i) =>
+        `pr_${i}: pullRequest(number: ${item.number}) { reviews(first: 100, after: $c${i}) { ${reviewFields} } }`,
+    )
+    .join(" ");
+  const query = `query BatchReviewPage($owner: String!, $name: String!, ${varDecls}) { repository(owner: $owner, name: $name) { ${aliases} } }`;
+  const variables: Record<string, string> = {};
+  items.forEach((item, i) => {
+    variables[`c${i}`] = item.cursor;
+  });
+  return { query, variables };
+}
+
 // Fetches per-PR detail (size stats) + reviews for a slice of PRs via GraphQL, batching
 // GQL_PRS_PER_QUERY PRs per query instead of 2 REST calls per PR.
 // ~150 PRs → 15 GraphQL queries (~15s) vs 300+ sequential REST calls (>10min).
@@ -302,15 +325,10 @@ export async function syncPrBatch(
     }
 
     const batchSizeUpdates: { id: number; additions: number; deletions: number; changed_files: number }[] = [];
-    const batchReviewRows: {
-      id: number;
-      pull_request_id: number;
-      reviewer_login: string;
-      reviewer_github_id: number;
-      state: string;
-      submitted_at: string;
-      fetched_at: string;
-    }[] = [];
+    // Accumulated review nodes keyed by PR id, grown across overflow pages.
+    const reviewNodesByPrId = new Map<number, GqlReviewNode[]>();
+    // PRs still waiting for more review pages after the current round.
+    let pendingReviewPages: { prId: number; prNumber: number; cursor: string }[] = [];
 
     for (let j = 0; j < batchPrs.length; j++) {
       const pr = batchPrs[j];
@@ -321,65 +339,87 @@ export async function syncPrBatch(
         continue;
       }
 
-      try {
-        batchSizeUpdates.push({
-          id: pr.id,
-          additions: prData.additions,
-          deletions: prData.deletions,
-          changed_files: prData.changedFiles,
-        });
+      batchSizeUpdates.push({
+        id: pr.id,
+        additions: prData.additions,
+        deletions: prData.deletions,
+        changed_files: prData.changedFiles,
+      });
 
-        // Paginate reviews beyond the initial 100 — rare (requires 100+ review submissions on one PR).
-        let reviewNodes = prData.reviews.nodes;
-        let cursor: string | null = prData.reviews.pageInfo.hasNextPage ? prData.reviews.pageInfo.endCursor : null;
-        while (cursor) {
-          const pageResp = await octokit.graphql<{
-            repository: {
-              pr: { reviews: { nodes: GqlReviewNode[]; pageInfo: { hasNextPage: boolean; endCursor: string } } };
-            };
-          }>(
-            `query($owner: String!, $name: String!, $number: Int!, $cursor: String!) {
-              repository(owner: $owner, name: $name) {
-                pr: pullRequest(number: $number) {
-                  reviews(first: 100, after: $cursor) {
-                    nodes { databaseId state submittedAt author { login ... on User { databaseId } } }
-                    pageInfo { hasNextPage endCursor }
-                  }
-                }
-              }
-            }`,
-            { owner, name: repoName, number: pr.number, cursor },
-          );
-          const page = pageResp.repository.pr.reviews;
-          reviewNodes = [...reviewNodes, ...page.nodes];
-          cursor = page.pageInfo.hasNextPage ? page.pageInfo.endCursor : null;
-        }
-
-        batchReviewRows.push(
-          ...new Map(
-            reviewNodes
-              .filter((n): n is GqlReviewNode & { submittedAt: string } => n.submittedAt !== null)
-              .map((n) => [
-                n.databaseId,
-                {
-                  id: n.databaseId,
-                  pull_request_id: pr.id,
-                  reviewer_login: n.author?.login ?? "",
-                  reviewer_github_id: n.author?.databaseId ?? 0,
-                  state: n.state,
-                  submitted_at: n.submittedAt,
-                  fetched_at: now,
-                },
-              ]),
-          ).values(),
-        );
-
-        reviewCount += reviewNodes.length;
-      } catch (err) {
-        const msg = `PR #${pr.number} (${owner}/${repoName}): ${describeError(err)}`;
-        errors.push(msg);
-        logger.warn(`[github-sync] Skipping ${msg}`);
+      reviewNodesByPrId.set(pr.id, [...prData.reviews.nodes]);
+      if (prData.reviews.pageInfo.hasNextPage) {
+        pendingReviewPages.push({ prId: pr.id, prNumber: pr.number, cursor: prData.reviews.pageInfo.endCursor });
       }
+    }
+
+    // Batch-paginate overflowing reviews: all PRs needing the same depth page share one GQL call.
+    // N PRs × M overflow pages = M round trips instead of N×M.
+    interface ReviewPageResp {
+      repository: Partial<
+        Record<string, { reviews: { nodes: GqlReviewNode[]; pageInfo: { hasNextPage: boolean; endCursor: string } } }>
+      >;
+    }
+    while (pendingReviewPages.length > 0) {
+      const items = pendingReviewPages.map((p) => ({ number: p.prNumber, cursor: p.cursor }));
+      const { query, variables } = buildBatchReviewPageQuery(items);
+      let pageRepo: ReviewPageResp["repository"];
+      try {
+        const resp = await octokit.graphql<ReviewPageResp>(query, { owner, name: repoName, ...variables });
+        pageRepo = resp.repository;
+      } catch (err) {
+        for (const p of pendingReviewPages) {
+          const msg = `PR #${p.prNumber} (${owner}/${repoName}): review overflow page failed: ${describeError(err)}`;
+          errors.push(msg);
+          logger.warn(`[github-sync] ${msg}`);
+        }
+        break;
+      }
+      const nextPending: typeof pendingReviewPages = [];
+      for (let k = 0; k < pendingReviewPages.length; k++) {
+        const { prId, prNumber } = pendingReviewPages[k];
+        const page = pageRepo[`pr_${k}`];
+        if (!page) continue;
+        const existing = reviewNodesByPrId.get(prId) ?? [];
+        reviewNodesByPrId.set(prId, [...existing, ...page.reviews.nodes]);
+        if (page.reviews.pageInfo.hasNextPage) {
+          nextPending.push({ prId, prNumber, cursor: page.reviews.pageInfo.endCursor });
+        }
+      }
+      pendingReviewPages = nextPending;
+    }
+
+    const batchReviewRows: {
+      id: number;
+      pull_request_id: number;
+      reviewer_login: string;
+      reviewer_github_id: number;
+      state: string;
+      submitted_at: string;
+      fetched_at: string;
+    }[] = [];
+
+    for (const pr of batchPrs) {
+      const reviewNodes = reviewNodesByPrId.get(pr.id);
+      if (!reviewNodes) continue;
+      batchReviewRows.push(
+        ...new Map(
+          reviewNodes
+            .filter((n): n is GqlReviewNode & { submittedAt: string } => n.submittedAt !== null)
+            .map((n) => [
+              n.databaseId,
+              {
+                id: n.databaseId,
+                pull_request_id: pr.id,
+                reviewer_login: n.author?.login ?? "",
+                reviewer_github_id: n.author?.databaseId ?? 0,
+                state: n.state,
+                submitted_at: n.submittedAt,
+                fetched_at: now,
+              },
+            ]),
+        ).values(),
+      );
+      reviewCount += reviewNodes.length;
     }
 
     if (batchSizeUpdates.length > 0) {
