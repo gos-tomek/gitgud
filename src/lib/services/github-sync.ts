@@ -12,6 +12,12 @@ const MAX_PRS_PER_REPO = 200;
 // 500 PRs × 100 review nodes = 50,000 nodes — well within the limit.
 const GQL_PRS_PER_QUERY = 500;
 
+// Maximum extra GQL calls per GQL batch for paginating beyond the first 100 review nodes.
+// Budget: 1 (initial GQL) + MAX_OVERFLOW_ROUNDS + 1 (RPC) + 1 (upsert) = 47 ≤ 50 (free-plan cap).
+// If the step is retried by Cloudflare Workflows (subrequest counter may carry over across
+// attempts), keeping total at 47 leaves a 3-subrequest buffer for the retry's first call.
+const MAX_OVERFLOW_ROUNDS = 44;
+
 type SupabaseClient = NonNullable<ReturnType<typeof createClient>>;
 
 // Supabase PostgrestError objects are not Error instances (different prototype) — duck-type
@@ -354,12 +360,22 @@ export async function syncPrBatch(
 
     // Batch-paginate overflowing reviews: all PRs needing the same depth page share one GQL call.
     // N PRs × M overflow pages = M round trips instead of N×M.
+    // Capped at MAX_OVERFLOW_ROUNDS to stay within the 50-subrequest free-plan limit per step
+    // invocation (including budget headroom if Cloudflare retries the step).
     interface ReviewPageResp {
       repository: Partial<
         Record<string, { reviews: { nodes: GqlReviewNode[]; pageInfo: { hasNextPage: boolean; endCursor: string } } }>
       >;
     }
+    let overflowRound = 0;
     while (pendingReviewPages.length > 0) {
+      if (overflowRound >= MAX_OVERFLOW_ROUNDS) {
+        logger.warn(
+          `[github-sync] ${owner}/${repoName}: review overflow truncated at ${MAX_OVERFLOW_ROUNDS} rounds; ${pendingReviewPages.length} PR(s) may have incomplete reviews`,
+        );
+        break;
+      }
+      overflowRound++;
       const items = pendingReviewPages.map((p) => ({ number: p.prNumber, cursor: p.cursor }));
       const { query, variables } = buildBatchReviewPageQuery(items);
       let pageRepo: ReviewPageResp["repository"];
@@ -422,18 +438,35 @@ export async function syncPrBatch(
       reviewCount += reviewNodes.length;
     }
 
+    // Supabase writes wrapped in try-catch: Cloudflare throws "Too many subrequests"
+    // synchronously (before returning a response), which Supabase's fetch-based client
+    // propagates as a thrown exception rather than { error }. Catching here prevents an
+    // unhandled throw from failing the step and triggering a retry whose carried-over
+    // subrequest counter would immediately exhaust the budget on the retry's first call.
     if (batchSizeUpdates.length > 0) {
-      const { error } = await supabase.rpc("batch_update_pr_sizes", { updates: batchSizeUpdates });
-      if (error) {
-        const msg = `batch size update failed (PRs ${batchPrs[0].number}–${batchPrs[batchPrs.length - 1].number}): ${describeError(error)}`;
+      try {
+        const { error } = await supabase.rpc("batch_update_pr_sizes", { updates: batchSizeUpdates });
+        if (error) {
+          const msg = `batch size update failed (PRs ${batchPrs[0].number}–${batchPrs[batchPrs.length - 1].number}): ${describeError(error)}`;
+          errors.push(msg);
+          logger.warn(`[github-sync] ${msg}`);
+        }
+      } catch (err) {
+        const msg = `batch size update threw (PRs ${batchPrs[0].number}–${batchPrs[batchPrs.length - 1].number}): ${describeError(err)}`;
         errors.push(msg);
         logger.warn(`[github-sync] ${msg}`);
       }
     }
     if (batchReviewRows.length > 0) {
-      const { error } = await supabase.from("github_reviews").upsert(batchReviewRows, { onConflict: "id" });
-      if (error) {
-        const msg = `review upsert failed (PRs ${batchPrs[0].number}–${batchPrs[batchPrs.length - 1].number}): ${describeError(error)}`;
+      try {
+        const { error } = await supabase.from("github_reviews").upsert(batchReviewRows, { onConflict: "id" });
+        if (error) {
+          const msg = `review upsert failed (PRs ${batchPrs[0].number}–${batchPrs[batchPrs.length - 1].number}): ${describeError(error)}`;
+          errors.push(msg);
+          logger.warn(`[github-sync] ${msg}`);
+        }
+      } catch (err) {
+        const msg = `review upsert threw (PRs ${batchPrs[0].number}–${batchPrs[batchPrs.length - 1].number}): ${describeError(err)}`;
         errors.push(msg);
         logger.warn(`[github-sync] ${msg}`);
       }
