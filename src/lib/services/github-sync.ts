@@ -368,6 +368,23 @@ export async function syncPrBatch(
     }
   }
 
+  if (sizeUpdates.length > 0) {
+    const { error } = await supabase.rpc("batch_update_pr_sizes", { updates: sizeUpdates });
+    if (error) {
+      const msg = `batch size update failed: ${describeError(error)}`;
+      errors.push(msg);
+      logger.warn(`[github-sync] ${msg}`);
+    }
+  }
+  if (allReviewRows.length > 0) {
+    const { error } = await supabase.from("github_reviews").upsert(allReviewRows, { onConflict: "id" });
+    if (error) {
+      const msg = `batch review upsert failed: ${describeError(error)}`;
+      errors.push(msg);
+      logger.warn(`[github-sync] ${msg}`);
+    }
+  }
+
   return { reviews: reviewCount, errors };
 }
 
