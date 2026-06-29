@@ -8,6 +8,11 @@ import { logger } from "@/lib/logger";
 // since durable steps have no such timeout constraint.
 const MAX_PRS_PER_REPO = 200;
 
+// PRs batched per GraphQL query via field aliases. GitHub's query complexity limit is generous,
+// but aliasing too many nodes in one query risks hitting the 500,000-node ceiling on large repos
+// with many reviews. 10 is safe: 10 PRs × 100 review nodes = 1,000 nodes/query.
+const GQL_PRS_PER_QUERY = 10;
+
 type SupabaseClient = NonNullable<ReturnType<typeof createClient>>;
 
 export interface SyncResult {
@@ -29,8 +34,6 @@ export interface SyncOptions {
 }
 
 export type PrItem = Awaited<ReturnType<Octokit["rest"]["pulls"]["list"]>>["data"][number];
-type PrDetailItem = Awaited<ReturnType<Octokit["rest"]["pulls"]["get"]>>["data"];
-type ReviewItem = Awaited<ReturnType<Octokit["rest"]["pulls"]["listReviews"]>>["data"][number];
 type RepoCommentItem = Awaited<ReturnType<Octokit["rest"]["pulls"]["listReviewCommentsForRepo"]>>["data"][number];
 
 export interface RepoRow {
@@ -69,29 +72,14 @@ async function upsertPullRequests(supabase: SupabaseClient, repoId: string, prs:
   if (error) throw error;
 }
 
-async function upsertReviews(supabase: SupabaseClient, prId: number, reviews: ReviewItem[]): Promise<void> {
-  if (reviews.length === 0) return;
-  const now = new Date().toISOString();
-  const rows = dedupeById(reviews)
-    .filter((r) => (r.submitted_at as string | null) !== null)
-    .map((r) => ({
-      id: r.id,
-      pull_request_id: prId,
-      reviewer_login: r.user?.login ?? "",
-      reviewer_github_id: r.user?.id ?? 0,
-      state: r.state,
-      submitted_at: r.submitted_at,
-      fetched_at: now,
-    }));
-  if (rows.length === 0) return;
-  const { error } = await supabase.from("github_reviews").upsert(rows, { onConflict: "id" });
-  if (error) throw error;
-}
-
-async function updatePullRequestSize(supabase: SupabaseClient, prId: number, detail: PrDetailItem): Promise<void> {
+async function updatePullRequestSize(
+  supabase: SupabaseClient,
+  prId: number,
+  size: { additions: number; deletions: number; changedFiles: number },
+): Promise<void> {
   const { error } = await supabase
     .from("github_pull_requests")
-    .update({ additions: detail.additions, deletions: detail.deletions, changed_files: detail.changed_files })
+    .update({ additions: size.additions, deletions: size.deletions, changed_files: size.changedFiles })
     .eq("id", prId);
   if (error) throw error;
 }
@@ -212,9 +200,37 @@ export async function listAndUpsertPrsForRepo(
   return cappedPrs.map((pr) => ({ id: pr.id, number: pr.number }));
 }
 
-// Fetches per-PR detail (size stats) + reviews for a slice of PRs. This is the expensive part
-// (2 GitHub requests/PR) — callers needing rate-limit checkpointing (e.g. the classification-batch
-// Workflow) should chunk `prs` and call this once per chunk between durable step boundaries.
+// GraphQL node shapes for the batched PR details query.
+interface GqlReviewNode {
+  databaseId: number;
+  state: string;
+  submittedAt: string | null;
+  author: { login: string; databaseId: number } | null;
+}
+
+interface GqlPrData {
+  additions: number;
+  deletions: number;
+  changedFiles: number;
+  reviews: {
+    nodes: GqlReviewNode[];
+    pageInfo: { hasNextPage: boolean; endCursor: string };
+  };
+}
+
+// Builds a single GraphQL query that fetches size stats and reviews for up to GQL_PRS_PER_QUERY
+// PRs in one round trip using field aliases. PR numbers are inlined (not variables) because
+// GraphQL variables cannot be used inside alias positions.
+function buildBatchPrDetailsQuery(prs: PrRef[]): string {
+  const reviewFields = `nodes { databaseId state submittedAt author { login databaseId } } pageInfo { hasNextPage endCursor }`;
+  const prFragment = `additions deletions changedFiles reviews(first: 100) { ${reviewFields} }`;
+  const aliases = prs.map((pr, i) => `pr_${i}: pullRequest(number: ${pr.number}) { ${prFragment} }`).join(" ");
+  return `query BatchPrDetails($owner: String!, $name: String!) { repository(owner: $owner, name: $name) { ${aliases} } }`;
+}
+
+// Fetches per-PR detail (size stats) + reviews for a slice of PRs via GraphQL, batching
+// GQL_PRS_PER_QUERY PRs per query instead of 2 REST calls per PR.
+// ~150 PRs → 15 GraphQL queries (~15s) vs 300+ sequential REST calls (>10min).
 export async function syncPrBatch(
   supabase: SupabaseClient,
   octokit: Octokit,
@@ -224,27 +240,95 @@ export async function syncPrBatch(
 ): Promise<{ reviews: number; errors: string[] }> {
   let reviewCount = 0;
   const errors: string[] = [];
+  const now = new Date().toISOString();
 
-  for (const pr of prs) {
+  for (let i = 0; i < prs.length; i += GQL_PRS_PER_QUERY) {
+    const batchPrs = prs.slice(i, i + GQL_PRS_PER_QUERY);
+    let batchData: Partial<Record<string, GqlPrData>>;
+
     try {
-      const [prDetail, reviews] = await Promise.all([
-        octokit.rest.pulls.get({ owner, repo: repoName, pull_number: pr.number }),
-        octokit.paginate(octokit.rest.pulls.listReviews, {
-          owner,
-          repo: repoName,
-          pull_number: pr.number,
-          per_page: 100,
-        }),
-      ]);
-
-      await updatePullRequestSize(supabase, pr.id, prDetail.data);
-      await upsertReviews(supabase, pr.id, reviews);
-
-      reviewCount += reviews.length;
+      const response = await octokit.graphql<{ repository: Partial<Record<string, GqlPrData>> }>(
+        buildBatchPrDetailsQuery(batchPrs),
+        { owner, name: repoName },
+      );
+      batchData = response.repository;
     } catch (err) {
-      const msg = `PR #${pr.number} (${owner}/${repoName}): ${err instanceof Error ? err.message : String(err)}`;
-      errors.push(msg);
-      logger.warn(`[github-sync] Skipping ${msg}`);
+      for (const pr of batchPrs) {
+        const msg = `PR #${pr.number} (${owner}/${repoName}): GraphQL batch failed: ${err instanceof Error ? err.message : String(err)}`;
+        errors.push(msg);
+        logger.warn(`[github-sync] Skipping ${msg}`);
+      }
+      continue;
+    }
+
+    for (let j = 0; j < batchPrs.length; j++) {
+      const pr = batchPrs[j];
+      const prData = batchData[`pr_${j}`];
+
+      if (!prData) {
+        errors.push(`PR #${pr.number} (${owner}/${repoName}): missing from GraphQL response`);
+        continue;
+      }
+
+      try {
+        await updatePullRequestSize(supabase, pr.id, prData);
+
+        // Paginate reviews beyond the initial 100 — rare (requires 100+ review submissions on one PR).
+        let reviewNodes = prData.reviews.nodes;
+        let cursor: string | null = prData.reviews.pageInfo.hasNextPage ? prData.reviews.pageInfo.endCursor : null;
+        while (cursor) {
+          const pageResp = await octokit.graphql<{
+            repository: {
+              pr: { reviews: { nodes: GqlReviewNode[]; pageInfo: { hasNextPage: boolean; endCursor: string } } };
+            };
+          }>(
+            `query($owner: String!, $name: String!, $number: Int!, $cursor: String!) {
+              repository(owner: $owner, name: $name) {
+                pr: pullRequest(number: $number) {
+                  reviews(first: 100, after: $cursor) {
+                    nodes { databaseId state submittedAt author { login databaseId } }
+                    pageInfo { hasNextPage endCursor }
+                  }
+                }
+              }
+            }`,
+            { owner, name: repoName, number: pr.number, cursor },
+          );
+          const page = pageResp.repository.pr.reviews;
+          reviewNodes = [...reviewNodes, ...page.nodes];
+          cursor = page.pageInfo.hasNextPage ? page.pageInfo.endCursor : null;
+        }
+
+        const reviewRows = [
+          ...new Map(
+            reviewNodes
+              .filter((n): n is GqlReviewNode & { submittedAt: string } => n.submittedAt !== null)
+              .map((n) => [
+                n.databaseId,
+                {
+                  id: n.databaseId,
+                  pull_request_id: pr.id,
+                  reviewer_login: n.author?.login ?? "",
+                  reviewer_github_id: n.author?.databaseId ?? 0,
+                  state: n.state,
+                  submitted_at: n.submittedAt,
+                  fetched_at: now,
+                },
+              ]),
+          ).values(),
+        ];
+
+        if (reviewRows.length > 0) {
+          const { error } = await supabase.from("github_reviews").upsert(reviewRows, { onConflict: "id" });
+          if (error) throw error;
+        }
+
+        reviewCount += reviewNodes.length;
+      } catch (err) {
+        const msg = `PR #${pr.number} (${owner}/${repoName}): ${err instanceof Error ? err.message : String(err)}`;
+        errors.push(msg);
+        logger.warn(`[github-sync] Skipping ${msg}`);
+      }
     }
   }
 

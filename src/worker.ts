@@ -133,14 +133,23 @@ export class ClassificationBatchWorkflow extends WorkflowEntrypoint<Env, Classif
       for (let c = 0; c < prChunks.length; c++) {
         const rateLimit = await runStep(step, `check-rate-limit-${r}-${c}`, async () => {
           const { data } = await octokit.rest.rateLimit.get();
-          return { remaining: data.resources.core.remaining, reset: data.resources.core.reset };
+          return {
+            core: { remaining: data.resources.core.remaining, reset: data.resources.core.reset },
+            graphql: {
+              remaining: data.resources.graphql?.remaining ?? 5000,
+              reset: data.resources.graphql?.reset ?? data.resources.core.reset,
+            },
+          };
         });
 
-        // 2 GitHub requests/PR (detail + reviews) — sleep until the window resets rather than
-        // burning the rest of the budget mid-chunk and falling into the same retry-from-scratch
-        // loop a plain step.do retry would cause.
-        if (rateLimit.remaining < prChunks[c].length * 2) {
-          await step.sleepUntil(`wait-for-rate-limit-${r}-${c}`, new Date(rateLimit.reset * 1000));
+        // syncPrBatch now uses GraphQL (not REST core quota). The graphql quota is 5000 pts/hr;
+        // each query fetches 10 PRs and costs ~10 pts, so a 150-PR chunk costs ~150 pts — well
+        // within budget for any realistic board. We still guard the core quota with a small
+        // buffer to ensure the upcoming listReviewCommentsForRepo step (REST) can complete.
+        if (rateLimit.graphql.remaining < 200) {
+          await step.sleepUntil(`wait-for-rate-limit-${r}-${c}`, new Date(rateLimit.graphql.reset * 1000));
+        } else if (rateLimit.core.remaining < 200) {
+          await step.sleepUntil(`wait-for-rate-limit-${r}-${c}`, new Date(rateLimit.core.reset * 1000));
         }
 
         await runStep(step, `sync-pr-details-${r}-${c}`, async () => {
