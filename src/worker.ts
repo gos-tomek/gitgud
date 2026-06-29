@@ -157,9 +157,26 @@ export class ClassificationBatchWorkflow extends WorkflowEntrypoint<Env, Classif
         });
       }
 
-      await runStep(step, `sync-review-comments-${r}`, async () => {
-        return syncReviewCommentsForRepo(supabase, octokit, repoId, owner, repoName, new Date(since));
-      });
+      // 45 pages × 1 REST subrequest + 1 mapPrNumbersToIds + 1 upsert = 47 subrequests/step —
+      // safely under the Free-plan cap of 50. On repos with >4 500 review comments per sync
+      // window each continuation step picks up where the previous one stopped via the cursor.
+      let reviewSince = new Date(since);
+      for (let p = 0; ; p++) {
+        const result = await runStep(step, `sync-review-comments-${r}-${p}`, async () => {
+          const { comments, nextSince } = await syncReviewCommentsForRepo(
+            supabase,
+            octokit,
+            repoId,
+            owner,
+            repoName,
+            reviewSince,
+            45,
+          );
+          return { comments, nextSince: nextSince?.toISOString() ?? null };
+        });
+        if (!result.nextSince) break;
+        reviewSince = new Date(result.nextSince);
+      }
 
       await runStep(step, `update-last-synced-${r}`, async () => {
         const updateResult = await supabase
