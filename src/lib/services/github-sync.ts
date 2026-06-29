@@ -8,10 +8,9 @@ import { logger } from "@/lib/logger";
 // since durable steps have no such timeout constraint.
 const MAX_PRS_PER_REPO = 200;
 
-// PRs batched per GraphQL query via field aliases. GitHub's query complexity limit is generous,
-// but aliasing too many nodes in one query risks hitting the 500,000-node ceiling on large repos
-// with many reviews. 10 is safe: 10 PRs × 100 review nodes = 1,000 nodes/query.
-const GQL_PRS_PER_QUERY = 10;
+// PRs batched per GraphQL query via field aliases. GitHub's node ceiling is 500,000 per query;
+// 500 PRs × 100 review nodes = 50,000 nodes — well within the limit.
+const GQL_PRS_PER_QUERY = 500;
 
 type SupabaseClient = NonNullable<ReturnType<typeof createClient>>;
 
@@ -245,20 +244,12 @@ export async function syncPrBatch(
   const errors: string[] = [];
   const now = new Date().toISOString();
 
-  // Collect all data first, then flush with 2 Supabase calls at the end.
-  // The original per-PR approach made 2×N individual calls (one size UPDATE + one review
-  // upsert per PR), burning through the Cloudflare Worker subrequest budget on large repos.
-  const sizeUpdates: { id: number; additions: number; deletions: number; changed_files: number }[] = [];
-  const allReviewRows: {
-    id: number;
-    pull_request_id: number;
-    reviewer_login: string;
-    reviewer_github_id: number;
-    state: string;
-    submitted_at: string;
-    fetched_at: string;
-  }[] = [];
-
+  // Flush once per GQL batch (not per-PR and not deferred to end-of-loop).
+  // Per-PR (original): 2×N Supabase calls per batch — hit the Worker subrequest limit.
+  // Deferred to end: Supabase writes failed when the subrequest budget was already exhausted
+  //   by preceding GQL calls, leaving github_reviews empty even though reviewCount > 0.
+  // Per-GQL-batch: 3 subrequests per batch (1 GQL + 1 RPC + 1 upsert), data committed
+  //   incrementally so a mid-loop subrequest failure can't wipe already-processed batches.
   for (let i = 0; i < prs.length; i += GQL_PRS_PER_QUERY) {
     const batchPrs = prs.slice(i, i + GQL_PRS_PER_QUERY);
     let batchData: Partial<Record<string, GqlPrData>>;
@@ -278,6 +269,17 @@ export async function syncPrBatch(
       continue;
     }
 
+    const batchSizeUpdates: { id: number; additions: number; deletions: number; changed_files: number }[] = [];
+    const batchReviewRows: {
+      id: number;
+      pull_request_id: number;
+      reviewer_login: string;
+      reviewer_github_id: number;
+      state: string;
+      submitted_at: string;
+      fetched_at: string;
+    }[] = [];
+
     for (let j = 0; j < batchPrs.length; j++) {
       const pr = batchPrs[j];
       const prData = batchData[`pr_${j}`];
@@ -288,7 +290,7 @@ export async function syncPrBatch(
       }
 
       try {
-        sizeUpdates.push({
+        batchSizeUpdates.push({
           id: pr.id,
           additions: prData.additions,
           deletions: prData.deletions,
@@ -321,7 +323,7 @@ export async function syncPrBatch(
           cursor = page.pageInfo.hasNextPage ? page.pageInfo.endCursor : null;
         }
 
-        allReviewRows.push(
+        batchReviewRows.push(
           ...new Map(
             reviewNodes
               .filter((n): n is GqlReviewNode & { submittedAt: string } => n.submittedAt !== null)
@@ -347,22 +349,22 @@ export async function syncPrBatch(
         logger.warn(`[github-sync] Skipping ${msg}`);
       }
     }
-  }
 
-  if (sizeUpdates.length > 0) {
-    const { error } = await supabase.rpc("batch_update_pr_sizes", { updates: sizeUpdates });
-    if (error) {
-      const msg = `batch size update failed: ${describeError(error)}`;
-      errors.push(msg);
-      logger.warn(`[github-sync] ${msg}`);
+    if (batchSizeUpdates.length > 0) {
+      const { error } = await supabase.rpc("batch_update_pr_sizes", { updates: batchSizeUpdates });
+      if (error) {
+        const msg = `batch size update failed (PRs ${batchPrs[0].number}–${batchPrs[batchPrs.length - 1].number}): ${describeError(error)}`;
+        errors.push(msg);
+        logger.warn(`[github-sync] ${msg}`);
+      }
     }
-  }
-  if (allReviewRows.length > 0) {
-    const { error } = await supabase.from("github_reviews").upsert(allReviewRows, { onConflict: "id" });
-    if (error) {
-      const msg = `batch review upsert failed: ${describeError(error)}`;
-      errors.push(msg);
-      logger.warn(`[github-sync] ${msg}`);
+    if (batchReviewRows.length > 0) {
+      const { error } = await supabase.from("github_reviews").upsert(batchReviewRows, { onConflict: "id" });
+      if (error) {
+        const msg = `review upsert failed (PRs ${batchPrs[0].number}–${batchPrs[batchPrs.length - 1].number}): ${describeError(error)}`;
+        errors.push(msg);
+        logger.warn(`[github-sync] ${msg}`);
+      }
     }
   }
 
