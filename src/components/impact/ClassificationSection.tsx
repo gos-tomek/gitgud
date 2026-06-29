@@ -42,7 +42,7 @@ function TooltipLabel({ tooltip, children }: { tooltip: string; children: React.
   return (
     <Tooltip>
       <TooltipTrigger asChild>
-        <span className="cursor-default underline decoration-purple-400/50 decoration-dotted underline-offset-2">
+        <span className="decoration-primary/50 cursor-default underline decoration-dotted underline-offset-2">
           {children}
         </span>
       </TooltipTrigger>
@@ -113,27 +113,25 @@ export function ClassificationSection({ data, loading, threadsUrl }: Props) {
 
   return (
     <TooltipProvider>
-      <section className="rounded-xl border border-purple-500/30 bg-purple-500/5 p-5 backdrop-blur-sm">
+      <section className="border-primary/30 bg-primary/5 rounded-xl border p-5">
         {/* header */}
         <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
           <div>
             <div className="flex items-center gap-2">
-              <span className="h-2 w-2 rounded-full bg-purple-400" />
-              <h2 className="text-sm font-semibold tracking-wide text-purple-200/80 uppercase">
-                What kind of feedback
-              </h2>
-              <span className="rounded bg-purple-500/20 px-1.5 py-0.5 text-xs font-medium text-purple-300">
+              <span className="bg-primary h-2 w-2 rounded-full" />
+              <h2 className="text-primary text-sm font-semibold tracking-wide uppercase">What kind of feedback</h2>
+              <span className="bg-primary/20 text-primary rounded px-1.5 py-0.5 text-xs font-medium">
                 AI classified
               </span>
             </div>
-            <p className="mt-0.5 text-xs text-purple-200/40">
+            <p className="text-muted-foreground mt-0.5 text-xs">
               Every review thread is labelled by intent (why the comment was made) and domain (what part of the work it
               touched). Intent is ordered by signal value.
             </p>
           </div>
           <a
             href={threadsUrl}
-            className="flex shrink-0 items-center gap-1 rounded-lg border border-purple-400/30 bg-purple-500/10 px-3 py-1.5 text-xs font-medium text-purple-300 transition-colors hover:bg-purple-500/20"
+            className="border-primary/30 bg-primary/10 text-primary hover:bg-primary/20 flex shrink-0 items-center gap-1 rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors"
           >
             Inspect threads
             <ChevronRight className="size-3.5" />
@@ -142,24 +140,24 @@ export function ClassificationSection({ data, loading, threadsUrl }: Props) {
 
         {loading ? (
           <div className="grid gap-4 sm:grid-cols-[1.7fr_1fr]">
-            <Skeleton className="h-40 bg-purple-500/10" />
-            <Skeleton className="h-40 bg-purple-500/10" />
+            <Skeleton className="bg-primary/10 h-40" />
+            <Skeleton className="bg-primary/10 h-40" />
           </div>
         ) : !data || totalClassified === 0 ? (
-          <p className="text-sm text-purple-200/30 italic">No classified threads in this period</p>
+          <p className="text-muted-foreground text-sm italic">No classified threads in this period</p>
         ) : (
           <>
             <div className="grid gap-6 sm:grid-cols-[1.7fr_1fr]">
               {/* intent panel */}
               <div>
                 <div className="mb-2 flex items-baseline justify-between">
-                  <p className="text-xs text-blue-100/40">Intent</p>
+                  <p className="text-muted-foreground text-xs">Intent</p>
                   <div className="flex items-center gap-1">
-                    <span className="text-xl font-bold text-white">{data.highSignalPercent}%</span>
-                    <span className="text-xs text-blue-100/40">high-signal</span>
+                    <span className="text-foreground text-xl font-bold">{data.highSignalPercent}%</span>
+                    <span className="text-muted-foreground text-xs">high-signal</span>
                     <Tooltip>
                       <TooltipTrigger asChild>
-                        <button className="flex-shrink-0 text-purple-300/40 transition-colors hover:text-purple-300/70">
+                        <button className="text-muted-foreground hover:text-foreground flex-shrink-0 transition-colors">
                           <Info className="size-3" />
                         </button>
                       </TooltipTrigger>
@@ -192,7 +190,7 @@ export function ClassificationSection({ data, loading, threadsUrl }: Props) {
                 </div>
 
                 {/* tier scale labels */}
-                <div className="mt-1.5 flex flex-wrap gap-3 font-mono text-[10px] text-blue-100/40">
+                <div className="text-muted-foreground mt-1.5 flex flex-wrap gap-3 font-mono text-[10px]">
                   {TIER_ORDER.map(({ tier, label, categories }) => {
                     const tierTotal = categories.reduce((sum, c) => sum + (intentCountMap.get(c) ?? 0), 0);
                     if (tierTotal === 0) return null;
@@ -216,10 +214,12 @@ export function ClassificationSection({ data, loading, threadsUrl }: Props) {
                   {intentLegendItems.map((item) => (
                     <div key={item.key} className="flex items-center gap-1.5 text-xs">
                       <span className="size-[9px] shrink-0 rounded-sm" style={{ backgroundColor: item.color }} />
-                      <span className={item.dim ? "text-blue-100/30" : "text-blue-100/60"}>
+                      <span className={item.dim ? "text-muted-foreground/50" : "text-muted-foreground"}>
                         <TooltipLabel tooltip={item.tooltip}>{item.label}</TooltipLabel>
                       </span>
-                      <span className={`ml-auto font-mono ${item.dim ? "text-blue-100/30" : "text-blue-100/40"}`}>
+                      <span
+                        className={`ml-auto font-mono ${item.dim ? "text-muted-foreground/50" : "text-muted-foreground"}`}
+                      >
                         {item.count}
                       </span>
                     </div>
@@ -228,8 +228,8 @@ export function ClassificationSection({ data, loading, threadsUrl }: Props) {
               </div>
 
               {/* domain panel */}
-              <div className="border-l border-white/10 pl-6">
-                <p className="mb-2 text-xs text-blue-100/40">Domain</p>
+              <div className="border-border border-l pl-6">
+                <p className="text-muted-foreground mb-2 text-xs">Domain</p>
                 <div className="flex items-center gap-4">
                   <svg width={104} height={104} viewBox="0 0 104 104" className="-rotate-90">
                     {domainSegments.map(({ category, length, offset }) => (
@@ -253,7 +253,12 @@ export function ClassificationSection({ data, loading, threadsUrl }: Props) {
                           textAnchor="middle"
                           dominantBaseline="middle"
                           className="rotate-90"
-                          style={{ transformOrigin: "52px 52px", fontSize: 7, fontWeight: 600, fill: "#c4b5fd" }}
+                          style={{
+                            transformOrigin: "52px 52px",
+                            fontSize: 7,
+                            fontWeight: 600,
+                            fill: "var(--color-primary)",
+                          }}
                         >
                           {DOMAIN_LABELS[topDomain.category]}
                         </text>
@@ -263,7 +268,12 @@ export function ClassificationSection({ data, loading, threadsUrl }: Props) {
                           textAnchor="middle"
                           dominantBaseline="middle"
                           className="rotate-90"
-                          style={{ transformOrigin: "52px 52px", fontSize: 14, fontWeight: 700, fill: "#ede9fe" }}
+                          style={{
+                            transformOrigin: "52px 52px",
+                            fontSize: 14,
+                            fontWeight: 700,
+                            fill: "var(--color-foreground)",
+                          }}
                         >
                           {topDomainPercent}%
                         </text>
@@ -277,10 +287,16 @@ export function ClassificationSection({ data, loading, threadsUrl }: Props) {
                           className="size-[9px] shrink-0 rounded-full"
                           style={{ backgroundColor: DOMAIN_COLORS[category] }}
                         />
-                        <span className={category === "false-positive" ? "text-blue-100/30" : "text-blue-100/60"}>
+                        <span
+                          className={
+                            category === "false-positive" ? "text-muted-foreground/50" : "text-muted-foreground"
+                          }
+                        >
                           <TooltipLabel tooltip={CATEGORY_TOOLTIPS[category]}>{DOMAIN_LABELS[category]}</TooltipLabel>
                         </span>
-                        <span className="ml-auto font-mono text-blue-100/40">{domainCountMap.get(category) ?? 0}</span>
+                        <span className="text-muted-foreground ml-auto font-mono">
+                          {domainCountMap.get(category) ?? 0}
+                        </span>
                       </div>
                     ))}
                   </div>
@@ -289,17 +305,17 @@ export function ClassificationSection({ data, loading, threadsUrl }: Props) {
             </div>
 
             {/* coverage footer */}
-            <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-white/10 pt-3">
+            <div className="border-border mt-4 flex flex-wrap items-center justify-between gap-3 border-t pt-3">
               <div className="flex items-center gap-2">
-                <span className="text-xs text-blue-100/40">
+                <span className="text-muted-foreground text-xs">
                   {totalClassified} of {totalThreads} threads classified ({coveragePercent}%)
                 </span>
-                <div className="h-[5px] w-[220px] max-w-[220px] overflow-hidden rounded-full bg-white/10">
-                  <div className="h-full rounded-full bg-purple-500" style={{ width: `${coveragePercent}%` }} />
+                <div className="bg-muted h-[5px] w-[220px] max-w-[220px] overflow-hidden rounded-full">
+                  <div className="bg-primary h-full rounded-full" style={{ width: `${coveragePercent}%` }} />
                 </div>
-                {pending > 0 && <span className="font-mono text-xs text-blue-100/30">{pending} pending</span>}
+                {pending > 0 && <span className="text-muted-foreground font-mono text-xs">{pending} pending</span>}
               </div>
-              <span className="font-mono text-[11px] text-blue-100/30">
+              <span className="text-muted-foreground font-mono text-[11px]">
                 llama-3.3-70b · daily batch · majority vote ×3
               </span>
             </div>

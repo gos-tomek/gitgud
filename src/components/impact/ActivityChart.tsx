@@ -22,12 +22,12 @@ interface Props {
 
 export function ActivityChart({ data, loading }: Props) {
   if (loading) {
-    return <Skeleton className="h-48 w-full bg-white/10" />;
+    return <Skeleton className="bg-muted h-48 w-full" />;
   }
 
   if (!data || data.length === 0) {
     return (
-      <div className="flex h-48 items-center justify-center rounded-xl border border-white/10 bg-white/5 text-sm text-blue-100/40">
+      <div className="border-border bg-card text-muted-foreground flex h-48 items-center justify-center rounded-xl border text-sm">
         No activity in this period
       </div>
     );
@@ -50,12 +50,12 @@ export function ActivityChart({ data, loading }: Props) {
             <stop offset="95%" stopColor="var(--chart-3)" stopOpacity={0} />
           </linearGradient>
         </defs>
-        <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
+        <CartesianGrid strokeDasharray="3 3" stroke="rgba(0,0,0,0.05)" />
         <XAxis
           dataKey="week"
           tickLine={false}
           axisLine={false}
-          tick={{ fontSize: 10, fill: "rgba(255,255,255,0.4)" }}
+          tick={{ fontSize: 10, fill: "rgba(0,0,0,0.4)" }}
           tickFormatter={(v: string) => v.slice(5)}
         />
         <ChartTooltip content={<ChartTooltipContent />} />

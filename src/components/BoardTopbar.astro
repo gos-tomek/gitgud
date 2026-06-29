@@ -20,64 +20,67 @@ function initials(name: string) {
 }
 ---
 
-<header class="sticky top-0 z-20 border-b border-white/10 bg-black/60 backdrop-blur-md">
+<header class="border-border bg-background/95 sticky top-0 z-20 border-b backdrop-blur-md">
   <div class="mx-auto flex h-14 max-w-6xl items-center justify-between gap-4 px-4">
     <!-- left: logo + separator + board switcher -->
     <div class="flex items-center gap-2">
-      <a href="/dashboard" class="flex items-center gap-1.5 text-white/70 hover:text-white">
-        <div class="flex h-7 w-7 items-center justify-center rounded-md bg-white text-sm font-black text-black">g</div>
-        <span class="text-sm font-semibold text-white">GitGud</span>
+      <a href="/dashboard" class="transition-opacity hover:opacity-80">
+        <img src="/logo_gitgud.png" alt="GitGud" class="h-8 w-auto" />
       </a>
-      <span class="text-white/20">/</span>
+      <span class="text-muted-foreground">/</span>
 
       <!-- board switcher (CSS-only details/summary) -->
       <details class="group relative">
         <summary
-          class="flex cursor-pointer list-none items-center gap-1.5 rounded-lg px-2 py-1.5 text-sm font-medium text-white select-none hover:bg-white/10"
+          class="text-foreground hover:bg-accent flex cursor-pointer list-none items-center gap-1.5 rounded-lg px-2 py-1.5 text-sm font-medium select-none"
         >
           <div
-            class="flex h-6 w-6 shrink-0 items-center justify-center rounded bg-purple-600 text-[10px] font-bold text-white"
+            class="bg-primary text-primary-foreground flex h-6 w-6 shrink-0 items-center justify-center rounded text-[10px] font-bold"
           >
             {initials(board.name)}
           </div>
           <span>{board.name}</span>
-          <svg class="h-3.5 w-3.5 text-white/40" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg class="text-muted-foreground h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"></path>
           </svg>
         </summary>
 
         <div
-          class="absolute top-full left-0 z-50 mt-1.5 w-72 overflow-hidden rounded-xl border border-white/10 bg-gray-950 py-1.5 shadow-2xl"
+          class="border-border bg-popover absolute top-full left-0 z-50 mt-1.5 w-72 overflow-hidden rounded-xl border py-1.5 shadow-2xl"
         >
-          <p class="px-3 py-1 text-[11px] font-semibold tracking-widest text-white/30 uppercase">Switch board</p>
+          <p class="text-muted-foreground px-3 py-1 text-[11px] font-semibold tracking-widest uppercase">
+            Switch board
+          </p>
           {
             boards.map((b) => (
               <a
                 href={`/board/${b.id}`}
                 class:list={[
-                  "flex items-center gap-2.5 px-3 py-2 text-sm transition-colors hover:bg-white/5",
-                  b.id === board.id ? "text-white" : "text-white/60",
+                  "hover:bg-accent flex items-center gap-2.5 px-3 py-2 text-sm transition-colors",
+                  b.id === board.id ? "text-foreground" : "text-muted-foreground",
                 ]}
               >
-                <div class="flex h-7 w-7 shrink-0 items-center justify-center rounded bg-purple-600 text-[10px] font-bold text-white">
+                <div class="bg-primary text-primary-foreground flex h-7 w-7 shrink-0 items-center justify-center rounded text-[10px] font-bold">
                   {initials(b.name)}
                 </div>
                 <div class="min-w-0 flex-1">
                   <p class="truncate font-medium">{b.name}</p>
-                  <p class="text-[11px] text-white/40">{b.role === "supervisor" ? "Supervisor" : "Contributor"}</p>
+                  <p class="text-muted-foreground text-[11px]">
+                    {b.role === "supervisor" ? "Supervisor" : "Contributor"}
+                  </p>
                 </div>
                 {b.id === board.id && (
-                  <svg class="h-4 w-4 shrink-0 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg class="text-primary h-4 w-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7" />
                   </svg>
                 )}
               </a>
             ))
           }
-          <div class="mx-3 my-1 border-t border-white/10"></div>
+          <div class="border-border mx-3 my-1 border-t"></div>
           <a
             href="/board/new"
-            class="flex items-center gap-2 px-3 py-2 text-sm text-white/40 transition-colors hover:bg-white/5 hover:text-white/70"
+            class="text-muted-foreground hover:bg-accent hover:text-foreground flex items-center gap-2 px-3 py-2 text-sm transition-colors"
           >
             + Create new board
           </a>
@@ -92,7 +95,7 @@ function initials(name: string) {
           avatarUrl ? (
             <img src={avatarUrl} alt="" class="h-8 w-8 rounded-full" />
           ) : (
-            <div class="flex h-8 w-8 items-center justify-center rounded-full bg-purple-600 text-sm font-semibold text-white hover:bg-purple-500">
+            <div class="bg-primary text-primary-foreground hover:bg-primary/90 flex h-8 w-8 items-center justify-center rounded-full text-sm font-semibold">
               {userInitial}
             </div>
           )
@@ -100,11 +103,11 @@ function initials(name: string) {
       </summary>
 
       <div
-        class="absolute top-full right-0 z-50 mt-1.5 w-48 overflow-hidden rounded-xl border border-white/10 bg-gray-950 py-1.5 shadow-2xl"
+        class="border-border bg-popover absolute top-full right-0 z-50 mt-1.5 w-48 overflow-hidden rounded-xl border py-1.5 shadow-2xl"
       >
         <a
           href="/profile/settings"
-          class="flex items-center gap-2 px-3 py-2 text-sm text-white/70 transition-colors hover:bg-white/5 hover:text-white"
+          class="text-muted-foreground hover:bg-accent hover:text-foreground flex items-center gap-2 px-3 py-2 text-sm transition-colors"
         >
           <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path
@@ -115,11 +118,11 @@ function initials(name: string) {
           </svg>
           Profile settings
         </a>
-        <div class="mx-3 my-1 border-t border-white/10"></div>
+        <div class="border-border mx-3 my-1 border-t"></div>
         <form method="POST" action="/api/auth/signout">
           <button
             type="submit"
-            class="flex w-full items-center gap-2 px-3 py-2 text-sm text-white/70 transition-colors hover:bg-white/5 hover:text-white"
+            class="text-muted-foreground hover:bg-accent hover:text-foreground flex w-full items-center gap-2 px-3 py-2 text-sm transition-colors"
           >
             <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path

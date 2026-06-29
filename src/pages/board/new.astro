@@ -9,20 +9,61 @@ const supabase = createClient(Astro.request.headers, Astro.cookies);
 const profile = supabase && user ? await getUserProfile(supabase, user.id).catch(() => null) : null;
 
 const storedPat = profile?.hasGithubPat ? { login: profile.githubPatLogin, expiresAt: profile.tokenExpiresAt } : null;
+const userInitial = user?.email?.[0]?.toUpperCase() ?? "?";
 ---
 
 <Layout title="New board">
-  <div class="bg-cosmic flex min-h-screen items-center justify-center p-4">
-    <div class="w-full max-w-sm rounded-2xl border border-white/10 bg-white/10 p-8 text-white backdrop-blur-xl">
-      <h1
-        class="mb-6 bg-gradient-to-r from-blue-200 to-purple-200 bg-clip-text text-center text-2xl font-bold text-transparent"
-      >
-        New board
-      </h1>
-      <CreateBoardForm client:load storedPat={storedPat} />
-      <p class="mt-4 text-center text-sm text-blue-100/60">
-        <a href="/dashboard" class="text-purple-300 hover:underline">← Back to dashboard</a>
-      </p>
+  <div class="bg-background min-h-screen">
+    <header class="border-border bg-background/95 sticky top-0 z-20 border-b backdrop-blur-md">
+      <div class="mx-auto flex h-14 max-w-6xl items-center justify-between gap-4 px-4">
+        <a href="/dashboard" class="transition-opacity hover:opacity-80">
+          <img src="/logo_gitgud.png" alt="GitGud" class="h-8 w-auto" />
+        </a>
+
+        <details class="relative">
+          <summary class="flex h-8 w-8 cursor-pointer list-none items-center justify-center rounded-full select-none">
+            {
+              profile?.avatarUrl ? (
+                <img src={profile.avatarUrl} alt="" class="h-8 w-8 rounded-full" />
+              ) : (
+                <div class="bg-primary text-primary-foreground hover:bg-primary/90 flex h-8 w-8 items-center justify-center rounded-full text-sm font-semibold">
+                  {userInitial}
+                </div>
+              )
+            }
+          </summary>
+
+          <div
+            class="border-border bg-popover absolute top-full right-0 z-50 mt-1.5 w-48 overflow-hidden rounded-xl border py-1.5 shadow-2xl"
+          >
+            <a
+              href="/profile/settings"
+              class="text-muted-foreground hover:bg-accent hover:text-foreground flex items-center gap-2 px-3 py-2 text-sm transition-colors"
+            >
+              Profile settings
+            </a>
+            <div class="border-border mx-3 my-1 border-t"></div>
+            <form method="POST" action="/api/auth/signout">
+              <button
+                type="submit"
+                class="text-muted-foreground hover:bg-accent hover:text-foreground flex w-full items-center gap-2 px-3 py-2 text-sm transition-colors"
+              >
+                Sign out
+              </button>
+            </form>
+          </div>
+        </details>
+      </div>
+    </header>
+
+    <div class="mx-auto max-w-2xl space-y-4 p-4">
+      <div class="flex items-center justify-between">
+        <h1 class="text-foreground text-xl font-semibold">New board</h1>
+        <a href="/dashboard" class="text-primary hover:text-primary/80 text-sm transition-colors hover:underline">
+          ← Back to dashboard
+        </a>
+      </div>
+      <CreateBoardForm client:load storedPat={storedPat} serverTime={Date.now()} />
     </div>
   </div>
 </Layout>

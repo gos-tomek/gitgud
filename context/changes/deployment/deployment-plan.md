@@ -81,6 +81,32 @@ rewrite needed). So the only wiring is uploading Worker secrets.
 - [ ] Verify: `npx wrangler secret list` shows all four names (values are write-only).
 - [ ] (Optional, local workerd fidelity) create `.dev.vars` (gitignored) with the same four keys so `npm run dev`/`wrangler dev` mirror prod. `.env` already serves Node dev.
 
+## Phase 2b — KV namespace provisioning
+
+The homepage stats cache (`HOMEPAGE_CACHE` binding in `wrangler.jsonc`) requires a real KV namespace ID before the first production deploy. The placeholder `00000000000000000000000000000001` in `wrangler.jsonc` is intentional for local dev (Miniflare auto-provisions KV locally and ignores the ID) but will fail a production `wrangler deploy`.
+
+- [ ] Create the namespace: `npx wrangler kv namespace create HOMEPAGE_CACHE`
+  - The command prints: `{ binding: 'HOMEPAGE_CACHE', id: '<32-char hex>' }`
+  - Replace the placeholder ID in `wrangler.jsonc`'s `kv_namespaces[0].id` with the returned value and commit the change.
+- [ ] Verify: `npx wrangler kv namespace list` — `HOMEPAGE_CACHE` appears in the list.
+
+**Note:** The KV namespace is for public homepage stats caching (1h TTL, no sensitive data). No `wrangler secret put` needed — the binding is wired via `wrangler.jsonc`, not via secrets.
+
+## Phase 2b — KV namespace provisioning
+
+The homepage stats cache (`HOMEPAGE_CACHE` binding in `wrangler.jsonc`) requires a real KV namespace before the first production deploy. The placeholder ID in `wrangler.jsonc` is intentional for local dev (Miniflare auto-provisions KV locally and ignores the value), but `deploy.yml` substitutes the real ID at deploy time via a GitHub Secret — so the placeholder is never committed, but the real ID is also never pushed to the repo.
+
+- [ ] Create the namespace: `npx wrangler kv namespace create HOMEPAGE_CACHE`
+  - The command prints: `{ binding: 'HOMEPAGE_CACHE', id: '<32-char hex>' }`
+- [ ] Add the returned ID to GitHub Secrets as `CF_KV_HOMEPAGE_CACHE_ID`:
+  ```bash
+  gh secret set CF_KV_HOMEPAGE_CACHE_ID --repo gos-tomek/gitgud
+  ```
+  (pyta o wartość interaktywnie; alternatywnie: `--body "<id>"`).
+- [ ] Verify: `npx wrangler kv namespace list` — `HOMEPAGE_CACHE` appears in the list.
+
+`deploy.yml` injects the secret into `wrangler.jsonc` via `sed` before running `wrangler deploy` — no code change needed after setting the secret.
+
 ## Phase 3 — Build + dry-run validation (catch config errors before mutating prod)
 
 - [ ] `npm run build` — Astro SSR build emits the Worker + client assets into `./dist`.

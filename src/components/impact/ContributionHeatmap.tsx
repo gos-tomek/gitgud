@@ -10,12 +10,12 @@ const LEFT_MARGIN = 28;
 const DAY_LABELS = ["", "Mon", "", "Wed", "", "Fri", ""];
 
 function intensityClass(count: number, max: number): string {
-  if (count === 0 || max === 0) return "fill-white/5";
+  if (count === 0 || max === 0) return "fill-gray-100";
   const ratio = count / max;
-  if (ratio < 0.2) return "fill-purple-500/20";
-  if (ratio < 0.4) return "fill-purple-500/40";
-  if (ratio < 0.7) return "fill-purple-500/60";
-  return "fill-purple-500/90";
+  if (ratio < 0.2) return "fill-primary/20";
+  if (ratio < 0.4) return "fill-primary/40";
+  if (ratio < 0.7) return "fill-primary/60";
+  return "fill-primary/90";
 }
 
 interface Props {
@@ -25,7 +25,7 @@ interface Props {
 
 export function ContributionHeatmap({ data, loading }: Props) {
   if (loading) {
-    return <Skeleton className="h-28 w-full bg-white/10" />;
+    return <Skeleton className="bg-muted h-28 w-full" />;
   }
 
   const dateMap = new Map<string, number>((data ?? []).map((d) => [d.date, d.count]));
@@ -72,7 +72,7 @@ export function ContributionHeatmap({ data, loading }: Props) {
       <svg width={svgW} height={svgH} aria-label="Contribution heatmap">
         {/* month labels */}
         {monthLabels.map(({ col, label }) => (
-          <text key={`${col}-${label}`} x={LEFT_MARGIN + col * STEP} y={10} fontSize={9} fill="rgba(255,255,255,0.4)">
+          <text key={`${col}-${label}`} x={LEFT_MARGIN + col * STEP} y={10} fontSize={9} fill="rgba(0,0,0,0.4)">
             {label}
           </text>
         ))}
@@ -84,7 +84,7 @@ export function ContributionHeatmap({ data, loading }: Props) {
               x={LEFT_MARGIN - 4}
               y={16 + i * STEP + CELL}
               fontSize={9}
-              fill="rgba(255,255,255,0.4)"
+              fill="rgba(0,0,0,0.4)"
               textAnchor="end"
             >
               {label}

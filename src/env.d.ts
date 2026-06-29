@@ -15,6 +15,7 @@ declare namespace Cloudflare {
     SUPABASE_KEY: string;
     SUPABASE_SERVICE_KEY: string;
     GITHUB_TOKEN_ENCRYPTION_KEY: string;
+    HOMEPAGE_CACHE: KVNamespace;
   }
 }
 

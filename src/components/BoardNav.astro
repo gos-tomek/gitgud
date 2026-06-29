@@ -18,11 +18,11 @@ const impactHref = `/board/${boardId}/impact${contributorSuffix}`;
 const threadsHref = `/board/${boardId}/threads${contributorSuffix}`;
 
 const base = "border-b-2 px-4 py-3 text-sm font-medium transition-colors";
-const active = "border-purple-400 text-white";
-const inactive = "border-transparent text-blue-100/50 hover:text-white";
+const active = "border-primary text-foreground";
+const inactive = "border-transparent text-muted-foreground hover:text-foreground";
 ---
 
-<nav class="border-b border-white/10">
+<nav class="border-border border-b">
   <div class="mx-auto max-w-6xl px-4">
     <div class="flex">
       <a href={impactHref} data-nav-segment="impact" class:list={[base, isImpact ? active : inactive]}>Impact</a>

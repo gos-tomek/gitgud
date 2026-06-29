@@ -94,6 +94,26 @@ This is declared entirely in `wrangler.jsonc` (`triggers.crons`, `workflows`, an
 
 To verify after a deploy, watch `npx wrangler tail` around 03:00 UTC, or check the Workflow's instance list in the Cloudflare dashboard.
 
+## Cloudflare Bindings
+
+Beyond the Worker secrets, the app uses two Cloudflare resource bindings declared in `wrangler.jsonc`:
+
+| Binding          | Type         | Purpose                                     |
+| ---------------- | ------------ | ------------------------------------------- |
+| `AI`             | Workers AI   | Review-comment classification (daily batch) |
+| `HOMEPAGE_CACHE` | KV Namespace | Homepage stats cache (1 h TTL)              |
+
+For local dev, Miniflare auto-provisions both bindings — no manual setup required. For production:
+
+- **`AI`** is available on all standard Cloudflare accounts — `wrangler deploy` wires it automatically.
+- **`HOMEPAGE_CACHE`** requires a one-time namespace creation:
+  1. `npx wrangler kv namespace create HOMEPAGE_CACHE` — note the returned ID.
+  2. Add the ID to GitHub Secrets:
+     ```bash
+     gh secret set CF_KV_HOMEPAGE_CACHE_ID --repo gos-tomek/gitgud
+     ```
+     The deploy pipeline substitutes it into `wrangler.jsonc` at deploy time; the real ID is never committed to the repo.
+
 ## CI / Deployment
 
 Changes to `main` are delivery-gated — direct pushes are rejected by branch protection.

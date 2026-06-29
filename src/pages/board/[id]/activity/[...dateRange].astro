@@ -23,12 +23,12 @@ const userInitial = user?.email?.[0]?.toUpperCase() ?? "?";
 ---
 
 <Layout title={`Activity — ${board.name}`}>
-  <div class="bg-cosmic min-h-screen text-white">
+  <div class="bg-background text-foreground min-h-screen">
     <BoardTopbar board={board} boards={boards} userInitial={userInitial} avatarUrl={ownProfile?.avatarUrl} />
     <BoardNav boardId={board.id} />
     <div class="mx-auto max-w-6xl p-4">
-      <div class="rounded-lg border border-white/10 bg-white/5 px-6 py-12 text-center">
-        <p class="text-blue-100/50">Activity feed coming soon</p>
+      <div class="border-border bg-card rounded-lg border px-6 py-12 text-center">
+        <p class="text-muted-foreground">Activity feed coming soon</p>
       </div>
     </div>
   </div>

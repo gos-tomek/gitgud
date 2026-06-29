@@ -46,7 +46,7 @@ describe("PatUpdateForm", () => {
     render(<PatUpdateForm hasToken={true} currentLogin="octocat" currentExpiresAt={soon} />);
 
     const badge = screen.getByText(/Expires/);
-    expect(badge.className).toMatch(/text-red-300/);
+    expect(badge.className).toMatch(/text-red-500/);
   });
 
   it("does not highlight the expiry badge when the token expires far in the future", () => {

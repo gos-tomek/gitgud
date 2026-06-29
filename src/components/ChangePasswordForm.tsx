@@ -75,7 +75,7 @@ export default function ChangePasswordForm() {
           resetStatus();
         }}
         icon={<Lock className="size-4" />}
-        hint={<p className="mt-1 text-xs text-blue-100/50">At least 6 characters.</p>}
+        hint={<p className="text-muted-foreground mt-1 text-xs">At least 6 characters.</p>}
       />
       <FormField
         id="confirm-password"
@@ -98,13 +98,13 @@ export default function ChangePasswordForm() {
       />
 
       {status === "error" && message && (
-        <p className="flex items-center gap-2 text-sm text-red-300">
+        <p className="flex items-center gap-2 text-sm text-red-500">
           <AlertTriangle className="size-4" />
           {message}
         </p>
       )}
       {status === "success" && (
-        <p className="flex items-center gap-2 text-sm text-green-400">
+        <p className="flex items-center gap-2 text-sm text-green-600">
           <CheckCircle2 className="size-4" />
           Password updated successfully.
         </p>
@@ -114,7 +114,7 @@ export default function ChangePasswordForm() {
         type="button"
         onClick={() => void handleSubmit()}
         disabled={!currentPassword || !newPassword || !confirmPassword || status === "submitting"}
-        className="rounded-lg bg-purple-600 px-4 py-2 font-medium text-white transition-colors hover:bg-purple-500 disabled:opacity-50"
+        className="bg-primary text-primary-foreground hover:bg-primary/90 rounded-lg px-4 py-2 font-medium transition-colors disabled:opacity-50"
       >
         {status === "submitting" ? (
           <span className="flex items-center gap-2">
