@@ -15,6 +15,21 @@ const GQL_PRS_PER_QUERY = 10;
 
 type SupabaseClient = NonNullable<ReturnType<typeof createClient>>;
 
+// Supabase PostgrestError objects are not Error instances (different prototype) — duck-type
+// for .message before falling back to JSON or String().
+function describeError(err: unknown): string {
+  if (typeof err === "object" && err !== null) {
+    const obj = err as Record<string, unknown>;
+    if (typeof obj.message === "string") return obj.message;
+    try {
+      return JSON.stringify(obj, Object.getOwnPropertyNames(obj));
+    } catch {
+      // fall through
+    }
+  }
+  return String(err);
+}
+
 export interface SyncResult {
   repos: number;
   pullRequests: number;
@@ -69,18 +84,6 @@ async function upsertPullRequests(supabase: SupabaseClient, repoId: string, prs:
     fetched_at: now,
   }));
   const { error } = await supabase.from("github_pull_requests").upsert(rows, { onConflict: "id" });
-  if (error) throw error;
-}
-
-async function updatePullRequestSize(
-  supabase: SupabaseClient,
-  prId: number,
-  size: { additions: number; deletions: number; changedFiles: number },
-): Promise<void> {
-  const { error } = await supabase
-    .from("github_pull_requests")
-    .update({ additions: size.additions, deletions: size.deletions, changed_files: size.changedFiles })
-    .eq("id", prId);
   if (error) throw error;
 }
 
@@ -242,6 +245,20 @@ export async function syncPrBatch(
   const errors: string[] = [];
   const now = new Date().toISOString();
 
+  // Collect all data first, then flush with 2 Supabase calls at the end.
+  // The original per-PR approach made 2×N individual calls (one size UPDATE + one review
+  // upsert per PR), burning through the Cloudflare Worker subrequest budget on large repos.
+  const sizeUpdates: { id: number; additions: number; deletions: number; changed_files: number }[] = [];
+  const allReviewRows: {
+    id: number;
+    pull_request_id: number;
+    reviewer_login: string;
+    reviewer_github_id: number;
+    state: string;
+    submitted_at: string;
+    fetched_at: string;
+  }[] = [];
+
   for (let i = 0; i < prs.length; i += GQL_PRS_PER_QUERY) {
     const batchPrs = prs.slice(i, i + GQL_PRS_PER_QUERY);
     let batchData: Partial<Record<string, GqlPrData>>;
@@ -254,7 +271,7 @@ export async function syncPrBatch(
       batchData = response.repository;
     } catch (err) {
       for (const pr of batchPrs) {
-        const msg = `PR #${pr.number} (${owner}/${repoName}): GraphQL batch failed: ${err instanceof Error ? err.message : String(err)}`;
+        const msg = `PR #${pr.number} (${owner}/${repoName}): GraphQL batch failed: ${describeError(err)}`;
         errors.push(msg);
         logger.warn(`[github-sync] Skipping ${msg}`);
       }
@@ -271,7 +288,12 @@ export async function syncPrBatch(
       }
 
       try {
-        await updatePullRequestSize(supabase, pr.id, prData);
+        sizeUpdates.push({
+          id: pr.id,
+          additions: prData.additions,
+          deletions: prData.deletions,
+          changed_files: prData.changedFiles,
+        });
 
         // Paginate reviews beyond the initial 100 — rare (requires 100+ review submissions on one PR).
         let reviewNodes = prData.reviews.nodes;
@@ -299,7 +321,7 @@ export async function syncPrBatch(
           cursor = page.pageInfo.hasNextPage ? page.pageInfo.endCursor : null;
         }
 
-        const reviewRows = [
+        allReviewRows.push(
           ...new Map(
             reviewNodes
               .filter((n): n is GqlReviewNode & { submittedAt: string } => n.submittedAt !== null)
@@ -316,19 +338,31 @@ export async function syncPrBatch(
                 },
               ]),
           ).values(),
-        ];
-
-        if (reviewRows.length > 0) {
-          const { error } = await supabase.from("github_reviews").upsert(reviewRows, { onConflict: "id" });
-          if (error) throw error;
-        }
+        );
 
         reviewCount += reviewNodes.length;
       } catch (err) {
-        const msg = `PR #${pr.number} (${owner}/${repoName}): ${err instanceof Error ? err.message : String(err)}`;
+        const msg = `PR #${pr.number} (${owner}/${repoName}): ${describeError(err)}`;
         errors.push(msg);
         logger.warn(`[github-sync] Skipping ${msg}`);
       }
+    }
+  }
+
+  if (sizeUpdates.length > 0) {
+    const { error } = await supabase.rpc("batch_update_pr_sizes", { updates: sizeUpdates });
+    if (error) {
+      const msg = `batch size update failed: ${describeError(error)}`;
+      errors.push(msg);
+      logger.warn(`[github-sync] ${msg}`);
+    }
+  }
+  if (allReviewRows.length > 0) {
+    const { error } = await supabase.from("github_reviews").upsert(allReviewRows, { onConflict: "id" });
+    if (error) {
+      const msg = `batch review upsert failed: ${describeError(error)}`;
+      errors.push(msg);
+      logger.warn(`[github-sync] ${msg}`);
     }
   }
 
