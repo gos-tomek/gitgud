@@ -7,7 +7,6 @@ import {
   listAndUpsertPrsForRepo,
   syncPrBatch,
   syncReviewCommentsForRepo,
-  type PrRef,
 } from "@/lib/services/github-sync";
 import { classifyThreads, isBotComment } from "@/lib/services/classification";
 import { logger } from "@/lib/logger";
@@ -24,7 +23,6 @@ export interface ClassificationBatchParams {
   owner?: string;
   repoName?: string;
   since?: string;
-  prs?: PrRef[];
   syncStartedAt?: string;
 }
 
@@ -92,80 +90,35 @@ export class ClassificationBatchWorkflow extends WorkflowEntrypoint<Env, Classif
     const { boardId } = event.payload;
     const supabase = createServiceClient(this.env.SUPABASE_URL, this.env.SUPABASE_SERVICE_KEY);
 
-    const githubToken = await runStep(step, "get-github-token", () =>
-      getGitHubToken(supabase, boardId, this.env.GITHUB_TOKEN_ENCRYPTION_KEY),
-    );
-    const octokit = makeOctokit(githubToken);
-
     const syncStartedAt = await runStep(step, "read-sync-state", () => Promise.resolve(new Date().toISOString()));
 
     const repos = await runStep(step, "list-board-repos", () => listBoardRepos(supabase, boardId));
-
-    interface RepoTarget {
-      repoId: string;
-      owner: string;
-      repoName: string;
-      since: string;
-      prs: PrRef[];
-    }
-
-    const targets: RepoTarget[] = [];
-    for (let r = 0; r < repos.length; r++) {
-      const repo = repos[r];
-      const target = await runStep(step, `sync-list-prs-${r}`, async () => {
-        const since = repo.last_synced_at
-          ? new Date(repo.last_synced_at)
-          : new Date(Date.now() - DEFAULT_BACKFILL_WINDOW_MS);
-        const prs = await listAndUpsertPrsForRepo(supabase, octokit, repo, since, Number.POSITIVE_INFINITY);
-        return {
-          repoId: repo.id,
-          owner: repo.repo_owner,
-          repoName: repo.repo_name,
-          since: since.toISOString(),
-          prs,
-        };
-      });
-      targets.push(target);
-    }
-
-    await step.sleep("budget-reset-before-spawn", "1 second");
 
     const dateStamp = new Date().toISOString().slice(0, 10);
 
     await runStep(step, "spawn-children", async () => {
       const spawned: string[] = [];
 
-      for (const t of targets) {
-        const id = `sync-${t.repoId}-${dateStamp}`;
+      for (const repo of repos) {
+        const since = repo.last_synced_at ?? new Date(Date.now() - DEFAULT_BACKFILL_WINDOW_MS).toISOString();
+        const id = `sync-${repo.id}-${dateStamp}`;
         try {
           await this.env.CLASSIFICATION_BATCH.create({
             id,
             params: {
               boardId,
               phase: "sync-repo",
-              repoId: t.repoId,
-              owner: t.owner,
-              repoName: t.repoName,
-              since: t.since,
-              prs: t.prs,
+              repoId: repo.id,
+              owner: repo.repo_owner,
+              repoName: repo.repo_name,
+              since,
               syncStartedAt,
             },
           });
           spawned.push(id);
         } catch (err) {
-          logger.error(`[dispatch] Failed to spawn sync for repo ${t.owner}/${t.repoName}`, err);
+          logger.error(`[dispatch] Failed to spawn sync for repo ${repo.repo_owner}/${repo.repo_name}`, err);
         }
-      }
-
-      const classifyId = `classify-${boardId}-${dateStamp}`;
-      try {
-        await this.env.CLASSIFICATION_BATCH.create({
-          id: classifyId,
-          params: { boardId, phase: "classify" },
-        });
-        spawned.push(classifyId);
-      } catch (err) {
-        logger.error(`[dispatch] Failed to spawn classify for board ${boardId}`, err);
       }
 
       return { spawned };
@@ -173,12 +126,12 @@ export class ClassificationBatchWorkflow extends WorkflowEntrypoint<Env, Classif
   }
 
   // Phase 2: sync PR details + review comments for one repo.
-  // Steps: get-token, sync-pr-details, sleep, sync-review-comments-0..N, update-last-synced.
+  // Steps: get-token, list-and-upsert-prs, sleep, sync-pr-details, sleep, sync-review-comments-0..N, update-last-synced, spawn-classify.
   // Each instance starts fresh — no replay overhead from the dispatcher.
   private async runSyncRepo(event: WorkflowEvent<ClassificationBatchParams>, step: WorkflowStep) {
-    const { boardId, repoId, owner, repoName, since, prs, syncStartedAt } = event.payload;
-    if (!repoId || !owner || !repoName || !since || !prs || !syncStartedAt) {
-      throw new Error("sync-repo phase requires repoId, owner, repoName, since, prs, syncStartedAt");
+    const { boardId, repoId, owner, repoName, since, syncStartedAt } = event.payload;
+    if (!repoId || !owner || !repoName || !since || !syncStartedAt) {
+      throw new Error("sync-repo phase requires repoId, owner, repoName, since, syncStartedAt");
     }
 
     const supabase = createServiceClient(this.env.SUPABASE_URL, this.env.SUPABASE_SERVICE_KEY);
@@ -188,13 +141,22 @@ export class ClassificationBatchWorkflow extends WorkflowEntrypoint<Env, Classif
     );
     const octokit = makeOctokit(githubToken);
 
+    const repoRow = { id: repoId, repo_owner: owner, repo_name: repoName, last_synced_at: null };
+    const sinceDate = new Date(since);
+
+    const prs = await runStep(step, "list-and-upsert-prs", () =>
+      listAndUpsertPrsForRepo(supabase, octokit, repoRow, sinceDate, Number.POSITIVE_INFINITY),
+    );
+
+    await step.sleep("budget-reset-before-details", "1 second");
+
     await runStep(step, "sync-pr-details", async () => {
       return syncPrBatch(supabase, octokit, owner, repoName, prs);
     });
 
     await step.sleep("budget-reset-before-reviews", "1 second");
 
-    let reviewSince = new Date(since);
+    let reviewSince = sinceDate;
     for (let p = 0; ; p++) {
       const result = await runStep(step, `sync-review-comments-${p}`, async () => {
         const { comments, nextSince } = await syncReviewCommentsForRepo(
@@ -204,18 +166,34 @@ export class ClassificationBatchWorkflow extends WorkflowEntrypoint<Env, Classif
           owner,
           repoName,
           reviewSince,
-          45,
+          25,
         );
         return { comments, nextSince: nextSince?.toISOString() ?? null };
       });
       if (!result.nextSince) break;
       reviewSince = new Date(result.nextSince);
+      await step.sleep(`budget-reset-review-${p}`, "1 second");
     }
 
     await runStep(step, "update-last-synced", async () => {
       const { error } = await supabase.from("github_repos").update({ last_synced_at: syncStartedAt }).eq("id", repoId);
       if (error) throw error;
       return { updated: true };
+    });
+
+    const dateStamp = new Date().toISOString().slice(0, 10);
+    await runStep(step, "spawn-classify", async () => {
+      try {
+        const classifyId = `classify-${boardId}-${repoId}-${dateStamp}`;
+        await this.env.CLASSIFICATION_BATCH.create({
+          id: classifyId,
+          params: { boardId, phase: "classify" },
+        });
+        return { classifyId };
+      } catch (err) {
+        logger.error(`[sync-repo] Failed to spawn classify for board ${boardId} repo ${repoId}`, err);
+        return { classifyId: null };
+      }
     });
   }
 
@@ -224,9 +202,6 @@ export class ClassificationBatchWorkflow extends WorkflowEntrypoint<Env, Classif
   private async runClassify(event: WorkflowEvent<ClassificationBatchParams>, step: WorkflowStep) {
     const { boardId } = event.payload;
     const supabase = createServiceClient(this.env.SUPABASE_URL, this.env.SUPABASE_SERVICE_KEY);
-
-    // Give repo sync instances time to finish before reading unclassified comments.
-    await step.sleep("wait-for-syncs", "3 minutes");
 
     const threadRootIds = await runStep(step, "fetch-unclassified", async () => {
       const result = await supabase.rpc("get_unclassified_root_comments_for_board", { p_board_id: boardId });
