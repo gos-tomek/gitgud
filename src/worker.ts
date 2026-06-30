@@ -7,6 +7,7 @@ import {
   listAndUpsertPrsForRepo,
   syncPrBatch,
   syncReviewCommentsForRepo,
+  GQL_PRS_PER_QUERY,
 } from "@/lib/services/github-sync";
 import { classifyThreads, isBotComment } from "@/lib/services/classification";
 import { logger } from "@/lib/logger";
@@ -152,9 +153,15 @@ export class ClassificationBatchWorkflow extends WorkflowEntrypoint<Env, Classif
 
     await step.sleep("budget-reset-before-details", "1 second");
 
-    await runStep(step, "sync-pr-details", async () => {
-      return syncPrBatch(supabase, octokit, owner, repoName, prs);
-    });
+    const prChunks = chunk(prs, GQL_PRS_PER_QUERY);
+    for (let i = 0; i < prChunks.length; i++) {
+      await runStep(step, `sync-pr-details-${i}`, async () => {
+        return syncPrBatch(supabase, octokit, owner, repoName, prChunks[i]);
+      });
+      if (i < prChunks.length - 1) {
+        await step.sleep(`budget-reset-details-${i}`, "1 second");
+      }
+    }
 
     await step.sleep("budget-reset-before-reviews", "1 second");
 
