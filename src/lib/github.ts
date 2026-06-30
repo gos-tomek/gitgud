@@ -6,6 +6,10 @@ import { logger } from "@/lib/logger";
 
 const OctokitWithRetry = Octokit.plugin(retry);
 
+// Per-request timeout guards against GitHub keeping a connection open indefinitely
+// (observed: 16-min hangs on large GQL queries before Cloudflare killed the step).
+const GH_REQUEST_TIMEOUT_MS = 60_000;
+
 type SupabaseClient = NonNullable<ReturnType<typeof createClient>>;
 
 export class GitHubTokenMissingError extends Error {
@@ -59,24 +63,35 @@ export function makeOctokit(token: string): Octokit {
     request: { fetch: globalThis.fetch },
   });
 
+  // Inject a fresh AbortSignal per request so hanging GitHub responses
+  // (e.g. large GQL queries that never return) time out after 60 s
+  // instead of blocking the Cloudflare Worker step for 15+ minutes.
+  octokit.hook.before("request", (options) => {
+    const req = options.request as Record<string, unknown>;
+    req.signal ??= AbortSignal.timeout(GH_REQUEST_TIMEOUT_MS);
+    logger.info(`[github] → ${options.method} ${options.url}`);
+  });
+
   octokit.hook.after("request", (response) => {
-    const remaining = Number(response.headers["x-ratelimit-remaining"] ?? 9999);
+    const remaining = Number(response.headers["x-ratelimit-remaining"] ?? -1);
     const reset = Number(response.headers["x-ratelimit-reset"] ?? 0);
+    const resetStr = reset ? new Date(reset * 1000).toISOString() : "?";
 
     if (remaining === 0) {
-      const resetAt = new Date(reset * 1000);
-      throw new GitHubRateLimitError(resetAt);
+      throw new GitHubRateLimitError(new Date(reset * 1000));
     }
 
-    if (remaining <= 10) {
-      logger.warn(
-        `[github] rate-limit warning: ${remaining} requests remaining, resets at ${new Date(reset * 1000).toISOString()}`,
-      );
+    if (remaining >= 0) {
+      const level = remaining <= 100 ? "warn" : "info";
+      logger[level](`[github] ← ${response.status} | rate-limit: ${remaining} remaining, resets ${resetStr}`);
+    } else {
+      logger.info(`[github] ← ${response.status}`);
     }
   });
 
   octokit.hook.error("request", (error) => {
     const status = (error as { status?: number }).status ?? 0;
+    logger.warn(`[github] ✗ status=${status} ${error.message}`);
     if (status === 401 || status === 403) {
       throw new GitHubAuthError(`GitHub API auth error ${status}: ${error.message}`);
     }
