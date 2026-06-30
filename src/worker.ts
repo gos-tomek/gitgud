@@ -159,9 +159,10 @@ export class ClassificationBatchWorkflow extends WorkflowEntrypoint<Env, Classif
         return syncPrBatch(supabase, octokit, owner, repoName, prChunks[i]);
       });
       if (i < prChunks.length - 1) {
-        // GQL errors signal GitHub throttling; sleep longer to let the secondary-rate-limit window
-        // reset before the next batch. 1 s is sufficient for the subrequest-budget reset alone.
-        await step.sleep(`budget-reset-details-${i}`, batchResult.errors.length > 0 ? "30 seconds" : "1 second");
+        // 10 s baseline keeps the GQL request rate low enough to avoid GitHub's secondary rate
+        // limit (which manifests as the connection being held open until our 60 s AbortSignal
+        // fires). 30 s on errors gives the throttle window time to fully reset.
+        await step.sleep(`budget-reset-details-${i}`, batchResult.errors.length > 0 ? "30 seconds" : "10 seconds");
       }
     }
 
