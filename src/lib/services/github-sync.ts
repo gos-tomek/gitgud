@@ -36,6 +36,22 @@ function describeError(err: unknown): string {
   return String(err);
 }
 
+// Retry a GQL call on transient 502s (Bad Gateway from GitHub).
+// Re-throws immediately on subrequest budget errors and non-502 failures.
+async function withRetry<T>(fn: () => Promise<T>): Promise<T> {
+  const delays = [500, 1000];
+  for (let attempt = 0; ; attempt++) {
+    try {
+      return await fn();
+    } catch (err) {
+      const desc = describeError(err);
+      if (desc.includes("Too many subrequests")) throw err;
+      if (attempt >= delays.length || !desc.includes("502")) throw err;
+      await new Promise<void>((resolve) => setTimeout(resolve, delays[attempt]));
+    }
+  }
+}
+
 export interface SyncResult {
   repos: number;
   pullRequests: number;
@@ -317,9 +333,11 @@ export async function syncPrBatch(
     let batchData: Partial<Record<string, GqlPrData>>;
 
     try {
-      const response = await octokit.graphql<{ repository: Partial<Record<string, GqlPrData>> }>(
-        buildBatchPrDetailsQuery(batchPrs),
-        { owner, name: repoName },
+      const response = await withRetry(() =>
+        octokit.graphql<{ repository: Partial<Record<string, GqlPrData>> }>(buildBatchPrDetailsQuery(batchPrs), {
+          owner,
+          name: repoName,
+        }),
       );
       batchData = response.repository;
     } catch (err) {
@@ -382,7 +400,9 @@ export async function syncPrBatch(
       const { query, variables } = buildBatchReviewPageQuery(items);
       let pageRepo: ReviewPageResp["repository"];
       try {
-        const resp = await octokit.graphql<ReviewPageResp>(query, { owner, name: repoName, ...variables });
+        const resp = await withRetry(() =>
+          octokit.graphql<ReviewPageResp>(query, { owner, name: repoName, ...variables }),
+        );
         pageRepo = resp.repository;
       } catch (err) {
         if (describeError(err).includes("Too many subrequests")) throw err;
