@@ -1,7 +1,7 @@
 import { handle } from "@astrojs/cloudflare/handler";
 import { WorkflowEntrypoint, type WorkflowEvent, type WorkflowStep } from "cloudflare:workers";
 import { createServiceClient } from "@/lib/supabase-admin";
-import { createGitHubClient } from "@/lib/github";
+import { getGitHubToken, makeOctokit } from "@/lib/github";
 import {
   listBoardRepos,
   listAndUpsertPrsForRepo,
@@ -12,23 +12,28 @@ import {
 import { classifyThreads, isBotComment } from "@/lib/services/classification";
 import { logger } from "@/lib/logger";
 
+// --- Workflow params --- //
+// Single interface with optional fields — Cloudflare's Workflow generic expects one type,
+// and discriminated unions break `Workflow.create({ params })` typing.
+
 export interface ClassificationBatchParams {
   boardId: string;
+  phase?: "dispatch" | "sync-repo" | "classify";
+  // sync-repo fields (required when phase === "sync-repo")
+  repoId?: string;
+  owner?: string;
+  repoName?: string;
+  since?: string;
+  prs?: PrRef[];
+  syncStartedAt?: string;
 }
 
-const CLASSIFICATION_BATCH_SIZE = 50;
+// --- Constants --- //
 
-// First-ever sync for a repo has no `last_synced_at` to anchor `since` on. Bound it to 90 days
-// instead of true full history — even 90 days of a very active repo (e.g. ~2,375 PRs for
-// supabase/supabase) can approach the 5000 req/hr GitHub primary rate limit at ~3 requests/PR;
-// unbounded history is never feasible in a single run. See `check-rate-limit-*` steps below for
-// how a window that still exceeds the limit gets handled.
+const CLASSIFICATION_BATCH_SIZE = 50;
 const DEFAULT_BACKFILL_WINDOW_MS = 90 * 24 * 60 * 60 * 1000;
 
-// Per-PR enrichment (detail + reviews) costs ~2 GitHub requests/PR. Chunking keeps each durable
-// step's worst-case cost bounded so a `check-rate-limit-*` step run right before it can decide
-// whether to sleep until the quota resets instead of burning through it mid-chunk.
-const PR_DETAIL_CHUNK_SIZE = 150;
+// --- Helpers --- //
 
 interface UnclassifiedRootCommentRow {
   id: number;
@@ -43,10 +48,6 @@ function chunk<T>(items: T[], size: number): T[][] {
   return chunks;
 }
 
-// `err instanceof Error` can be false even for a genuine Error if it crossed a realm boundary
-// inside workerd's Workflow step plumbing — `message`/`stack` are real but the prototype isn't
-// our `Error`. Duck-type instead of relying on instanceof, with JSON.stringify(getOwnPropertyNames)
-// as a last resort since `message`/`stack` are non-enumerable (a plain JSON.stringify gives "{}").
 function describeError(err: unknown): string {
   if (typeof err === "object" && err !== null) {
     const obj = err as Record<string, unknown>;
@@ -55,17 +56,12 @@ function describeError(err: unknown): string {
     try {
       return JSON.stringify(obj, Object.getOwnPropertyNames(obj));
     } catch {
-      // fall through to String(err) below
+      // fall through
     }
   }
   return String(err);
 }
 
-// Workflows serialize step.do callback errors across an internal RPC boundary; on some
-// wrangler/workerd versions the original Error prototype/message is lost by the time it
-// reaches the top-level inspector, surfacing only as "Uncaught #<Object>". Logging the real
-// message/stack here (a plain console call, not subject to that boundary) keeps `wrangler dev`
-// / `wrangler tail` output diagnosable regardless.
 function runStep<T extends Rpc.Serializable<T>>(step: WorkflowStep, name: string, fn: () => Promise<T>): Promise<T> {
   return step.do(name, async () => {
     try {
@@ -77,37 +73,43 @@ function runStep<T extends Rpc.Serializable<T>>(step: WorkflowStep, name: string
   });
 }
 
-interface RepoSyncTarget {
-  repoId: string;
-  owner: string;
-  repoName: string;
-  since: string;
-  prs: PrRef[];
-}
+// --- Workflow --- //
 
 export class ClassificationBatchWorkflow extends WorkflowEntrypoint<Env, ClassificationBatchParams> {
   async run(event: WorkflowEvent<ClassificationBatchParams>, step: WorkflowStep) {
+    const phase = event.payload.phase ?? "dispatch";
+    switch (phase) {
+      case "dispatch":
+        return this.runDispatch(event, step);
+      case "sync-repo":
+        return this.runSyncRepo(event, step);
+      case "classify":
+        return this.runClassify(event, step);
+    }
+  }
+
+  private async runDispatch(event: WorkflowEvent<ClassificationBatchParams>, step: WorkflowStep) {
     const { boardId } = event.payload;
     const supabase = createServiceClient(this.env.SUPABASE_URL, this.env.SUPABASE_SERVICE_KEY);
 
-    // Octokit isn't Rpc.Serializable (it's a client instance, not plain data) so it can't be
-    // returned from a step.do and reused in later steps — build it once here, outside any step,
-    // like `supabase` above. It gets rebuilt (cheap: one PAT-decrypt RPC) on every `run()` resume.
-    const octokit = await createGitHubClient(supabase, boardId, this.env.GITHUB_TOKEN_ENCRYPTION_KEY);
+    const githubToken = await runStep(step, "get-github-token", () =>
+      getGitHubToken(supabase, boardId, this.env.GITHUB_TOKEN_ENCRYPTION_KEY),
+    );
+    const octokit = makeOctokit(githubToken);
 
-    // One shared timestamp for every repo's `last_synced_at` write this run, read durably once so
-    // retries of later steps don't drift it forward.
     const syncStartedAt = await runStep(step, "read-sync-state", () => Promise.resolve(new Date().toISOString()));
 
-    // `since` is tracked per repo (`github_repos.last_synced_at`), not per board — `since` is a
-    // GitHub API parameter scoped to one repo, and a board could gain a repo later with its own
-    // independent sync history that a shared board-level cursor would silently under-backfill.
     const repos = await runStep(step, "list-board-repos", () => listBoardRepos(supabase, boardId));
 
-    // One durable step per repo (not one step for all repos) — a board with many repos could
-    // otherwise make thousands of GitHub requests in a single step.do and lose all listing
-    // progress on failure, retrying every repo from scratch instead of just the failed one.
-    const targets: RepoSyncTarget[] = [];
+    interface RepoTarget {
+      repoId: string;
+      owner: string;
+      repoName: string;
+      since: string;
+      prs: PrRef[];
+    }
+
+    const targets: RepoTarget[] = [];
     for (let r = 0; r < repos.length; r++) {
       const repo = repos[r];
       const target = await runStep(step, `sync-list-prs-${r}`, async () => {
@@ -126,85 +128,105 @@ export class ClassificationBatchWorkflow extends WorkflowEntrypoint<Env, Classif
       targets.push(target);
     }
 
-    // Free-plan Workers have 50 subrequests per invocation, shared across ALL steps that
-    // execute in one invocation. The listing phase above uses ~28 subrequests for a large
-    // repo (27 REST pages + 1 upsert), leaving only ~22 for subsequent chunks — not enough.
-    // step.sleep creates a durable checkpoint; when the sleep expires, Cloudflare resumes
-    // the Workflow in a NEW invocation with a fresh 50-subrequest budget.
-    await step.sleep("budget-reset-after-listing", "1 second");
+    await step.sleep("budget-reset-before-spawn", "1 second");
 
-    for (let r = 0; r < targets.length; r++) {
-      const { repoId, owner, repoName, since, prs } = targets[r];
-      const prChunks = chunk(prs, PR_DETAIL_CHUNK_SIZE);
+    const dateStamp = new Date().toISOString().slice(0, 10);
 
-      for (let c = 0; c < prChunks.length; c++) {
-        // Each chunk uses ~6 subrequests (1 rate-limit + 1 GQL + ≤2 overflow + 1 RPC + 1 upsert).
-        // With 2700 PRs / 150 = 18 chunks, they'd exhaust the 50-subrequest budget around chunk 6.
-        // Sleeping between chunks forces a new invocation with a fresh budget.
-        if (c > 0) {
-          await step.sleep(`budget-reset-before-chunk-${r}-${c}`, "1 second");
-        }
+    await runStep(step, "spawn-children", async () => {
+      const spawned: string[] = [];
 
-        const rateLimit = await runStep(step, `check-rate-limit-${r}-${c}`, async () => {
-          const { data } = await octokit.rest.rateLimit.get();
-          return {
-            core: { remaining: data.resources.core.remaining, reset: data.resources.core.reset },
-            graphql: {
-              remaining: data.resources.graphql?.remaining ?? 5000,
-              reset: data.resources.graphql?.reset ?? data.resources.core.reset,
+      for (const t of targets) {
+        const id = `sync-${t.repoId}-${dateStamp}`;
+        try {
+          await this.env.CLASSIFICATION_BATCH.create({
+            id,
+            params: {
+              boardId,
+              phase: "sync-repo",
+              repoId: t.repoId,
+              owner: t.owner,
+              repoName: t.repoName,
+              since: t.since,
+              prs: t.prs,
+              syncStartedAt,
             },
-          };
-        });
-
-        // syncPrBatch now uses GraphQL (not REST core quota). The graphql quota is 5000 pts/hr;
-        // each query fetches 100 PRs and costs ~100 pts, so a 150-PR chunk costs ~200 pts — well
-        // within budget for any realistic board. We still guard the core quota with a small
-        // buffer to ensure the upcoming listReviewCommentsForRepo step (REST) can complete.
-        if (rateLimit.graphql.remaining < 200) {
-          await step.sleepUntil(`wait-for-rate-limit-${r}-${c}`, new Date(rateLimit.graphql.reset * 1000));
-        } else if (rateLimit.core.remaining < 200) {
-          await step.sleepUntil(`wait-for-rate-limit-${r}-${c}`, new Date(rateLimit.core.reset * 1000));
+          });
+          spawned.push(id);
+        } catch (err) {
+          logger.error(`[dispatch] Failed to spawn sync for repo ${t.owner}/${t.repoName}`, err);
         }
-
-        await runStep(step, `sync-pr-details-${r}-${c}`, async () => {
-          return syncPrBatch(supabase, octokit, owner, repoName, prChunks[c]);
-        });
       }
 
-      // Review comment steps use up to 47 subrequests each — almost the full free-plan
-      // budget. Force a new invocation so they don't share budget with preceding chunks.
-      await step.sleep(`budget-reset-before-reviews-${r}`, "1 second");
-
-      // 45 pages × 1 REST subrequest + 1 mapPrNumbersToIds + 1 upsert = 47 subrequests/step —
-      // safely under the Free-plan cap of 50. On repos with >4 500 review comments per sync
-      // window each continuation step picks up where the previous one stopped via the cursor.
-      let reviewSince = new Date(since);
-      for (let p = 0; ; p++) {
-        const result = await runStep(step, `sync-review-comments-${r}-${p}`, async () => {
-          const { comments, nextSince } = await syncReviewCommentsForRepo(
-            supabase,
-            octokit,
-            repoId,
-            owner,
-            repoName,
-            reviewSince,
-            45,
-          );
-          return { comments, nextSince: nextSince?.toISOString() ?? null };
+      const classifyId = `classify-${boardId}-${dateStamp}`;
+      try {
+        await this.env.CLASSIFICATION_BATCH.create({
+          id: classifyId,
+          params: { boardId, phase: "classify" },
         });
-        if (!result.nextSince) break;
-        reviewSince = new Date(result.nextSince);
+        spawned.push(classifyId);
+      } catch (err) {
+        logger.error(`[dispatch] Failed to spawn classify for board ${boardId}`, err);
       }
 
-      await runStep(step, `update-last-synced-${r}`, async () => {
-        const updateResult = await supabase
-          .from("github_repos")
-          .update({ last_synced_at: syncStartedAt })
-          .eq("id", repoId);
-        if (updateResult.error) throw updateResult.error;
-        return { updated: true };
-      });
+      return { spawned };
+    });
+  }
+
+  // Phase 2: sync PR details + review comments for one repo.
+  // Steps: get-token, sync-pr-details, sleep, sync-review-comments-0..N, update-last-synced.
+  // Each instance starts fresh — no replay overhead from the dispatcher.
+  private async runSyncRepo(event: WorkflowEvent<ClassificationBatchParams>, step: WorkflowStep) {
+    const { boardId, repoId, owner, repoName, since, prs, syncStartedAt } = event.payload;
+    if (!repoId || !owner || !repoName || !since || !prs || !syncStartedAt) {
+      throw new Error("sync-repo phase requires repoId, owner, repoName, since, prs, syncStartedAt");
     }
+
+    const supabase = createServiceClient(this.env.SUPABASE_URL, this.env.SUPABASE_SERVICE_KEY);
+
+    const githubToken = await runStep(step, "get-github-token", () =>
+      getGitHubToken(supabase, boardId, this.env.GITHUB_TOKEN_ENCRYPTION_KEY),
+    );
+    const octokit = makeOctokit(githubToken);
+
+    await runStep(step, "sync-pr-details", async () => {
+      return syncPrBatch(supabase, octokit, owner, repoName, prs);
+    });
+
+    await step.sleep("budget-reset-before-reviews", "1 second");
+
+    let reviewSince = new Date(since);
+    for (let p = 0; ; p++) {
+      const result = await runStep(step, `sync-review-comments-${p}`, async () => {
+        const { comments, nextSince } = await syncReviewCommentsForRepo(
+          supabase,
+          octokit,
+          repoId,
+          owner,
+          repoName,
+          reviewSince,
+          45,
+        );
+        return { comments, nextSince: nextSince?.toISOString() ?? null };
+      });
+      if (!result.nextSince) break;
+      reviewSince = new Date(result.nextSince);
+    }
+
+    await runStep(step, "update-last-synced", async () => {
+      const { error } = await supabase.from("github_repos").update({ last_synced_at: syncStartedAt }).eq("id", repoId);
+      if (error) throw error;
+      return { updated: true };
+    });
+  }
+
+  // Phase 3: classify unprocessed review threads.
+  // Starts fresh — no replay from sync phases.
+  private async runClassify(event: WorkflowEvent<ClassificationBatchParams>, step: WorkflowStep) {
+    const { boardId } = event.payload;
+    const supabase = createServiceClient(this.env.SUPABASE_URL, this.env.SUPABASE_SERVICE_KEY);
+
+    // Give repo sync instances time to finish before reading unclassified comments.
+    await step.sleep("wait-for-syncs", "3 minutes");
 
     const threadRootIds = await runStep(step, "fetch-unclassified", async () => {
       const result = await supabase.rpc("get_unclassified_root_comments_for_board", { p_board_id: boardId });
@@ -214,11 +236,6 @@ export class ClassificationBatchWorkflow extends WorkflowEntrypoint<Env, Classif
         .map((row) => row.id);
     });
 
-    // Store each batch's results immediately after it classifies, rather than accumulating
-    // everything in memory for one trailing upsert. AI calls cost real money — banking each
-    // batch's results into `thread_classifications` right away means a manual termination or a
-    // later batch's permanent failure only loses that one batch's spend, not every batch that
-    // already succeeded in this run.
     const batches = chunk(threadRootIds, CLASSIFICATION_BATCH_SIZE);
     for (let i = 0; i < batches.length; i++) {
       const batchResults = await runStep(step, `classify-batch-${i}`, async () => {

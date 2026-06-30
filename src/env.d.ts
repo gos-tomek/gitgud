@@ -10,7 +10,7 @@ declare namespace Cloudflare {
   interface Env {
     ASSETS: Fetcher;
     AI: Ai;
-    CLASSIFICATION_BATCH: Workflow<{ boardId: string }>;
+    CLASSIFICATION_BATCH: Workflow<import("./worker").ClassificationBatchParams>;
     SUPABASE_URL: string;
     SUPABASE_KEY: string;
     SUPABASE_SERVICE_KEY: string;
