@@ -1,7 +1,7 @@
 import { handle } from "@astrojs/cloudflare/handler";
 import { WorkflowEntrypoint, type WorkflowEvent, type WorkflowStep } from "cloudflare:workers";
 import { createServiceClient } from "@/lib/supabase-admin";
-import { createGitHubClient } from "@/lib/github";
+import { getGitHubToken, makeOctokit } from "@/lib/github";
 import {
   listBoardRepos,
   listAndUpsertPrsForRepo,
@@ -25,10 +25,11 @@ const CLASSIFICATION_BATCH_SIZE = 50;
 // how a window that still exceeds the limit gets handled.
 const DEFAULT_BACKFILL_WINDOW_MS = 90 * 24 * 60 * 60 * 1000;
 
-// Per-PR enrichment (detail + reviews) costs ~2 GitHub requests/PR. Chunking keeps each durable
-// step's worst-case cost bounded so a `check-rate-limit-*` step run right before it can decide
-// whether to sleep until the quota resets instead of burning through it mid-chunk.
-const PR_DETAIL_CHUNK_SIZE = 150;
+// All PRs for a repo are processed in a single syncPrBatch call. With GQL_PRS_PER_QUERY=500,
+// 2700 PRs = 6 GraphQL batches ≈ 20 subrequests (6 GQL + overflow + Supabase writes) — well
+// within the 50-subrequest free-plan budget. Avoiding per-chunk steps/sleeps is critical because
+// each completed Workflow step adds replay overhead on every Workflow restart, and with ~18
+// chunks the replay cost alone exceeded the budget before any new work could begin.
 
 interface UnclassifiedRootCommentRow {
   id: number;
@@ -90,10 +91,12 @@ export class ClassificationBatchWorkflow extends WorkflowEntrypoint<Env, Classif
     const { boardId } = event.payload;
     const supabase = createServiceClient(this.env.SUPABASE_URL, this.env.SUPABASE_SERVICE_KEY);
 
-    // Octokit isn't Rpc.Serializable (it's a client instance, not plain data) so it can't be
-    // returned from a step.do and reused in later steps — build it once here, outside any step,
-    // like `supabase` above. It gets rebuilt (cheap: one PAT-decrypt RPC) on every `run()` resume.
-    const octokit = await createGitHubClient(supabase, boardId, this.env.GITHUB_TOKEN_ENCRYPTION_KEY);
+    // Cache the decrypted PAT in a durable step so restarts don't burn a subrequest on every
+    // `run()` resume. Octokit itself isn't serializable, but the token string is.
+    const githubToken = await runStep(step, "get-github-token", () =>
+      getGitHubToken(supabase, boardId, this.env.GITHUB_TOKEN_ENCRYPTION_KEY),
+    );
+    const octokit = makeOctokit(githubToken);
 
     // One shared timestamp for every repo's `last_synced_at` write this run, read durably once so
     // retries of later steps don't drift it forward.
@@ -135,41 +138,10 @@ export class ClassificationBatchWorkflow extends WorkflowEntrypoint<Env, Classif
 
     for (let r = 0; r < targets.length; r++) {
       const { repoId, owner, repoName, since, prs } = targets[r];
-      const prChunks = chunk(prs, PR_DETAIL_CHUNK_SIZE);
 
-      for (let c = 0; c < prChunks.length; c++) {
-        // Each chunk uses ~6 subrequests (1 rate-limit + 1 GQL + ≤2 overflow + 1 RPC + 1 upsert).
-        // With 2700 PRs / 150 = 18 chunks, they'd exhaust the 50-subrequest budget around chunk 6.
-        // Sleeping between chunks forces a new invocation with a fresh budget.
-        if (c > 0) {
-          await step.sleep(`budget-reset-before-chunk-${r}-${c}`, "1 second");
-        }
-
-        const rateLimit = await runStep(step, `check-rate-limit-${r}-${c}`, async () => {
-          const { data } = await octokit.rest.rateLimit.get();
-          return {
-            core: { remaining: data.resources.core.remaining, reset: data.resources.core.reset },
-            graphql: {
-              remaining: data.resources.graphql?.remaining ?? 5000,
-              reset: data.resources.graphql?.reset ?? data.resources.core.reset,
-            },
-          };
-        });
-
-        // syncPrBatch now uses GraphQL (not REST core quota). The graphql quota is 5000 pts/hr;
-        // each query fetches 100 PRs and costs ~100 pts, so a 150-PR chunk costs ~200 pts — well
-        // within budget for any realistic board. We still guard the core quota with a small
-        // buffer to ensure the upcoming listReviewCommentsForRepo step (REST) can complete.
-        if (rateLimit.graphql.remaining < 200) {
-          await step.sleepUntil(`wait-for-rate-limit-${r}-${c}`, new Date(rateLimit.graphql.reset * 1000));
-        } else if (rateLimit.core.remaining < 200) {
-          await step.sleepUntil(`wait-for-rate-limit-${r}-${c}`, new Date(rateLimit.core.reset * 1000));
-        }
-
-        await runStep(step, `sync-pr-details-${r}-${c}`, async () => {
-          return syncPrBatch(supabase, octokit, owner, repoName, prChunks[c]);
-        });
-      }
+      await runStep(step, `sync-pr-details-${r}`, async () => {
+        return syncPrBatch(supabase, octokit, owner, repoName, prs);
+      });
 
       // Review comment steps use up to 47 subrequests each — almost the full free-plan
       // budget. Force a new invocation so they don't share budget with preceding chunks.
