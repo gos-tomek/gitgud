@@ -94,14 +94,16 @@ export class ClassificationBatchWorkflow extends WorkflowEntrypoint<Env, Classif
 
     const repos = await runStep(step, "list-board-repos", () => listBoardRepos(supabase, boardId));
 
-    const dateStamp = new Date().toISOString().slice(0, 10);
+    // Use ms-precision timestamp so each dispatch run gets unique child IDs.
+    // dateStamp (per-day) caused silent failures when the same repo was synced twice in one day.
+    const syncStamp = new Date(syncStartedAt).getTime();
 
     await runStep(step, "spawn-children", async () => {
       const spawned: string[] = [];
 
       for (const repo of repos) {
         const since = repo.last_synced_at ?? new Date(Date.now() - DEFAULT_BACKFILL_WINDOW_MS).toISOString();
-        const id = `sync-${repo.id}-${dateStamp}`;
+        const id = `sync-${repo.id}-${syncStamp}`;
         try {
           await this.env.CLASSIFICATION_BATCH.create({
             id,
@@ -181,10 +183,10 @@ export class ClassificationBatchWorkflow extends WorkflowEntrypoint<Env, Classif
       return { updated: true };
     });
 
-    const dateStamp = new Date().toISOString().slice(0, 10);
+    const syncStamp = new Date(syncStartedAt).getTime();
     await runStep(step, "spawn-classify", async () => {
       try {
-        const classifyId = `classify-${boardId}-${repoId}-${dateStamp}`;
+        const classifyId = `classify-${boardId}-${repoId}-${syncStamp}`;
         await this.env.CLASSIFICATION_BATCH.create({
           id: classifyId,
           params: { boardId, phase: "classify" },
