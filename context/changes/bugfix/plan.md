@@ -281,11 +281,11 @@ No invocation exceeds 31 subrequests. All phases have ≥36% headroom from the 5
 
 #### Automated
 
-- [x] 1.1 Type checking passes (`npx tsc --noEmit`)
-- [x] 1.2 Test type checking passes (`npm run test:typecheck`)
-- [x] 1.3 Linting passes (`npm run lint`)
-- [x] 1.4 Build succeeds (`npm run build`)
-- [x] 1.5 Non-integration tests pass (`vitest run --exclude 'tests/integration/**'`)
+- [x] 1.1 Type checking passes (`npx tsc --noEmit`) — 2808142
+- [x] 1.2 Test type checking passes (`npm run test:typecheck`) — 2808142
+- [x] 1.3 Linting passes (`npm run lint`) — 2808142
+- [x] 1.4 Build succeeds (`npm run build`) — 2808142
+- [x] 1.5 Non-integration tests pass (`vitest run --exclude 'tests/integration/**'`) — 2808142
 
 #### Manual
 
