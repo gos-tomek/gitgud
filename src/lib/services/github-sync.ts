@@ -122,7 +122,7 @@ async function mapPrNumbersToIds(supabase: SupabaseClient, repoId: string): Prom
       .select("id,number")
       .eq("repo_id", repoId)
       .range(from, from + PAGE - 1);
-    if (error) throw error;
+    if (error) throw new Error(`mapPrNumbersToIds page ${from / PAGE + 1}: ${error.message}`);
     all.push(...(data as { id: number; number: number }[]));
     if (data.length < PAGE) break;
   }
@@ -205,7 +205,7 @@ export async function syncReviewCommentsForRepo(
 
   if (rows.length > 0) {
     const { error } = await supabase.from("github_review_comments").upsert(rows, { onConflict: "id" });
-    if (error) throw error;
+    if (error) throw new Error(`github_review_comments upsert (${rows.length} rows): ${error.message}`);
   }
 
   return {
