@@ -110,9 +110,21 @@ async function upsertPullRequests(supabase: SupabaseClient, repoId: string, prs:
 }
 
 async function mapPrNumbersToIds(supabase: SupabaseClient, repoId: string): Promise<Map<number, number>> {
-  const { data, error } = await supabase.from("github_pull_requests").select("id,number").eq("repo_id", repoId);
-  if (error) throw error;
-  return new Map((data as { id: number; number: number }[]).map((row) => [row.number, row.id]));
+  // PostgREST caps single-request results at max-rows (typically 1000). Paginate to collect all
+  // PRs so that review comments for repos with >1000 PRs aren't silently dropped.
+  const PAGE = 1000;
+  const all: { id: number; number: number }[] = [];
+  for (let from = 0; ; from += PAGE) {
+    const { data, error } = await supabase
+      .from("github_pull_requests")
+      .select("id,number")
+      .eq("repo_id", repoId)
+      .range(from, from + PAGE - 1);
+    if (error) throw error;
+    all.push(...(data as { id: number; number: number }[]));
+    if (data.length < PAGE) break;
+  }
+  return new Map(all.map((row) => [row.number, row.id]));
 }
 
 // `GET /repos/{owner}/{repo}/pulls/comments` lists review comments for the whole repo in one
