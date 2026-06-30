@@ -9,10 +9,10 @@ import { logger } from "@/lib/logger";
 const MAX_PRS_PER_REPO = 200;
 
 // PRs batched per GraphQL query via field aliases. GitHub's node ceiling is 500,000 per query;
-// 25 PRs × 100 review nodes = 2,500 nodes — well within the limit. Kept small so the GitHub
-// server can respond within the 60s per-request timeout even for PRs with many reviews.
+// 500 PRs × 100 review nodes = 50,000 nodes — within the limit. Fewer GQL calls per sync run
+// means less chance of hitting GitHub's secondary rate limit (which is request-count-based).
 // Exported so worker.ts can chunk prs[] into one-batch-per-step slices of this size.
-export const GQL_PRS_PER_QUERY = 25;
+export const GQL_PRS_PER_QUERY = 500;
 
 // Maximum extra GQL calls per GQL batch for paginating beyond the first 100 review nodes.
 // Free-plan budget is 50 subrequests per invocation, shared across ALL steps in one invocation.
