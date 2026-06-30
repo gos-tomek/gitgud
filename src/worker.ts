@@ -126,6 +126,13 @@ export class ClassificationBatchWorkflow extends WorkflowEntrypoint<Env, Classif
       targets.push(target);
     }
 
+    // Free-plan Workers have 50 subrequests per invocation, shared across ALL steps that
+    // execute in one invocation. The listing phase above uses ~28 subrequests for a large
+    // repo (27 REST pages + 1 upsert), leaving only ~22 for subsequent chunks — not enough.
+    // step.sleep creates a durable checkpoint; when the sleep expires, Cloudflare resumes
+    // the Workflow in a NEW invocation with a fresh 50-subrequest budget.
+    await step.sleep("budget-reset-after-listing", "1 second");
+
     for (let r = 0; r < targets.length; r++) {
       const { repoId, owner, repoName, since, prs } = targets[r];
       const prChunks = chunk(prs, PR_DETAIL_CHUNK_SIZE);
@@ -156,6 +163,10 @@ export class ClassificationBatchWorkflow extends WorkflowEntrypoint<Env, Classif
           return syncPrBatch(supabase, octokit, owner, repoName, prChunks[c]);
         });
       }
+
+      // Review comment steps use up to 47 subrequests each — almost the full free-plan
+      // budget. Force a new invocation so they don't share budget with preceding chunks.
+      await step.sleep(`budget-reset-before-reviews-${r}`, "1 second");
 
       // 45 pages × 1 REST subrequest + 1 mapPrNumbersToIds + 1 upsert = 47 subrequests/step —
       // safely under the Free-plan cap of 50. On repos with >4 500 review comments per sync

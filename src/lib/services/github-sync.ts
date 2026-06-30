@@ -13,10 +13,11 @@ const MAX_PRS_PER_REPO = 200;
 const GQL_PRS_PER_QUERY = 500;
 
 // Maximum extra GQL calls per GQL batch for paginating beyond the first 100 review nodes.
-// Budget: 1 (initial GQL) + MAX_OVERFLOW_ROUNDS + 1 (RPC) + 1 (upsert) = 47 ≤ 50 (free-plan cap).
-// If the step is retried by Cloudflare Workflows (subrequest counter may carry over across
-// attempts), keeping total at 47 leaves a 3-subrequest buffer for the retry's first call.
-const MAX_OVERFLOW_ROUNDS = 44;
+// Free-plan budget is 50 subrequests per invocation, shared across ALL steps in one invocation.
+// After a step.sleep checkpoint, the chunk phase starts with a fresh ~49 budget (50 minus
+// createGitHubClient). Each chunk uses 1 (rate-limit) + 1 (GQL) + overflow + 1 (RPC) + 1 (upsert).
+// With MAX_OVERFLOW_ROUNDS=2: worst case 6 per chunk, fitting ~8 chunks before re-throw → retry.
+const MAX_OVERFLOW_ROUNDS = 2;
 
 type SupabaseClient = NonNullable<ReturnType<typeof createClient>>;
 
@@ -322,6 +323,7 @@ export async function syncPrBatch(
       );
       batchData = response.repository;
     } catch (err) {
+      if (describeError(err).includes("Too many subrequests")) throw err;
       for (const pr of batchPrs) {
         const msg = `PR #${pr.number} (${owner}/${repoName}): GraphQL batch failed: ${describeError(err)}`;
         errors.push(msg);
@@ -383,6 +385,7 @@ export async function syncPrBatch(
         const resp = await octokit.graphql<ReviewPageResp>(query, { owner, name: repoName, ...variables });
         pageRepo = resp.repository;
       } catch (err) {
+        if (describeError(err).includes("Too many subrequests")) throw err;
         for (const p of pendingReviewPages) {
           const msg = `PR #${p.prNumber} (${owner}/${repoName}): review overflow page failed: ${describeError(err)}`;
           errors.push(msg);
@@ -439,10 +442,9 @@ export async function syncPrBatch(
     }
 
     // Supabase writes wrapped in try-catch: Cloudflare throws "Too many subrequests"
-    // synchronously (before returning a response), which Supabase's fetch-based client
-    // propagates as a thrown exception rather than { error }. Catching here prevents an
-    // unhandled throw from failing the step and triggering a retry whose carried-over
-    // subrequest counter would immediately exhaust the budget on the retry's first call.
+    // as a thrown exception (not a PostgREST { error }). "Too many subrequests" is
+    // re-thrown so the Workflow step fails and Cloudflare retries in a new invocation
+    // with a fresh 50-subrequest budget. Other exceptions are caught gracefully.
     if (batchSizeUpdates.length > 0) {
       try {
         const { error } = await supabase.rpc("batch_update_pr_sizes", { updates: batchSizeUpdates });
@@ -452,6 +454,7 @@ export async function syncPrBatch(
           logger.warn(`[github-sync] ${msg}`);
         }
       } catch (err) {
+        if (describeError(err).includes("Too many subrequests")) throw err;
         const msg = `batch size update threw (PRs ${batchPrs[0].number}–${batchPrs[batchPrs.length - 1].number}): ${describeError(err)}`;
         errors.push(msg);
         logger.warn(`[github-sync] ${msg}`);
@@ -466,6 +469,7 @@ export async function syncPrBatch(
           logger.warn(`[github-sync] ${msg}`);
         }
       } catch (err) {
+        if (describeError(err).includes("Too many subrequests")) throw err;
         const msg = `review upsert threw (PRs ${batchPrs[0].number}–${batchPrs[batchPrs.length - 1].number}): ${describeError(err)}`;
         errors.push(msg);
         logger.warn(`[github-sync] ${msg}`);
