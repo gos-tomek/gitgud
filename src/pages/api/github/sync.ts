@@ -62,10 +62,19 @@ export const POST: APIRoute = async (context) => {
     const instance = await env.CLASSIFICATION_BATCH.create({ id: instanceId, params: { boardId } });
     return json({ instanceId: instance.id, status: "queued" });
   } catch (err) {
-    // Workflow.create() throws if the id already exists — that's the dedup hit, not a failure.
+    // Workflow.create() throws if the id already exists — check the existing instance's state.
     try {
       const existing = await env.CLASSIFICATION_BATCH.get(instanceId);
       const { status } = await existing.status();
+
+      // If the previous run finished (successfully or with an error), allow a retry with a
+      // unique suffix so the dedup key no longer collides. Running instances are left alone.
+      if (status === "errored" || status === "complete") {
+        const retryId = `${instanceId}-${Date.now()}`;
+        const retried = await env.CLASSIFICATION_BATCH.create({ id: retryId, params: { boardId } });
+        return json({ instanceId: retried.id, status: "queued" });
+      }
+
       return json({ instanceId: existing.id, status });
     } catch {
       logger.error("[github-sync]", err);
