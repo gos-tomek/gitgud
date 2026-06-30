@@ -8,11 +8,12 @@ import { logger } from "@/lib/logger";
 // since durable steps have no such timeout constraint.
 const MAX_PRS_PER_REPO = 200;
 
-// PRs batched per GraphQL query via field aliases. GitHub's node ceiling is 500,000 per query;
-// 500 PRs × 100 review nodes = 50,000 nodes — within the limit. Fewer GQL calls per sync run
-// means less chance of hitting GitHub's secondary rate limit (which is request-count-based).
+// PRs batched per GraphQL query via field aliases. 100 is the empirical sweet spot for
+// supabase/supabase: large enough to keep GQL call count low (fewer rate-limit hits), small
+// enough that GitHub executes the query within its server-side timeout. 500 times out;
+// 25 causes too many requests and triggers the secondary rate limit sooner.
 // Exported so worker.ts can chunk prs[] into one-batch-per-step slices of this size.
-export const GQL_PRS_PER_QUERY = 500;
+export const GQL_PRS_PER_QUERY = 100;
 
 // Maximum extra GQL calls per GQL batch for paginating beyond the first 100 review nodes.
 // Free-plan budget is 50 subrequests per invocation, shared across ALL steps in one invocation.
