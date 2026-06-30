@@ -138,6 +138,13 @@ export class ClassificationBatchWorkflow extends WorkflowEntrypoint<Env, Classif
       const prChunks = chunk(prs, PR_DETAIL_CHUNK_SIZE);
 
       for (let c = 0; c < prChunks.length; c++) {
+        // Each chunk uses ~6 subrequests (1 rate-limit + 1 GQL + ≤2 overflow + 1 RPC + 1 upsert).
+        // With 2700 PRs / 150 = 18 chunks, they'd exhaust the 50-subrequest budget around chunk 6.
+        // Sleeping between chunks forces a new invocation with a fresh budget.
+        if (c > 0) {
+          await step.sleep(`budget-reset-before-chunk-${r}-${c}`, "1 second");
+        }
+
         const rateLimit = await runStep(step, `check-rate-limit-${r}-${c}`, async () => {
           const { data } = await octokit.rest.rateLimit.get();
           return {
