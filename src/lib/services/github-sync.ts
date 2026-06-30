@@ -340,10 +340,18 @@ export async function syncPrBatch(
   //   by preceding GQL calls, leaving github_reviews empty even though reviewCount > 0.
   // Per-GQL-batch: 3 subrequests per batch (1 GQL + 1 RPC + 1 upsert), data committed
   //   incrementally so a mid-loop subrequest failure can't wipe already-processed batches.
+  const totalBatches = Math.ceil(prs.length / GQL_PRS_PER_QUERY);
   for (let i = 0; i < prs.length; i += GQL_PRS_PER_QUERY) {
+    const batchIdx = Math.floor(i / GQL_PRS_PER_QUERY);
     const batchPrs = prs.slice(i, i + GQL_PRS_PER_QUERY);
-    let batchData: Partial<Record<string, GqlPrData>>;
+    const firstPr = batchPrs[0].number;
+    const lastPr = batchPrs[batchPrs.length - 1].number;
+    logger.info(
+      `[syncPrBatch] ${owner}/${repoName}: batch ${batchIdx + 1}/${totalBatches} — PRs #${firstPr}–#${lastPr} (${batchPrs.length} PRs)`,
+    );
 
+    let batchData: Partial<Record<string, GqlPrData>>;
+    const t0 = Date.now();
     try {
       const response = await withRetry(() =>
         octokit.graphql<{ repository: Partial<Record<string, GqlPrData>> }>(buildBatchPrDetailsQuery(batchPrs), {
@@ -351,13 +359,17 @@ export async function syncPrBatch(
           name: repoName,
         }),
       );
+      logger.info(
+        `[syncPrBatch] ${owner}/${repoName}: batch ${batchIdx + 1}/${totalBatches} GQL done in ${Date.now() - t0}ms`,
+      );
       batchData = response.repository;
     } catch (err) {
+      logger.warn(
+        `[syncPrBatch] ${owner}/${repoName}: batch ${batchIdx + 1}/${totalBatches} GQL failed after ${Date.now() - t0}ms: ${describeError(err)}`,
+      );
       if (describeError(err).includes("Too many subrequests")) throw err;
       for (const pr of batchPrs) {
-        const msg = `PR #${pr.number} (${owner}/${repoName}): GraphQL batch failed: ${describeError(err)}`;
-        errors.push(msg);
-        logger.warn(`[github-sync] Skipping ${msg}`);
+        errors.push(`PR #${pr.number} (${owner}/${repoName}): GraphQL batch failed: ${describeError(err)}`);
       }
       continue;
     }
@@ -408,15 +420,25 @@ export async function syncPrBatch(
         break;
       }
       overflowRound++;
+      logger.info(
+        `[syncPrBatch] ${owner}/${repoName}: batch ${batchIdx + 1}/${totalBatches} overflow round ${overflowRound} — ${pendingReviewPages.length} PR(s) with >100 reviews`,
+      );
       const items = pendingReviewPages.map((p) => ({ number: p.prNumber, cursor: p.cursor }));
       const { query, variables } = buildBatchReviewPageQuery(items);
       let pageRepo: ReviewPageResp["repository"];
+      const tOverflow = Date.now();
       try {
         const resp = await withRetry(() =>
           octokit.graphql<ReviewPageResp>(query, { owner, name: repoName, ...variables }),
         );
+        logger.info(
+          `[syncPrBatch] ${owner}/${repoName}: batch ${batchIdx + 1}/${totalBatches} overflow round ${overflowRound} done in ${Date.now() - tOverflow}ms`,
+        );
         pageRepo = resp.repository;
       } catch (err) {
+        logger.warn(
+          `[syncPrBatch] ${owner}/${repoName}: batch ${batchIdx + 1}/${totalBatches} overflow round ${overflowRound} failed after ${Date.now() - tOverflow}ms: ${describeError(err)}`,
+        );
         if (describeError(err).includes("Too many subrequests")) throw err;
         for (const p of pendingReviewPages) {
           const msg = `PR #${p.prNumber} (${owner}/${repoName}): review overflow page failed: ${describeError(err)}`;
