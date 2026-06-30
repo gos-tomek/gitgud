@@ -155,11 +155,13 @@ export class ClassificationBatchWorkflow extends WorkflowEntrypoint<Env, Classif
 
     const prChunks = chunk(prs, GQL_PRS_PER_QUERY);
     for (let i = 0; i < prChunks.length; i++) {
-      await runStep(step, `sync-pr-details-${i}`, async () => {
+      const batchResult = await runStep(step, `sync-pr-details-${i}`, async () => {
         return syncPrBatch(supabase, octokit, owner, repoName, prChunks[i]);
       });
       if (i < prChunks.length - 1) {
-        await step.sleep(`budget-reset-details-${i}`, "1 second");
+        // GQL errors signal GitHub throttling; sleep longer to let the secondary-rate-limit window
+        // reset before the next batch. 1 s is sufficient for the subrequest-budget reset alone.
+        await step.sleep(`budget-reset-details-${i}`, batchResult.errors.length > 0 ? "30 seconds" : "1 second");
       }
     }
 
