@@ -43,19 +43,25 @@ function isTransientGqlError(desc: string): boolean {
   return desc.includes("502") || desc.includes("aborted") || desc.includes("timeout") || desc.includes("ETIMEDOUT");
 }
 
-// Retry a GQL call on transient failures: 502 (Bad Gateway), AbortSignal timeouts, network timeouts.
-// Re-throws immediately on subrequest budget errors and non-transient failures.
+function isTimeoutError(desc: string): boolean {
+  return desc.includes("aborted") || desc.includes("timeout") || desc.includes("ETIMEDOUT");
+}
+
+// Retry a GQL call on transient 502s (Bad Gateway from GitHub).
+// Timeouts are NOT retried here — they take 60s each and are better handled by
+// fetchBatchGqlWithSplitting which splits the batch instead of blindly retrying.
 async function withRetry<T>(fn: () => Promise<T>): Promise<T> {
-  const delays = [1000, 3000];
+  const delays = [500, 1000];
   for (let attempt = 0; ; attempt++) {
     try {
       return await fn();
     } catch (err) {
       const desc = describeError(err);
       if (desc.includes("Too many subrequests")) throw err;
-      if (attempt >= delays.length || !isTransientGqlError(desc)) throw err;
+      if (isTimeoutError(desc)) throw err;
+      if (attempt >= delays.length || !desc.includes("502")) throw err;
       logger.info(
-        `[withRetry] transient failure (attempt ${attempt + 1}/${delays.length + 1}), retrying in ${delays[attempt]}ms: ${desc.slice(0, 120)}`,
+        `[withRetry] 502 retry (attempt ${attempt + 1}/${delays.length + 1}), retrying in ${delays[attempt]}ms`,
       );
       await new Promise<void>((resolve) => setTimeout(resolve, delays[attempt]));
     }
@@ -342,6 +348,9 @@ async function fetchBatchGqlWithSplitting(
   prs: PrRef[],
   label: string,
 ): Promise<{ data: Map<number, GqlPrData>; errors: string[] }> {
+  const firstPr = prs[0].number;
+  const lastPr = prs[prs.length - 1].number;
+  logger.info(`[gql-fetch] ${label}: requesting ${prs.length} PRs (#${firstPr}–#${lastPr})`);
   const t0 = Date.now();
   try {
     const response = await withRetry(() =>
@@ -350,20 +359,29 @@ async function fetchBatchGqlWithSplitting(
         name: repoName,
       }),
     );
-    logger.info(`[syncPrBatch] ${label} GQL done in ${Date.now() - t0}ms (${prs.length} PRs)`);
+    const elapsed = Date.now() - t0;
     const result = new Map<number, GqlPrData>();
+    let totalReviewNodes = 0;
     for (let j = 0; j < prs.length; j++) {
       const prData = response.repository[`pr_${j}`];
-      if (prData) result.set(j, prData);
+      if (prData) {
+        result.set(j, prData);
+        totalReviewNodes += prData.reviews.nodes.length;
+      }
     }
+    logger.info(
+      `[gql-fetch] ${label}: OK in ${elapsed}ms — ${result.size}/${prs.length} PRs, ${totalReviewNodes} review nodes`,
+    );
     return { data: result, errors: [] };
   } catch (err) {
+    const elapsed = Date.now() - t0;
     const desc = describeError(err);
+    const errType = isTimeoutError(desc) ? "TIMEOUT" : desc.includes("502") ? "502" : "ERROR";
     if (desc.includes("Too many subrequests")) throw err;
 
     if (prs.length <= MIN_SPLIT_SIZE || !isTransientGqlError(desc)) {
       logger.warn(
-        `[syncPrBatch] ${label} GQL failed after ${Date.now() - t0}ms (${prs.length} PRs, no further splitting): ${desc.slice(0, 200)}`,
+        `[gql-fetch] ${label}: ${errType} after ${elapsed}ms (${prs.length} PRs, leaf — not splitting): ${desc.slice(0, 200)}`,
       );
       return {
         data: new Map(),
@@ -373,18 +391,21 @@ async function fetchBatchGqlWithSplitting(
 
     const mid = Math.ceil(prs.length / 2);
     logger.warn(
-      `[syncPrBatch] ${label} GQL failed after ${Date.now() - t0}ms, splitting ${prs.length} → ${mid}+${prs.length - mid}`,
+      `[gql-fetch] ${label}: ${errType} after ${elapsed}ms — splitting ${prs.length} → ${mid}+${prs.length - mid}`,
     );
     const leftPrs = prs.slice(0, mid);
     const rightPrs = prs.slice(mid);
 
-    const left = await fetchBatchGqlWithSplitting(octokit, owner, repoName, leftPrs, `${label}a`);
-    const right = await fetchBatchGqlWithSplitting(octokit, owner, repoName, rightPrs, `${label}b`);
+    const left = await fetchBatchGqlWithSplitting(octokit, owner, repoName, leftPrs, `${label}L`);
+    const right = await fetchBatchGqlWithSplitting(octokit, owner, repoName, rightPrs, `${label}R`);
 
     const merged = new Map(left.data);
     for (const [idx, val] of right.data) {
       merged.set(idx + mid, val);
     }
+    const totalOk = merged.size;
+    const totalErr = left.errors.length + right.errors.length;
+    logger.info(`[gql-fetch] ${label}: split done — ${totalOk} PRs OK, ${totalErr} errors`);
     return { data: merged, errors: [...left.errors, ...right.errors] };
   }
 }
@@ -582,6 +603,9 @@ export async function syncPrBatch(
     }
   }
 
+  logger.info(
+    `[syncPrBatch] ${owner}/${repoName}: done — ${reviewCount} reviews, ${errors.length} errors across ${totalBatches} batch(es)`,
+  );
   return { reviews: reviewCount, errors };
 }
 

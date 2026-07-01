@@ -70,6 +70,7 @@ export function makeOctokit(token: string): Octokit {
     userAgent: "gitgud/0.0.1",
     request: { fetch: globalThis.fetch },
     throttle: {
+      fallbackSecondaryRateRetryAfter: 15,
       onRateLimit: (
         retryAfter: number,
         options: { method: string; url: string },
