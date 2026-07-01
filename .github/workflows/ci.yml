@@ -41,6 +41,8 @@ jobs:
       SUPABASE_URL: http://127.0.0.1:54321
       SUPABASE_ANON_KEY: sb_publishable_ACJWlzQHlZjBrEguHvfOxg_3BJgxAaH
       SUPABASE_SERVICE_ROLE_KEY: sb_secret_N7UND0UgjKTVK-Uodkm0Hg_xSvEMPvz
+      # Passphrase for pgcrypto's pgp_sym_encrypt/decrypt — local-only, not a real secret
+      GITHUB_TOKEN_ENCRYPTION_KEY: ci-local-test-encryption-key-not-a-secret
     steps:
       - uses: actions/checkout@v6
       - uses: actions/setup-node@v6
@@ -56,4 +58,22 @@ jobs:
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      # pat-leak.test.ts spawns a real `astro dev` server (Cloudflare Workers runtime via
+      # wrangler). That runtime reads bindings from .dev.vars, not from process.env — so
+      # SUPABASE_URL/KEY and GITHUB_TOKEN_ENCRYPTION_KEY must be duplicated here in the
+      # astro:env schema's naming (SUPABASE_KEY / SUPABASE_SERVICE_KEY) for the dev server
+      # and its Workflow binding to see them.
+      - run: |
+          cat > .dev.vars <<EOF
+          SUPABASE_URL=${SUPABASE_URL}
+          SUPABASE_KEY=${SUPABASE_ANON_KEY}
+          SUPABASE_SERVICE_KEY=${SUPABASE_SERVICE_ROLE_KEY}
+          GITHUB_TOKEN_ENCRYPTION_KEY=${GITHUB_TOKEN_ENCRYPTION_KEY}
+          EOF
+      # pat-leak.test.ts's `astro dev` server has an "ai" (Workers AI) binding with no local
+      # emulation, so wrangler always opens a remote proxy session for it — needs Cloudflare
+      # auth even in dev mode, same as the `astro sync`/`wrangler deploy --dry-run` steps.
       - run: npx vitest run tests/integration/
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
