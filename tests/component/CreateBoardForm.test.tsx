@@ -71,13 +71,13 @@ function installFetchMock(options: FetchMockOptions = {}) {
 async function fillStep1(user: UserEvent, boardName = "Test Board", pat = PAT) {
   await user.type(screen.getByLabelText(/Board name/i), boardName);
   await user.type(screen.getByLabelText(/GitHub Personal Access Token/i), pat);
-  await waitFor(() => expect(screen.getByText(/Connected as/i)).toBeInTheDocument(), { timeout: 5000 });
+  await waitFor(() => expect(screen.getByText(/Connected as/i)).toBeInTheDocument(), { timeout: 2000 });
 }
 
 async function goToStep2(user: UserEvent, boardName = "Test Board") {
   await fillStep1(user, boardName);
   await user.click(screen.getByRole("button", { name: /next/i }));
-  await waitFor(() => expect(screen.getByText("Step 2 of 3")).toBeInTheDocument(), { timeout: 5000 });
+  await waitFor(() => expect(screen.getByText("Step 2 of 3")).toBeInTheDocument());
   await screen.findByText(REPO_A.fullName);
 }
 
@@ -116,7 +116,7 @@ describe("CreateBoardForm", () => {
     render(<CreateBoardForm />);
 
     await user.type(screen.getByLabelText(/GitHub Personal Access Token/i), PAT);
-    await waitFor(() => expect(screen.getByText(/Connected as/i)).toBeInTheDocument(), { timeout: 5000 });
+    await waitFor(() => expect(screen.getByText(/Connected as/i)).toBeInTheDocument(), { timeout: 2000 });
 
     await user.click(screen.getByRole("button", { name: /next/i }));
 
@@ -189,7 +189,7 @@ describe("CreateBoardForm", () => {
 
     await user.clear(screen.getByLabelText(/GitHub Personal Access Token/i));
     await user.type(screen.getByLabelText(/GitHub Personal Access Token/i), PAT_B);
-    await waitFor(() => expect(screen.getByText(/Connected as/i)).toBeInTheDocument(), { timeout: 5000 });
+    await waitFor(() => expect(screen.getByText(/Connected as/i)).toBeInTheDocument(), { timeout: 2000 });
 
     await user.click(screen.getByRole("button", { name: /next/i }));
     await waitFor(() => expect(screen.getByText("Step 2 of 3")).toBeInTheDocument());
@@ -308,7 +308,7 @@ describe("CreateBoardForm", () => {
     render(<CreateBoardForm />);
 
     await user.type(screen.getByLabelText(/GitHub Personal Access Token/i), PAT);
-    await waitFor(() => expect(screen.getByText(/Connected as/i)).toBeInTheDocument(), { timeout: 5000 });
+    await waitFor(() => expect(screen.getByText(/Connected as/i)).toBeInTheDocument(), { timeout: 2000 });
 
     expect(screen.getByText(WARNING)).toBeInTheDocument();
   });
