@@ -186,18 +186,23 @@ export class ClassificationBatchWorkflow extends WorkflowEntrypoint<Env, Classif
 
     let reviewSince = sinceDate;
     for (let p = 0; ; p++) {
-      const result = await runStep(step, `sync-review-comments-${p}`, async () => {
-        const { comments, nextSince } = await syncReviewCommentsForRepo(
-          supabase,
-          octokit,
-          repoId,
-          owner,
-          repoName,
-          reviewSince,
-          25,
-        );
-        return { comments, nextSince: nextSince?.toISOString() ?? null };
-      });
+      const result = await runStep(
+        step,
+        `sync-review-comments-${p}`,
+        async () => {
+          const { comments, nextSince } = await syncReviewCommentsForRepo(
+            supabase,
+            octokit,
+            repoId,
+            owner,
+            repoName,
+            reviewSince,
+            25,
+          );
+          return { comments, nextSince: nextSince?.toISOString() ?? null };
+        },
+        { retries: { limit: 0, delay: "1 second" } },
+      );
       if (!result.nextSince) break;
       reviewSince = new Date(result.nextSince);
       await step.sleep(`budget-reset-review-${p}`, "1 second");
