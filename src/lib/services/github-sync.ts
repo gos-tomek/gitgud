@@ -399,9 +399,14 @@ export async function syncPrBatch(
   repoName: string,
   prs: PrRef[],
 ): Promise<{ reviews: number; errors: string[] }> {
+  const t0 = Date.now();
+  logger.info(
+    `[syncPrBatch] ${owner}/${repoName}: START — ${prs.length} PRs, ${Math.ceil(prs.length / GQL_PRS_PER_QUERY)} GQL batch(es)`,
+  );
   let reviewCount = 0;
   const errors: string[] = [];
   const now = new Date().toISOString();
+  let gqlCalls = 0;
 
   // Flush once per GQL batch (not per-PR and not deferred to end-of-loop).
   // Per-PR (original): 2×N Supabase calls per batch — hit the Worker subrequest limit.
@@ -420,10 +425,17 @@ export async function syncPrBatch(
     );
 
     const batchLabel = `${owner}/${repoName}: batch ${batchIdx + 1}/${totalBatches}`;
+    const tGql = Date.now();
     const fetchResult = await fetchBatchGqlWithSplitting(octokit, owner, repoName, batchPrs, batchLabel);
+    gqlCalls++;
     errors.push(...fetchResult.errors);
 
-    if (fetchResult.data.size === 0) continue;
+    if (fetchResult.data.size === 0) {
+      logger.info(
+        `[syncPrBatch] ${owner}/${repoName}: batch ${batchIdx + 1}/${totalBatches} — no data returned, GQL took ${Date.now() - tGql}ms`,
+      );
+      continue;
+    }
 
     const batchSizeUpdates: { id: number; additions: number; deletions: number; changed_files: number }[] = [];
     const reviewNodesByPrId = new Map<number, GqlReviewNode[]>();
@@ -550,6 +562,7 @@ export async function syncPrBatch(
     // as a thrown exception (not a PostgREST { error }). "Too many subrequests" is
     // re-thrown so the Workflow step fails and Cloudflare retries in a new invocation
     // with a fresh 50-subrequest budget. Other exceptions are caught gracefully.
+    const tDb = Date.now();
     if (batchSizeUpdates.length > 0) {
       try {
         const { error } = await supabase.rpc("batch_update_pr_sizes", { updates: batchSizeUpdates });
@@ -580,8 +593,14 @@ export async function syncPrBatch(
         logger.warn(`[github-sync] ${msg}`);
       }
     }
+    logger.info(
+      `[syncPrBatch] ${owner}/${repoName}: batch ${batchIdx + 1}/${totalBatches} — GQL ${Date.now() - tGql}ms, DB writes ${Date.now() - tDb}ms, ${batchSizeUpdates.length} size updates, ${batchReviewRows.length} reviews`,
+    );
   }
 
+  logger.info(
+    `[syncPrBatch] ${owner}/${repoName}: DONE in ${Date.now() - t0}ms — ${prs.length} PRs, ${gqlCalls} GQL call(s), ${reviewCount} reviews, ${errors.length} error(s)`,
+  );
   return { reviews: reviewCount, errors };
 }
 
