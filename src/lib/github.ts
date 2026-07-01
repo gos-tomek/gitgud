@@ -1,10 +1,11 @@
 import { Octokit } from "@octokit/rest";
 import { retry } from "@octokit/plugin-retry";
+import { throttling } from "@octokit/plugin-throttling";
 import type { createClient } from "@/lib/supabase";
 import { GITHUB_TOKEN_ENCRYPTION_KEY } from "astro:env/server";
 import { logger } from "@/lib/logger";
 
-const OctokitWithRetry = Octokit.plugin(retry);
+const OctokitWithPlugins = Octokit.plugin(retry, throttling);
 
 // Per-request timeout guards against GitHub keeping a connection open indefinitely
 // (observed: 16-min hangs on large GQL queries before Cloudflare killed the step).
@@ -35,6 +36,11 @@ export class GitHubAuthError extends Error {
   }
 }
 
+function isSecondaryRateLimit(error: unknown): boolean {
+  const msg = (error as { message?: string }).message ?? "";
+  return msg.includes("secondary rate limit") || msg.includes("abuse detection");
+}
+
 // GitHub's "GitHub-Authentication-Token-Expiration" header is non-ISO and comes in two known
 // shapes: "2026-06-03 19:52:44 UTC" (named zone) and "2025-09-05 17:55:53 +0500" (numeric offset).
 // Rejecting past dates guards against a 2025 GitHub bug that returned server time instead of the
@@ -56,11 +62,37 @@ export function parseGitHubTokenExpiry(raw: string): Date | null {
   return date;
 }
 
+const MAX_RETRIES = 3;
+
 export function makeOctokit(token: string): Octokit {
-  const octokit = new OctokitWithRetry({
+  const octokit = new OctokitWithPlugins({
     auth: token,
     userAgent: "gitgud/0.0.1",
     request: { fetch: globalThis.fetch },
+    throttle: {
+      onRateLimit: (
+        retryAfter: number,
+        options: { method: string; url: string },
+        _octokit: unknown,
+        retryCount: number,
+      ) => {
+        logger.warn(
+          `[github] rate limit hit for ${options.method} ${options.url}, retry-after ${retryAfter}s (attempt ${retryCount + 1}/${MAX_RETRIES})`,
+        );
+        return retryCount < MAX_RETRIES;
+      },
+      onSecondaryRateLimit: (
+        retryAfter: number,
+        options: { method: string; url: string },
+        _octokit: unknown,
+        retryCount: number,
+      ) => {
+        logger.warn(
+          `[github] secondary rate limit for ${options.method} ${options.url}, retry-after ${retryAfter}s (attempt ${retryCount + 1}/${MAX_RETRIES})`,
+        );
+        return retryCount < MAX_RETRIES;
+      },
+    },
   });
 
   // Inject a fresh AbortSignal per request so hanging GitHub responses
@@ -92,7 +124,10 @@ export function makeOctokit(token: string): Octokit {
   octokit.hook.error("request", (error) => {
     const status = (error as { status?: number }).status ?? 0;
     logger.warn(`[github] ✗ status=${status} ${error.message}`);
-    if (status === 401 || status === 403) {
+    if (status === 401) {
+      throw new GitHubAuthError(`GitHub API auth error ${status}: ${error.message}`);
+    }
+    if (status === 403 && !isSecondaryRateLimit(error)) {
       throw new GitHubAuthError(`GitHub API auth error ${status}: ${error.message}`);
     }
     throw error;

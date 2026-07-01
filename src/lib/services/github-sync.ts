@@ -39,17 +39,24 @@ function describeError(err: unknown): string {
   return String(err);
 }
 
-// Retry a GQL call on transient 502s (Bad Gateway from GitHub).
-// Re-throws immediately on subrequest budget errors and non-502 failures.
+function isTransientGqlError(desc: string): boolean {
+  return desc.includes("502") || desc.includes("aborted") || desc.includes("timeout") || desc.includes("ETIMEDOUT");
+}
+
+// Retry a GQL call on transient failures: 502 (Bad Gateway), AbortSignal timeouts, network timeouts.
+// Re-throws immediately on subrequest budget errors and non-transient failures.
 async function withRetry<T>(fn: () => Promise<T>): Promise<T> {
-  const delays = [500, 1000];
+  const delays = [1000, 3000];
   for (let attempt = 0; ; attempt++) {
     try {
       return await fn();
     } catch (err) {
       const desc = describeError(err);
       if (desc.includes("Too many subrequests")) throw err;
-      if (attempt >= delays.length || !desc.includes("502")) throw err;
+      if (attempt >= delays.length || !isTransientGqlError(desc)) throw err;
+      logger.info(
+        `[withRetry] transient failure (attempt ${attempt + 1}/${delays.length + 1}), retrying in ${delays[attempt]}ms: ${desc.slice(0, 120)}`,
+      );
       await new Promise<void>((resolve) => setTimeout(resolve, delays[attempt]));
     }
   }
@@ -323,6 +330,65 @@ function buildBatchReviewPageQuery(items: { number: number; cursor: string }[]):
   return { query, variables };
 }
 
+const MIN_SPLIT_SIZE = 10;
+
+// Tries to fetch a batch of PRs via GQL; on transient failure (timeout/502), splits into halves
+// and retries each half recursively. Stops splitting at MIN_SPLIT_SIZE to avoid infinite recursion.
+// Returns a Map<prIndex, GqlPrData> where prIndex is the position in the input `prs` array.
+async function fetchBatchGqlWithSplitting(
+  octokit: Octokit,
+  owner: string,
+  repoName: string,
+  prs: PrRef[],
+  label: string,
+): Promise<{ data: Map<number, GqlPrData>; errors: string[] }> {
+  const t0 = Date.now();
+  try {
+    const response = await withRetry(() =>
+      octokit.graphql<{ repository: Partial<Record<string, GqlPrData>> }>(buildBatchPrDetailsQuery(prs), {
+        owner,
+        name: repoName,
+      }),
+    );
+    logger.info(`[syncPrBatch] ${label} GQL done in ${Date.now() - t0}ms (${prs.length} PRs)`);
+    const result = new Map<number, GqlPrData>();
+    for (let j = 0; j < prs.length; j++) {
+      const prData = response.repository[`pr_${j}`];
+      if (prData) result.set(j, prData);
+    }
+    return { data: result, errors: [] };
+  } catch (err) {
+    const desc = describeError(err);
+    if (desc.includes("Too many subrequests")) throw err;
+
+    if (prs.length <= MIN_SPLIT_SIZE || !isTransientGqlError(desc)) {
+      logger.warn(
+        `[syncPrBatch] ${label} GQL failed after ${Date.now() - t0}ms (${prs.length} PRs, no further splitting): ${desc.slice(0, 200)}`,
+      );
+      return {
+        data: new Map(),
+        errors: prs.map((pr) => `PR #${pr.number} (${owner}/${repoName}): GraphQL batch failed: ${desc}`),
+      };
+    }
+
+    const mid = Math.ceil(prs.length / 2);
+    logger.warn(
+      `[syncPrBatch] ${label} GQL failed after ${Date.now() - t0}ms, splitting ${prs.length} → ${mid}+${prs.length - mid}`,
+    );
+    const leftPrs = prs.slice(0, mid);
+    const rightPrs = prs.slice(mid);
+
+    const left = await fetchBatchGqlWithSplitting(octokit, owner, repoName, leftPrs, `${label}a`);
+    const right = await fetchBatchGqlWithSplitting(octokit, owner, repoName, rightPrs, `${label}b`);
+
+    const merged = new Map(left.data);
+    for (const [idx, val] of right.data) {
+      merged.set(idx + mid, val);
+    }
+    return { data: merged, errors: [...left.errors, ...right.errors] };
+  }
+}
+
 // Fetches per-PR detail (size stats) + reviews for a slice of PRs via GraphQL, batching
 // GQL_PRS_PER_QUERY PRs per query instead of 2 REST calls per PR.
 // ~150 PRs → 15 GraphQL queries (~15s) vs 300+ sequential REST calls (>10min).
@@ -353,42 +419,24 @@ export async function syncPrBatch(
       `[syncPrBatch] ${owner}/${repoName}: batch ${batchIdx + 1}/${totalBatches} — PRs #${firstPr}–#${lastPr} (${batchPrs.length} PRs)`,
     );
 
-    let batchData: Partial<Record<string, GqlPrData>>;
-    const t0 = Date.now();
-    try {
-      const response = await withRetry(() =>
-        octokit.graphql<{ repository: Partial<Record<string, GqlPrData>> }>(buildBatchPrDetailsQuery(batchPrs), {
-          owner,
-          name: repoName,
-        }),
-      );
-      logger.info(
-        `[syncPrBatch] ${owner}/${repoName}: batch ${batchIdx + 1}/${totalBatches} GQL done in ${Date.now() - t0}ms`,
-      );
-      batchData = response.repository;
-    } catch (err) {
-      logger.warn(
-        `[syncPrBatch] ${owner}/${repoName}: batch ${batchIdx + 1}/${totalBatches} GQL failed after ${Date.now() - t0}ms: ${describeError(err)}`,
-      );
-      if (describeError(err).includes("Too many subrequests")) throw err;
-      for (const pr of batchPrs) {
-        errors.push(`PR #${pr.number} (${owner}/${repoName}): GraphQL batch failed: ${describeError(err)}`);
-      }
-      continue;
-    }
+    const batchLabel = `${owner}/${repoName}: batch ${batchIdx + 1}/${totalBatches}`;
+    const fetchResult = await fetchBatchGqlWithSplitting(octokit, owner, repoName, batchPrs, batchLabel);
+    errors.push(...fetchResult.errors);
+
+    if (fetchResult.data.size === 0) continue;
 
     const batchSizeUpdates: { id: number; additions: number; deletions: number; changed_files: number }[] = [];
-    // Accumulated review nodes keyed by PR id, grown across overflow pages.
     const reviewNodesByPrId = new Map<number, GqlReviewNode[]>();
-    // PRs still waiting for more review pages after the current round.
     let pendingReviewPages: { prId: number; prNumber: number; cursor: string }[] = [];
 
     for (let j = 0; j < batchPrs.length; j++) {
       const pr = batchPrs[j];
-      const prData = batchData[`pr_${j}`];
+      const prData = fetchResult.data.get(j);
 
       if (!prData) {
-        errors.push(`PR #${pr.number} (${owner}/${repoName}): missing from GraphQL response`);
+        if (!fetchResult.errors.some((e) => e.includes(`PR #${pr.number}`))) {
+          errors.push(`PR #${pr.number} (${owner}/${repoName}): missing from GraphQL response`);
+        }
         continue;
       }
 
