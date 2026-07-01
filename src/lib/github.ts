@@ -69,6 +69,7 @@ export function makeOctokit(token: string): Octokit {
     auth: token,
     userAgent: "gitgud/0.0.1",
     request: { fetch: globalThis.fetch },
+    retry: { doNotRetry: [400, 401, 403, 404, 422, 500] },
     throttle: {
       onRateLimit: (
         retryAfter: number,

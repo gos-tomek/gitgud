@@ -330,19 +330,29 @@ function buildBatchReviewPageQuery(items: { number: number; cursor: string }[]):
   return { query, variables };
 }
 
-const MIN_SPLIT_SIZE = 10;
+const MIN_SPLIT_SIZE = 1;
 
-// Tries to fetch a batch of PRs via GQL; on transient failure (timeout/502), splits into halves
-// and retries each half recursively. Stops splitting at MIN_SPLIT_SIZE to avoid infinite recursion.
-// Returns a Map<prIndex, GqlPrData> where prIndex is the position in the input `prs` array.
+const BATCH_DEADLINE_MS = 120_000;
+
 async function fetchBatchGqlWithSplitting(
   octokit: Octokit,
   owner: string,
   repoName: string,
   prs: PrRef[],
   label: string,
+  deadline?: number,
 ): Promise<{ data: Map<number, GqlPrData>; errors: string[] }> {
+  const dl = deadline ?? Date.now() + BATCH_DEADLINE_MS;
   const t0 = Date.now();
+
+  if (Date.now() > dl) {
+    logger.warn(`[syncPrBatch] ${label} wall-clock deadline exceeded, skipping ${prs.length} PRs`);
+    return {
+      data: new Map(),
+      errors: prs.map((pr) => `PR #${pr.number} (${owner}/${repoName}): skipped (wall-clock deadline)`),
+    };
+  }
+
   try {
     const response = await withRetry(() =>
       octokit.graphql<{ repository: Partial<Record<string, GqlPrData>> }>(buildBatchPrDetailsQuery(prs), {
@@ -378,8 +388,8 @@ async function fetchBatchGqlWithSplitting(
     const leftPrs = prs.slice(0, mid);
     const rightPrs = prs.slice(mid);
 
-    const left = await fetchBatchGqlWithSplitting(octokit, owner, repoName, leftPrs, `${label}a`);
-    const right = await fetchBatchGqlWithSplitting(octokit, owner, repoName, rightPrs, `${label}b`);
+    const left = await fetchBatchGqlWithSplitting(octokit, owner, repoName, leftPrs, `${label}a`, dl);
+    const right = await fetchBatchGqlWithSplitting(octokit, owner, repoName, rightPrs, `${label}b`, dl);
 
     const merged = new Map(left.data);
     for (const [idx, val] of right.data) {
