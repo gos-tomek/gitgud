@@ -61,8 +61,13 @@ function describeError(err: unknown): string {
   return String(err);
 }
 
-function runStep<T extends Rpc.Serializable<T>>(step: WorkflowStep, name: string, fn: () => Promise<T>): Promise<T> {
-  return step.do(name, async () => {
+function runStep<T extends Rpc.Serializable<T>>(
+  step: WorkflowStep,
+  name: string,
+  fn: () => Promise<T>,
+  config?: Parameters<WorkflowStep["do"]>[1],
+): Promise<T> {
+  return step.do(name, config ?? {}, async () => {
     try {
       return await fn();
     } catch (err) {
@@ -155,9 +160,12 @@ export class ClassificationBatchWorkflow extends WorkflowEntrypoint<Env, Classif
 
     const prChunks = chunk(prs, GQL_PRS_PER_QUERY);
     for (let i = 0; i < prChunks.length; i++) {
-      const batchResult = await runStep(step, `sync-pr-details-${i}`, async () => {
-        return syncPrBatch(supabase, octokit, owner, repoName, prChunks[i]);
-      });
+      const batchResult = await runStep(
+        step,
+        `sync-pr-details-${i}`,
+        async () => syncPrBatch(supabase, octokit, owner, repoName, prChunks[i]),
+        { retries: { limit: 0, delay: "1 second" }, timeout: "5 minutes" },
+      );
       if (i < prChunks.length - 1) {
         // 10 s baseline keeps the GQL request rate low enough to avoid GitHub's secondary rate
         // limit (which manifests as the connection being held open until our 60 s AbortSignal
