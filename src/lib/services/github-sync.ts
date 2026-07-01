@@ -51,7 +51,7 @@ function isTimeoutError(desc: string): boolean {
 // Timeouts are NOT retried here — they take 60s each and are better handled by
 // fetchBatchGqlWithSplitting which splits the batch instead of blindly retrying.
 async function withRetry<T>(fn: () => Promise<T>): Promise<T> {
-  const delays = [500, 1000];
+  const delays = [1000, 3000];
   for (let attempt = 0; ; attempt++) {
     try {
       return await fn();
