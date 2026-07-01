@@ -40,11 +40,11 @@ function describeError(err: unknown): string {
 }
 
 function isTransientGqlError(desc: string): boolean {
-  return desc.includes("502") || desc.includes("aborted") || desc.includes("timeout") || desc.includes("ETIMEDOUT");
+  return desc.includes("502") || desc.includes("ETIMEDOUT");
 }
 
-// Retry a GQL call on transient failures: 502 (Bad Gateway), AbortSignal timeouts, network timeouts.
-// Re-throws immediately on subrequest budget errors and non-transient failures.
+// Retry on transient network failures only (502, ETIMEDOUT). AbortSignal timeouts (60s) are NOT
+// retried — they indicate a "poison PR" whose GQL query is too expensive for GitHub to resolve.
 async function withRetry<T>(fn: () => Promise<T>): Promise<T> {
   const delays = [1000, 3000];
   for (let attempt = 0; ; attempt++) {
@@ -332,7 +332,7 @@ function buildBatchReviewPageQuery(items: { number: number; cursor: string }[]):
 
 const MIN_SPLIT_SIZE = 1;
 
-const BATCH_DEADLINE_MS = 120_000;
+const BATCH_DEADLINE_MS = 180_000;
 
 async function fetchBatchGqlWithSplitting(
   octokit: Octokit,
