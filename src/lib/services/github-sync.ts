@@ -39,8 +39,12 @@ function describeError(err: unknown): string {
   return String(err);
 }
 
-function isTransientGqlError(desc: string): boolean {
+function isRetryableGqlError(desc: string): boolean {
   return desc.includes("502") || desc.includes("ETIMEDOUT");
+}
+
+function isSplittableGqlError(desc: string): boolean {
+  return isRetryableGqlError(desc) || desc.includes("aborted") || desc.includes("timeout");
 }
 
 // Retry on transient network failures only (502, ETIMEDOUT). AbortSignal timeouts (60s) are NOT
@@ -53,7 +57,7 @@ async function withRetry<T>(fn: () => Promise<T>): Promise<T> {
     } catch (err) {
       const desc = describeError(err);
       if (desc.includes("Too many subrequests")) throw err;
-      if (attempt >= delays.length || !isTransientGqlError(desc)) throw err;
+      if (attempt >= delays.length || !isRetryableGqlError(desc)) throw err;
       logger.info(
         `[withRetry] transient failure (attempt ${attempt + 1}/${delays.length + 1}), retrying in ${delays[attempt]}ms: ${desc.slice(0, 120)}`,
       );
@@ -371,7 +375,7 @@ async function fetchBatchGqlWithSplitting(
     const desc = describeError(err);
     if (desc.includes("Too many subrequests")) throw err;
 
-    if (prs.length <= MIN_SPLIT_SIZE || !isTransientGqlError(desc)) {
+    if (prs.length <= MIN_SPLIT_SIZE || !isSplittableGqlError(desc)) {
       logger.warn(
         `[syncPrBatch] ${label} GQL failed after ${Date.now() - t0}ms (${prs.length} PRs, no further splitting): ${desc.slice(0, 200)}`,
       );
