@@ -144,9 +144,9 @@ export class ClassificationBatchWorkflow extends WorkflowEntrypoint<Env, Classif
 
     const supabase = createServiceClient(this.env.SUPABASE_URL, this.env.SUPABASE_SERVICE_KEY);
 
-    const githubToken = await runStep(step, "get-github-token", () =>
-      getGitHubToken(supabase, boardId, this.env.GITHUB_TOKEN_ENCRYPTION_KEY),
-    );
+    // Fetched outside step.do() so the raw PAT is never persisted in Workflow step output.
+    // Re-executes on each replay (~1 subrequest), which is cheap and idempotent.
+    const githubToken = await getGitHubToken(supabase, boardId, this.env.GITHUB_TOKEN_ENCRYPTION_KEY);
     const octokit = makeOctokit(githubToken);
 
     const repoRow = { id: repoId, repo_owner: owner, repo_name: repoName, last_synced_at: null };
@@ -159,20 +159,28 @@ export class ClassificationBatchWorkflow extends WorkflowEntrypoint<Env, Classif
     await step.sleep("budget-reset-before-details", "1 second");
 
     const prChunks = chunk(prs, GQL_PRS_PER_QUERY);
+    const tDetails = Date.now();
+    logger.info(
+      `[sync-repo] ${owner}/${repoName}: ${prs.length} PRs in ${prChunks.length} chunk(s) of ${GQL_PRS_PER_QUERY}`,
+    );
     for (let i = 0; i < prChunks.length; i++) {
+      const tStep = Date.now();
       const batchResult = await runStep(
         step,
         `sync-pr-details-${i}`,
         async () => syncPrBatch(supabase, octokit, owner, repoName, prChunks[i]),
-        { retries: { limit: 0, delay: "1 second" }, timeout: "5 minutes" },
+        { retries: { limit: 0, delay: "1 second" } },
+      );
+      logger.info(
+        `[sync-repo] ${owner}/${repoName}: sync-pr-details-${i} step completed in ${Date.now() - tStep}ms — ${batchResult.errors.length} error(s)`,
       );
       if (i < prChunks.length - 1) {
-        // 10 s baseline keeps the GQL request rate low enough to avoid GitHub's secondary rate
-        // limit (which manifests as the connection being held open until our 60 s AbortSignal
-        // fires). 30 s on errors gives the throttle window time to fully reset.
-        await step.sleep(`budget-reset-details-${i}`, batchResult.errors.length > 0 ? "30 seconds" : "10 seconds");
+        const sleepDuration = batchResult.errors.length > 0 ? "30 seconds" : "10 seconds";
+        logger.info(`[sync-repo] ${owner}/${repoName}: sleeping ${sleepDuration} before next chunk`);
+        await step.sleep(`budget-reset-details-${i}`, sleepDuration);
       }
     }
+    logger.info(`[sync-repo] ${owner}/${repoName}: all sync-pr-details chunks completed in ${Date.now() - tDetails}ms`);
 
     await step.sleep("budget-reset-before-reviews", "1 second");
 
