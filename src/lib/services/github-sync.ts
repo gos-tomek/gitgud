@@ -16,10 +16,8 @@ const MAX_PRS_PER_REPO = 200;
 export const GQL_PRS_PER_QUERY = 100;
 
 // Maximum extra GQL calls per GQL batch for paginating beyond the first 100 review nodes.
-// Free-plan budget is 50 subrequests per invocation, shared across ALL steps in one invocation.
-// After a step.sleep checkpoint, the chunk phase starts with a fresh ~49 budget (50 minus
-// createGitHubClient). Each chunk uses 1 (rate-limit) + 1 (GQL) + overflow + 1 (RPC) + 1 (upsert).
-// With MAX_OVERFLOW_ROUNDS=2: worst case 6 per chunk, fitting ~8 chunks before re-throw → retry.
+// Each prdetails chunk is its own workflow invocation with a fresh 50-subrequest budget.
+// Per chunk: 1 (getGitHubToken) + 1 (GQL) + overflow + 1 (RPC) + 1 (upsert) ≈ 4-6 subs.
 const MAX_OVERFLOW_ROUNDS = 2;
 
 type SupabaseClient = NonNullable<ReturnType<typeof createClient>>;

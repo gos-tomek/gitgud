@@ -8,6 +8,7 @@ import {
   syncPrBatch,
   syncReviewCommentsForRepo,
   GQL_PRS_PER_QUERY,
+  type PrRef,
 } from "@/lib/services/github-sync";
 import { classifyThreads, isBotComment } from "@/lib/services/classification";
 import { logger } from "@/lib/logger";
@@ -18,13 +19,18 @@ import { logger } from "@/lib/logger";
 
 export interface ClassificationBatchParams {
   boardId: string;
-  phase?: "dispatch" | "sync-repo" | "classify";
-  // sync-repo fields (required when phase === "sync-repo")
+  phase?: "dispatch" | "sync-repo" | "prdetails" | "reviews" | "classify";
+  // sync-repo / prdetails / reviews fields
   repoId?: string;
   owner?: string;
   repoName?: string;
   since?: string;
   syncStartedAt?: string;
+  // prdetails: slice of PRs for this chunk
+  prChunk?: PrRef[];
+  chunkIndex?: number;
+  // reviews: page index for chained review instances
+  reviewPageIndex?: number;
 }
 
 // --- Constants --- //
@@ -87,6 +93,10 @@ export class ClassificationBatchWorkflow extends WorkflowEntrypoint<Env, Classif
         return this.runDispatch(event, step);
       case "sync-repo":
         return this.runSyncRepo(event, step);
+      case "prdetails":
+        return this.runPrDetails(event, step);
+      case "reviews":
+        return this.runReviews(event, step);
       case "classify":
         return this.runClassify(event, step);
     }
@@ -109,7 +119,7 @@ export class ClassificationBatchWorkflow extends WorkflowEntrypoint<Env, Classif
 
       for (const repo of repos) {
         const since = repo.last_synced_at ?? new Date(Date.now() - DEFAULT_BACKFILL_WINDOW_MS).toISOString();
-        const id = `sync-${repo.id}-${syncStamp}`;
+        const id = `repo-${repo.id}-${syncStamp}`;
         try {
           await this.env.CLASSIFICATION_BATCH.create({
             id,
@@ -133,9 +143,9 @@ export class ClassificationBatchWorkflow extends WorkflowEntrypoint<Env, Classif
     });
   }
 
-  // Phase 2: sync PR details + review comments for one repo.
-  // Steps: get-token, list-and-upsert-prs, sleep, sync-pr-details, sleep, sync-review-comments-0..N, update-last-synced, spawn-classify.
-  // Each instance starts fresh — no replay overhead from the dispatcher.
+  // Phase 2: repo orchestrator — lists PRs, spawns prdetails chunks, polls completion, then
+  // hands off to reviews (which chains to classify). Each prdetails/reviews child is its own
+  // workflow invocation with a fresh 50-subrequest budget, solving the free-plan limit.
   private async runSyncRepo(event: WorkflowEvent<ClassificationBatchParams>, step: WorkflowStep) {
     const { boardId, repoId, owner, repoName, since, syncStartedAt } = event.payload;
     if (!repoId || !owner || !repoName || !since || !syncStartedAt) {
@@ -143,94 +153,211 @@ export class ClassificationBatchWorkflow extends WorkflowEntrypoint<Env, Classif
     }
 
     const supabase = createServiceClient(this.env.SUPABASE_URL, this.env.SUPABASE_SERVICE_KEY);
-
-    // Fetched outside step.do() so the raw PAT is never persisted in Workflow step output.
-    // Re-executes on each replay (~1 subrequest), which is cheap and idempotent.
     const githubToken = await getGitHubToken(supabase, boardId, this.env.GITHUB_TOKEN_ENCRYPTION_KEY);
     const octokit = makeOctokit(githubToken);
 
     const repoRow = { id: repoId, repo_owner: owner, repo_name: repoName, last_synced_at: null };
     const sinceDate = new Date(since);
+    const syncStamp = new Date(syncStartedAt).getTime();
 
     const prs = await runStep(step, "list-and-upsert-prs", () =>
       listAndUpsertPrsForRepo(supabase, octokit, repoRow, sinceDate, Number.POSITIVE_INFINITY),
     );
 
-    await step.sleep("budget-reset-before-details", "1 second");
-
     const prChunks = chunk(prs, GQL_PRS_PER_QUERY);
-    const tDetails = Date.now();
     logger.info(
       `[sync-repo] ${owner}/${repoName}: ${prs.length} PRs in ${prChunks.length} chunk(s) of ${GQL_PRS_PER_QUERY}`,
     );
-    for (let i = 0; i < prChunks.length; i++) {
-      const tStep = Date.now();
-      const batchResult = await runStep(
-        step,
-        `sync-pr-details-${i}`,
-        async () => syncPrBatch(supabase, octokit, owner, repoName, prChunks[i]),
-        { retries: { limit: 0, delay: "1 second" } },
-      );
-      logger.info(
-        `[sync-repo] ${owner}/${repoName}: sync-pr-details-${i} step completed in ${Date.now() - tStep}ms — ${batchResult.errors.length} error(s)`,
-      );
-      if (i < prChunks.length - 1) {
-        const sleepDuration = batchResult.errors.length > 0 ? "30 seconds" : "10 seconds";
-        logger.info(`[sync-repo] ${owner}/${repoName}: sleeping ${sleepDuration} before next chunk`);
-        await step.sleep(`budget-reset-details-${i}`, sleepDuration);
-      }
-    }
-    logger.info(`[sync-repo] ${owner}/${repoName}: all sync-pr-details chunks completed in ${Date.now() - tDetails}ms`);
 
-    await step.sleep("budget-reset-before-reviews", "1 second");
-
-    let reviewSince = sinceDate;
-    for (let p = 0; ; p++) {
-      const result = await runStep(
-        step,
-        `sync-review-comments-${p}`,
-        async () => {
-          const { comments, nextSince } = await syncReviewCommentsForRepo(
-            supabase,
-            octokit,
-            repoId,
-            owner,
-            repoName,
-            reviewSince,
-            25,
-          );
-          return { comments, nextSince: nextSince?.toISOString() ?? null };
-        },
-        { retries: { limit: 0, delay: "1 second" } },
-      );
-      if (!result.nextSince) break;
-      reviewSince = new Date(result.nextSince);
-      await step.sleep(`budget-reset-review-${p}`, "1 second");
-    }
-
-    await runStep(step, "update-last-synced", async () => {
-      const { error } = await supabase.from("github_repos").update({ last_synced_at: syncStartedAt }).eq("id", repoId);
-      if (error) throw error;
-      return { updated: true };
-    });
-
-    const syncStamp = new Date(syncStartedAt).getTime();
-    await runStep(step, "spawn-classify", async () => {
-      try {
+    if (prChunks.length === 0) {
+      await runStep(step, "update-last-synced", async () => {
+        const { error } = await supabase
+          .from("github_repos")
+          .update({ last_synced_at: syncStartedAt })
+          .eq("id", repoId);
+        if (error) throw error;
+        return { updated: true };
+      });
+      await runStep(step, "spawn-classify", async () => {
         const classifyId = `classify-${boardId}-${repoId}-${syncStamp}`;
         await this.env.CLASSIFICATION_BATCH.create({
           id: classifyId,
           params: { boardId, phase: "classify" },
         });
         return { classifyId };
-      } catch (err) {
-        logger.error(`[sync-repo] Failed to spawn classify for board ${boardId} repo ${repoId}`, err);
-        return { classifyId: null };
+      });
+      return;
+    }
+
+    // Spawn one prdetails instance per chunk — each gets its own 50-sub invocation budget.
+    const chunkIds = await runStep(step, "spawn-prdetails", async () => {
+      const ids: string[] = [];
+      for (let i = 0; i < prChunks.length; i++) {
+        const id = `prdetails-${repoId}-${i}-${syncStamp}`;
+        await this.env.CLASSIFICATION_BATCH.create({
+          id,
+          params: {
+            boardId,
+            phase: "prdetails",
+            repoId,
+            owner,
+            repoName,
+            syncStartedAt,
+            prChunk: prChunks[i],
+            chunkIndex: i,
+          },
+        });
+        ids.push(id);
       }
+      logger.info(`[sync-repo] ${owner}/${repoName}: spawned ${ids.length} prdetails instance(s)`);
+      return ids;
+    });
+
+    // Poll chunk completion — instance.status() is a Cloudflare service call (1000/invocation),
+    // not an external subrequest (50/invocation), so polling is budget-safe.
+    for (let attempt = 0; ; attempt++) {
+      const poll = await runStep(step, `poll-chunks-${attempt}`, async () => {
+        const statuses = await Promise.all(
+          chunkIds.map(async (id) => {
+            const instance = await this.env.CLASSIFICATION_BATCH.get(id);
+            const { status } = await instance.status();
+            return { id, status };
+          }),
+        );
+        const pending = statuses.filter(
+          (s) => s.status !== "complete" && s.status !== "errored" && s.status !== "terminated",
+        );
+        return { done: pending.length === 0, pending: pending.length };
+      });
+      if (poll.done) break;
+      logger.info(`[sync-repo] ${owner}/${repoName}: ${poll.pending} chunk(s) still running, sleeping 30s`);
+      await step.sleep(`wait-chunks-${attempt}`, "30 seconds");
+    }
+
+    logger.info(`[sync-repo] ${owner}/${repoName}: all prdetails chunks done, spawning reviews`);
+
+    // Fire-and-forget: reviews chain handles update-last-synced + classify spawn.
+    await runStep(step, "spawn-reviews", async () => {
+      const reviewsId = `reviews-${repoId}-0-${syncStamp}`;
+      await this.env.CLASSIFICATION_BATCH.create({
+        id: reviewsId,
+        params: {
+          boardId,
+          phase: "reviews",
+          repoId,
+          owner,
+          repoName,
+          since,
+          syncStartedAt,
+          reviewPageIndex: 0,
+        },
+      });
+      return { reviewsId };
     });
   }
 
-  // Phase 3: classify unprocessed review threads.
+  // Phase 3: enrich one chunk of PRs with size stats + reviews via GraphQL.
+  // Own invocation = own 50-subrequest budget (~4-6 external subs per chunk).
+  private async runPrDetails(event: WorkflowEvent<ClassificationBatchParams>, step: WorkflowStep) {
+    const { boardId, repoId, owner, repoName, prChunk, chunkIndex } = event.payload;
+    if (!repoId || !owner || !repoName || !prChunk || chunkIndex === undefined) {
+      throw new Error("prdetails phase requires repoId, owner, repoName, prChunk, chunkIndex");
+    }
+
+    const supabase = createServiceClient(this.env.SUPABASE_URL, this.env.SUPABASE_SERVICE_KEY);
+    const githubToken = await getGitHubToken(supabase, boardId, this.env.GITHUB_TOKEN_ENCRYPTION_KEY);
+    const octokit = makeOctokit(githubToken);
+
+    logger.info(`[prdetails] ${owner}/${repoName}: chunk ${chunkIndex} — ${prChunk.length} PRs`);
+
+    await runStep(step, "sync-pr-details", async () => syncPrBatch(supabase, octokit, owner, repoName, prChunk), {
+      retries: { limit: 0, delay: "1 second" },
+    });
+  }
+
+  // Phase 4: sync review comments for one repo. Each instance processes up to 25 REST pages.
+  // If truncated, chains to the next reviews instance. The last instance (not truncated)
+  // finalizes: update-last-synced + spawn classify.
+  private async runReviews(event: WorkflowEvent<ClassificationBatchParams>, step: WorkflowStep) {
+    const { boardId, repoId, owner, repoName, since, syncStartedAt, reviewPageIndex } = event.payload;
+    if (!repoId || !owner || !repoName || !since || !syncStartedAt || reviewPageIndex === undefined) {
+      throw new Error("reviews phase requires repoId, owner, repoName, since, syncStartedAt, reviewPageIndex");
+    }
+
+    const supabase = createServiceClient(this.env.SUPABASE_URL, this.env.SUPABASE_SERVICE_KEY);
+    const githubToken = await getGitHubToken(supabase, boardId, this.env.GITHUB_TOKEN_ENCRYPTION_KEY);
+    const octokit = makeOctokit(githubToken);
+
+    logger.info(`[reviews] ${owner}/${repoName}: page index ${reviewPageIndex}`);
+
+    const result = await runStep(
+      step,
+      "sync-review-comments",
+      async () => {
+        const { comments, nextSince } = await syncReviewCommentsForRepo(
+          supabase,
+          octokit,
+          repoId,
+          owner,
+          repoName,
+          new Date(since),
+          25,
+        );
+        return { comments, nextSince: nextSince?.toISOString() ?? null };
+      },
+      { retries: { limit: 0, delay: "1 second" } },
+    );
+
+    const syncStamp = new Date(syncStartedAt).getTime();
+
+    const { nextSince } = result;
+    if (nextSince) {
+      const nextIdx = reviewPageIndex + 1;
+      await runStep(step, "spawn-next-reviews", async () => {
+        const id = `reviews-${repoId}-${nextIdx}-${syncStamp}`;
+        await this.env.CLASSIFICATION_BATCH.create({
+          id,
+          params: {
+            boardId,
+            phase: "reviews",
+            repoId,
+            owner,
+            repoName,
+            since: nextSince,
+            syncStartedAt,
+            reviewPageIndex: nextIdx,
+          },
+        });
+        logger.info(`[reviews] ${owner}/${repoName}: chained to reviews page ${nextIdx}`);
+        return { nextReviewsId: id };
+      });
+    } else {
+      await runStep(step, "update-last-synced", async () => {
+        const { error } = await supabase
+          .from("github_repos")
+          .update({ last_synced_at: syncStartedAt })
+          .eq("id", repoId);
+        if (error) throw error;
+        return { updated: true };
+      });
+
+      await runStep(step, "spawn-classify", async () => {
+        try {
+          const classifyId = `classify-${boardId}-${repoId}-${syncStamp}`;
+          await this.env.CLASSIFICATION_BATCH.create({
+            id: classifyId,
+            params: { boardId, phase: "classify" },
+          });
+          return { classifyId };
+        } catch (err) {
+          logger.error(`[reviews] Failed to spawn classify for board ${boardId} repo ${repoId}`, err);
+          return { classifyId: null };
+        }
+      });
+    }
+  }
+
+  // Phase 5: classify unprocessed review threads.
   // Starts fresh — no replay from sync phases.
   private async runClassify(event: WorkflowEvent<ClassificationBatchParams>, step: WorkflowStep) {
     const { boardId } = event.payload;
