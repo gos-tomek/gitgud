@@ -215,13 +215,35 @@ export async function syncReviewCommentsForRepo(
     })
     .filter((row): row is NonNullable<typeof row> => row !== null);
 
+  let insertedCount = 0;
+
   if (rows.length > 0) {
-    const { error } = await supabase.from("github_review_comments").upsert(rows, { onConflict: "id" });
-    if (error) throw new Error(`github_review_comments upsert (${rows.length} rows): ${error.message}`);
+    const reviewIds = [...new Set(rows.map((r) => r.review_id).filter((id): id is number => id !== null))];
+    const knownReviewIds = new Set<number>();
+    const IN_CHUNK = 500;
+    for (let i = 0; i < reviewIds.length; i += IN_CHUNK) {
+      const slice = reviewIds.slice(i, i + IN_CHUNK);
+      const { data: existing, error: lookupErr } = await supabase.from("github_reviews").select("id").in("id", slice);
+      if (lookupErr) throw new Error(`github_reviews lookup: ${lookupErr.message}`);
+      for (const r of existing) knownReviewIds.add(r.id as number);
+    }
+
+    const validRows = rows.filter((r) => r.review_id === null || knownReviewIds.has(r.review_id));
+    if (validRows.length < rows.length) {
+      logger.warn(
+        `[github-sync] skipped ${rows.length - validRows.length} review comment(s) with missing review_id FK`,
+      );
+    }
+
+    if (validRows.length > 0) {
+      const { error } = await supabase.from("github_review_comments").upsert(validRows, { onConflict: "id" });
+      if (error) throw new Error(`github_review_comments upsert (${validRows.length} rows): ${error.message}`);
+    }
+    insertedCount = validRows.length;
   }
 
   return {
-    comments: rows.length,
+    comments: insertedCount,
     nextSince: truncated && lastUpdatedAt !== undefined ? new Date(lastUpdatedAt) : undefined,
   };
 }
