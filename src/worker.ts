@@ -19,7 +19,7 @@ import { logger } from "@/lib/logger";
 
 export interface ClassificationBatchParams {
   boardId: string;
-  phase?: "dispatch" | "sync-repo" | "prdetails" | "reviews" | "classify";
+  phase?: "dispatch" | "sync-repo" | "orchestrate" | "prdetails" | "reviews" | "classify";
   // sync-repo / prdetails / reviews fields
   repoId?: string;
   owner?: string;
@@ -93,6 +93,8 @@ export class ClassificationBatchWorkflow extends WorkflowEntrypoint<Env, Classif
         return this.runDispatch(event, step);
       case "sync-repo":
         return this.runSyncRepo(event, step);
+      case "orchestrate":
+        return this.runOrchestrate(event, step);
       case "prdetails":
         return this.runPrDetails(event, step);
       case "reviews":
@@ -143,9 +145,9 @@ export class ClassificationBatchWorkflow extends WorkflowEntrypoint<Env, Classif
     });
   }
 
-  // Phase 2: repo orchestrator — lists PRs, spawns prdetails chunks, polls completion, then
-  // hands off to reviews (which chains to classify). Each prdetails/reviews child is its own
-  // workflow invocation with a fresh 50-subrequest budget, solving the free-plan limit.
+  // Phase 2: list PRs and hand off to orchestrate. Separated because listing alone can
+  // consume 20+ external subs (REST pagination + Supabase), and Workflow.create() also
+  // counts as an external sub — doing both in one invocation exceeds the free-plan 50-sub limit.
   private async runSyncRepo(event: WorkflowEvent<ClassificationBatchParams>, step: WorkflowStep) {
     const { boardId, repoId, owner, repoName, since, syncStartedAt } = event.payload;
     if (!repoId || !owner || !repoName || !since || !syncStartedAt) {
@@ -164,12 +166,9 @@ export class ClassificationBatchWorkflow extends WorkflowEntrypoint<Env, Classif
       listAndUpsertPrsForRepo(supabase, octokit, repoRow, sinceDate, Number.POSITIVE_INFINITY),
     );
 
-    const prChunks = chunk(prs, GQL_PRS_PER_QUERY);
-    logger.info(
-      `[sync-repo] ${owner}/${repoName}: ${prs.length} PRs in ${prChunks.length} chunk(s) of ${GQL_PRS_PER_QUERY}`,
-    );
+    logger.info(`[sync-repo] ${owner}/${repoName}: ${prs.length} PRs listed`);
 
-    if (prChunks.length === 0) {
+    if (prs.length === 0) {
       await runStep(step, "update-last-synced", async () => {
         const { error } = await supabase
           .from("github_repos")
@@ -189,7 +188,59 @@ export class ClassificationBatchWorkflow extends WorkflowEntrypoint<Env, Classif
       return;
     }
 
-    // Spawn one prdetails instance per chunk — each gets its own 50-sub invocation budget.
+    await runStep(step, "spawn-orchestrate", async () => {
+      const orchestrateId = `orchestrate-${repoId}-${syncStamp}`;
+      await this.env.CLASSIFICATION_BATCH.create({
+        id: orchestrateId,
+        params: {
+          boardId,
+          phase: "orchestrate",
+          repoId,
+          owner,
+          repoName,
+          since,
+          syncStartedAt,
+        },
+      });
+      return { orchestrateId };
+    });
+  }
+
+  // Phase 2b: orchestrate — spawns prdetails children, polls completion, hands off to reviews.
+  // Runs in its own invocation with a fresh 50-sub budget (separate from the listing step).
+  private async runOrchestrate(event: WorkflowEvent<ClassificationBatchParams>, step: WorkflowStep) {
+    const { boardId, repoId, owner, repoName, since, syncStartedAt } = event.payload;
+    if (!repoId || !owner || !repoName || !since || !syncStartedAt) {
+      throw new Error("orchestrate phase requires repoId, owner, repoName, since, syncStartedAt");
+    }
+
+    const supabase = createServiceClient(this.env.SUPABASE_URL, this.env.SUPABASE_SERVICE_KEY);
+    const sinceDate = new Date(since);
+    const syncStamp = new Date(syncStartedAt).getTime();
+
+    // Re-read PR refs from DB — they were upserted by the sync-repo instance.
+    const prs = await runStep(step, "read-pr-refs", async () => {
+      const PAGE = 1000;
+      const all: PrRef[] = [];
+      for (let from = 0; ; from += PAGE) {
+        const { data, error } = await supabase
+          .from("github_pull_requests")
+          .select("id,number")
+          .eq("repo_id", repoId)
+          .gte("updated_at", sinceDate.toISOString())
+          .range(from, from + PAGE - 1);
+        if (error) throw new Error(`read-pr-refs page ${from / PAGE + 1}: ${error.message}`);
+        all.push(...(data as PrRef[]));
+        if (data.length < PAGE) break;
+      }
+      return all;
+    });
+
+    const prChunks = chunk(prs, GQL_PRS_PER_QUERY);
+    logger.info(
+      `[orchestrate] ${owner}/${repoName}: ${prs.length} PRs in ${prChunks.length} chunk(s) of ${GQL_PRS_PER_QUERY}`,
+    );
+
     const chunkIds = await runStep(step, "spawn-prdetails", async () => {
       const ids: string[] = [];
       for (let i = 0; i < prChunks.length; i++) {
@@ -209,12 +260,10 @@ export class ClassificationBatchWorkflow extends WorkflowEntrypoint<Env, Classif
         });
         ids.push(id);
       }
-      logger.info(`[sync-repo] ${owner}/${repoName}: spawned ${ids.length} prdetails instance(s)`);
+      logger.info(`[orchestrate] ${owner}/${repoName}: spawned ${ids.length} prdetails instance(s)`);
       return ids;
     });
 
-    // Poll chunk completion — instance.status() is a Cloudflare service call (1000/invocation),
-    // not an external subrequest (50/invocation), so polling is budget-safe.
     for (let attempt = 0; ; attempt++) {
       const poll = await runStep(step, `poll-chunks-${attempt}`, async () => {
         const statuses = await Promise.all(
@@ -230,13 +279,12 @@ export class ClassificationBatchWorkflow extends WorkflowEntrypoint<Env, Classif
         return { done: pending.length === 0, pending: pending.length };
       });
       if (poll.done) break;
-      logger.info(`[sync-repo] ${owner}/${repoName}: ${poll.pending} chunk(s) still running, sleeping 30s`);
+      logger.info(`[orchestrate] ${owner}/${repoName}: ${poll.pending} chunk(s) still running, sleeping 30s`);
       await step.sleep(`wait-chunks-${attempt}`, "30 seconds");
     }
 
-    logger.info(`[sync-repo] ${owner}/${repoName}: all prdetails chunks done, spawning reviews`);
+    logger.info(`[orchestrate] ${owner}/${repoName}: all prdetails chunks done, spawning reviews`);
 
-    // Fire-and-forget: reviews chain handles update-last-synced + classify spawn.
     await runStep(step, "spawn-reviews", async () => {
       const reviewsId = `reviews-${repoId}-0-${syncStamp}`;
       await this.env.CLASSIFICATION_BATCH.create({
