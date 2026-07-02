@@ -165,15 +165,37 @@ export class ClassificationBatchWorkflow extends WorkflowEntrypoint<Env, Classif
     );
     for (let i = 0; i < prChunks.length; i++) {
       const tStep = Date.now();
-      const batchResult = await runStep(
+      let batchResult = await runStep(
         step,
         `sync-pr-details-${i}`,
         async () => syncPrBatch(supabase, octokit, owner, repoName, prChunks[i]),
         { retries: { limit: 0, delay: "1 second" } },
       );
       logger.info(
-        `[sync-repo] ${owner}/${repoName}: sync-pr-details-${i} step completed in ${Date.now() - tStep}ms — ${batchResult.errors.length} error(s)`,
+        `[sync-repo] ${owner}/${repoName}: sync-pr-details-${i} step completed in ${Date.now() - tStep}ms — ${batchResult.errors.length} error(s), throttled=${batchResult.throttled}`,
       );
+
+      if (batchResult.throttled) {
+        logger.warn(`[sync-repo] ${owner}/${repoName}: chunk ${i} throttled, cooling down 2 minutes before retry`);
+        await step.sleep(`throttle-cooldown-${i}`, "2 minutes");
+
+        batchResult = await runStep(
+          step,
+          `sync-pr-details-${i}-retry`,
+          async () => syncPrBatch(supabase, octokit, owner, repoName, prChunks[i]),
+          { retries: { limit: 0, delay: "1 second" } },
+        );
+        logger.info(
+          `[sync-repo] ${owner}/${repoName}: sync-pr-details-${i}-retry completed — ${batchResult.errors.length} error(s), throttled=${batchResult.throttled}`,
+        );
+
+        if (batchResult.throttled) {
+          throw new Error(
+            `GitHub API throttled ${owner}/${repoName} chunk ${i} after 2-minute cooldown — aborting sync`,
+          );
+        }
+      }
+
       if (i < prChunks.length - 1) {
         const sleepDuration = batchResult.errors.length > 0 ? "30 seconds" : "10 seconds";
         logger.info(`[sync-repo] ${owner}/${repoName}: sleeping ${sleepDuration} before next chunk`);
