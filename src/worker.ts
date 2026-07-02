@@ -206,8 +206,11 @@ export class ClassificationBatchWorkflow extends WorkflowEntrypoint<Env, Classif
     });
   }
 
-  // Phase 2b: orchestrate — spawns prdetails children, polls completion, hands off to reviews.
-  // Runs in its own invocation with a fresh 50-sub budget (separate from the listing step).
+  // Phase 2b: orchestrate — spawns prdetails children + reviews, all fire-and-forget.
+  // No polling: .get()/.status() are also external subs, so polling N children burns 2N subs
+  // per attempt — impossible on the free plan. Instead, prdetails and reviews run concurrently;
+  // the last reviews instance finalizes (update-last-synced + classify). Classify works on
+  // whatever data is in DB, so slow prdetails chunks get classified on the next sync cycle.
   private async runOrchestrate(event: WorkflowEvent<ClassificationBatchParams>, step: WorkflowStep) {
     const { boardId, repoId, owner, repoName, since, syncStartedAt } = event.payload;
     if (!repoId || !owner || !repoName || !since || !syncStartedAt) {
@@ -241,7 +244,7 @@ export class ClassificationBatchWorkflow extends WorkflowEntrypoint<Env, Classif
       `[orchestrate] ${owner}/${repoName}: ${prs.length} PRs in ${prChunks.length} chunk(s) of ${GQL_PRS_PER_QUERY}`,
     );
 
-    const chunkIds = await runStep(step, "spawn-prdetails", async () => {
+    await runStep(step, "spawn-prdetails", async () => {
       const ids: string[] = [];
       for (let i = 0; i < prChunks.length; i++) {
         const id = `prdetails-${repoId}-${i}-${syncStamp}`;
@@ -263,27 +266,6 @@ export class ClassificationBatchWorkflow extends WorkflowEntrypoint<Env, Classif
       logger.info(`[orchestrate] ${owner}/${repoName}: spawned ${ids.length} prdetails instance(s)`);
       return ids;
     });
-
-    for (let attempt = 0; ; attempt++) {
-      const poll = await runStep(step, `poll-chunks-${attempt}`, async () => {
-        const statuses = await Promise.all(
-          chunkIds.map(async (id) => {
-            const instance = await this.env.CLASSIFICATION_BATCH.get(id);
-            const { status } = await instance.status();
-            return { id, status };
-          }),
-        );
-        const pending = statuses.filter(
-          (s) => s.status !== "complete" && s.status !== "errored" && s.status !== "terminated",
-        );
-        return { done: pending.length === 0, pending: pending.length };
-      });
-      if (poll.done) break;
-      logger.info(`[orchestrate] ${owner}/${repoName}: ${poll.pending} chunk(s) still running, sleeping 30s`);
-      await step.sleep(`wait-chunks-${attempt}`, "30 seconds");
-    }
-
-    logger.info(`[orchestrate] ${owner}/${repoName}: all prdetails chunks done, spawning reviews`);
 
     await runStep(step, "spawn-reviews", async () => {
       const reviewsId = `reviews-${repoId}-0-${syncStamp}`;
