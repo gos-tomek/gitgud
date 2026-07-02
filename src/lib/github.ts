@@ -7,10 +7,6 @@ import { logger } from "@/lib/logger";
 
 const OctokitWithPlugins = Octokit.plugin(retry, throttling);
 
-// Per-request timeout guards against GitHub keeping a connection open indefinitely
-// (observed: 16-min hangs on large GQL queries before Cloudflare killed the step).
-const GH_REQUEST_TIMEOUT_MS = 60_000;
-
 type SupabaseClient = NonNullable<ReturnType<typeof createClient>>;
 
 export class GitHubTokenMissingError extends Error {
@@ -96,12 +92,7 @@ export function makeOctokit(token: string): Octokit {
     },
   });
 
-  // Inject a fresh AbortSignal per request so hanging GitHub responses
-  // (e.g. large GQL queries that never return) time out after 60 s
-  // instead of blocking the Cloudflare Worker step for 15+ minutes.
   octokit.hook.before("request", (options) => {
-    const req = options.request as Record<string, unknown>;
-    req.signal ??= AbortSignal.timeout(GH_REQUEST_TIMEOUT_MS);
     logger.info(`[github] → ${options.method} ${options.url}`);
   });
 
