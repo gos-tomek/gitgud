@@ -37,7 +37,7 @@ export interface ClassificationBatchParams {
 
 // --- Constants --- //
 
-const CLASSIFICATION_BATCH_SIZE = 50;
+const CLASSIFICATION_BATCH_SIZE = 25;
 const DEFAULT_BACKFILL_WINDOW_MS = 90 * 24 * 60 * 60 * 1000;
 
 // --- Helpers --- //
@@ -434,9 +434,14 @@ export class ClassificationBatchWorkflow extends WorkflowEntrypoint<Env, Classif
 
     const supabase = createServiceClient(this.env.SUPABASE_URL, this.env.SUPABASE_SERVICE_KEY);
 
-    const batchResults = await runStep(step, "classify-batch", async () => {
-      return classifyThreads(this.env.AI, supabase, threadChunk);
-    });
+    const batchResults = await runStep(
+      step,
+      "classify-batch",
+      async () => {
+        return classifyThreads(this.env.AI, supabase, threadChunk);
+      },
+      { retries: { limit: 0, delay: "1 second" } },
+    );
 
     await runStep(step, "store-results", async () => {
       if (batchResults.length === 0) return { stored: 0 };
