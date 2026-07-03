@@ -77,8 +77,9 @@ function runStep<T extends Rpc.Serializable<T>>(
     try {
       return await fn();
     } catch (err) {
-      logger.error(`[classification-batch] Step "${name}" failed: ${describeError(err)}`);
-      throw err;
+      const message = `Step "${name}" failed: ${describeError(err)}`;
+      logger.error(`[classification-batch] ${message}`);
+      throw new Error(message);
     }
   });
 }
