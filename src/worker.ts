@@ -19,7 +19,7 @@ import { logger } from "@/lib/logger";
 
 export interface ClassificationBatchParams {
   boardId: string;
-  phase?: "dispatch" | "sync-repo" | "orchestrate" | "prdetails" | "reviews" | "classify";
+  phase?: "dispatch" | "sync-repo" | "orchestrate" | "prdetails" | "reviews" | "classify" | "classify-chunk";
   // sync-repo / prdetails / reviews fields
   repoId?: string;
   owner?: string;
@@ -31,6 +31,8 @@ export interface ClassificationBatchParams {
   chunkIndex?: number;
   // reviews: page index for chained review instances
   reviewPageIndex?: number;
+  // classify-chunk: slice of thread root IDs for this chunk
+  threadChunk?: number[];
 }
 
 // --- Constants --- //
@@ -102,6 +104,8 @@ export class ClassificationBatchWorkflow extends WorkflowEntrypoint<Env, Classif
         return this.runReviews(event, step);
       case "classify":
         return this.runClassify(event, step);
+      case "classify-chunk":
+        return this.runClassifyChunk(event, step);
     }
   }
 
@@ -388,8 +392,9 @@ export class ClassificationBatchWorkflow extends WorkflowEntrypoint<Env, Classif
     }
   }
 
-  // Phase 5: classify unprocessed review threads.
-  // Starts fresh — no replay from sync phases.
+  // Phase 5: classify dispatcher — fetches unclassified thread IDs, chunks them,
+  // and spawns classify-chunk instances (fire-and-forget). Each chunk gets its own
+  // 50-subrequest budget, same pattern as prdetails.
   private async runClassify(event: WorkflowEvent<ClassificationBatchParams>, step: WorkflowStep) {
     const { boardId } = event.payload;
     const supabase = createServiceClient(this.env.SUPABASE_URL, this.env.SUPABASE_SERVICE_KEY);
@@ -402,21 +407,45 @@ export class ClassificationBatchWorkflow extends WorkflowEntrypoint<Env, Classif
         .map((row) => row.id);
     });
 
-    const batches = chunk(threadRootIds, CLASSIFICATION_BATCH_SIZE);
-    for (let i = 0; i < batches.length; i++) {
-      const batchResults = await runStep(step, `classify-batch-${i}`, async () => {
-        return classifyThreads(this.env.AI, supabase, batches[i]);
-      });
+    if (threadRootIds.length === 0) return;
 
-      await runStep(step, `store-results-${i}`, async () => {
-        if (batchResults.length === 0) return { stored: 0 };
-        const { error } = await supabase
-          .from("thread_classifications")
-          .upsert(batchResults, { onConflict: "thread_root_comment_id" });
-        if (error) throw error;
-        return { stored: batchResults.length };
-      });
+    const batches = chunk(threadRootIds, CLASSIFICATION_BATCH_SIZE);
+    await runStep(step, "spawn-classify-chunks", async () => {
+      const ids: string[] = [];
+      for (let i = 0; i < batches.length; i++) {
+        const id = `classify-chunk-${boardId}-${i}-${Date.now()}`;
+        await this.env.CLASSIFICATION_BATCH.create({
+          id,
+          params: { boardId, phase: "classify-chunk", threadChunk: batches[i], chunkIndex: i },
+        });
+        ids.push(id);
+      }
+      logger.info(`[classify] board ${boardId}: spawned ${ids.length} classify-chunk instance(s)`);
+      return ids;
+    });
+  }
+
+  // Phase 5b: classify one chunk of threads. Own invocation = own 50-subrequest budget.
+  private async runClassifyChunk(event: WorkflowEvent<ClassificationBatchParams>, step: WorkflowStep) {
+    const { threadChunk, chunkIndex } = event.payload;
+    if (!threadChunk || chunkIndex === undefined) {
+      throw new Error("classify-chunk phase requires threadChunk, chunkIndex");
     }
+
+    const supabase = createServiceClient(this.env.SUPABASE_URL, this.env.SUPABASE_SERVICE_KEY);
+
+    const batchResults = await runStep(step, "classify-batch", async () => {
+      return classifyThreads(this.env.AI, supabase, threadChunk);
+    });
+
+    await runStep(step, "store-results", async () => {
+      if (batchResults.length === 0) return { stored: 0 };
+      const { error } = await supabase
+        .from("thread_classifications")
+        .upsert(batchResults, { onConflict: "thread_root_comment_id" });
+      if (error) throw error;
+      return { stored: batchResults.length };
+    });
   }
 }
 
