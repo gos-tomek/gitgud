@@ -37,7 +37,7 @@ export interface ClassificationBatchParams {
 
 // --- Constants --- //
 
-const CLASSIFICATION_BATCH_SIZE = 25;
+const CLASSIFICATION_BATCH_SIZE = 10;
 const DEFAULT_BACKFILL_WINDOW_MS = 90 * 24 * 60 * 60 * 1000;
 
 // --- Helpers --- //
