@@ -251,6 +251,9 @@ export async function classifyThreads(
   }
 
   const humanRoots = (roots as CommentRow[]).filter((root) => !isBotComment(root.commenter_login));
+  logger.info(
+    `[classification] loaded ${(roots as CommentRow[]).length} roots, ${(replyRows as CommentRow[]).length} replies, ${humanRoots.length} human roots`,
+  );
   if (humanRoots.length === 0) return [];
 
   const prIds = [...new Set(humanRoots.map((root) => root.pull_request_id))];
@@ -263,20 +266,34 @@ export async function classifyThreads(
 
   const pullRequestIdByThreadId = new Map<number, number>();
   const payloads: ThreadPayload[] = [];
+  let skippedNoPrMeta = 0;
   for (const root of humanRoots) {
     const prMeta = prMetaMap.get(root.pull_request_id);
-    if (!prMeta) continue;
+    if (!prMeta) {
+      skippedNoPrMeta++;
+      continue;
+    }
 
     const humanReplies = (repliesByRoot.get(root.id) ?? []).filter((reply) => !isBotComment(reply.commenter_login));
-    // Diff hunks are not stored in the DB (Open Risk #2) — v1 classifies from comment text + PR metadata alone.
     payloads.push(assembleThreadPayload(root, humanReplies, prMeta, null));
     pullRequestIdByThreadId.set(root.id, root.pull_request_id);
   }
+  logger.info(
+    `[classification] built ${payloads.length} payloads from ${humanRoots.length} human roots (${skippedNoPrMeta} skipped — no PR metadata, ${prMetaMap.size} PRs found)`,
+  );
+
+  const subBatchCount = Math.ceil(payloads.length / CLASSIFICATION_BATCH_INPUT_SIZE);
+  logger.info(`[classification] starting ${subBatchCount} sub-batch(es) × ${CLASSIFICATION_VOTE_REPEATS} votes`);
 
   const results: ClassificationResult[] = [];
+  let skippedInvalidDomain = 0;
   for (let i = 0; i < payloads.length; i += CLASSIFICATION_BATCH_INPUT_SIZE) {
     const batch = payloads.slice(i, i + CLASSIFICATION_BATCH_INPUT_SIZE);
+    const batchIdx = i / CLASSIFICATION_BATCH_INPUT_SIZE;
     const votesByThreadId = await classifyBatch(ai, batch);
+    logger.info(
+      `[classification] sub-batch ${batchIdx}/${subBatchCount}: ${batch.length} threads → ${votesByThreadId.size} classified`,
+    );
     for (const [threadId, vote] of votesByThreadId) {
       const pullRequestId = pullRequestIdByThreadId.get(threadId);
       if (pullRequestId === undefined) continue;
@@ -288,8 +305,12 @@ export async function classifyThreads(
         model_id: CLASSIFICATION_MODEL,
       });
     }
+    skippedInvalidDomain += batch.length - votesByThreadId.size;
   }
 
+  logger.info(
+    `[classification] done: ${results.length} classified, ${skippedInvalidDomain} skipped (invalid domain / failed votes)`,
+  );
   return results;
 }
 
@@ -327,15 +348,25 @@ async function callClassificationBatch(
         : undefined;
   if (!rawText) throw new Error("Workers AI response did not include text output");
 
-  const parsedArray: unknown = JSON.parse(extractJsonArray(rawText));
+  const extracted = extractJsonArray(rawText);
+  const parsedArray: unknown = JSON.parse(extracted);
   if (!Array.isArray(parsedArray)) throw new Error("Workers AI response was not a JSON array");
 
-  // Per-item validation: one malformed item degrades only that thread's vote, not the whole
-  // batch's retry — a single bad item shouldn't throw away 3 other valid classifications.
   const byThreadId = new Map<number, ClassificationItem>();
+  let validationFailures = 0;
   for (const item of parsedArray) {
     const result = ClassificationItemSchema.safeParse(item);
-    if (result.success) byThreadId.set(result.data.thread_id, result.data);
+    if (result.success) {
+      byThreadId.set(result.data.thread_id, result.data);
+    } else {
+      validationFailures++;
+      logger.warn(`[classification] item validation failed: ${JSON.stringify(item)} — ${result.error.message}`);
+    }
+  }
+  if (validationFailures > 0 || byThreadId.size !== batch.length) {
+    logger.info(
+      `[classification] AI call: ${parsedArray.length} items returned, ${byThreadId.size} valid, ${validationFailures} failed validation, expected ${batch.length}`,
+    );
   }
   return byThreadId;
 }
@@ -350,6 +381,11 @@ async function callClassificationBatchWithRetry(
       return await callClassificationBatch(ai, batch);
     } catch (err) {
       lastError = err;
+      const errMsg = err instanceof Error ? err.message : String(err);
+      logger.warn(
+        `[classification] attempt ${attempt}/${CLASSIFICATION_MAX_RETRY_ATTEMPTS} failed for threads ${batch.map((p) => p.thread_id).join(",")}: ${errMsg}`,
+      );
+      if (errMsg.includes("Too many subrequests")) break;
       if (attempt < CLASSIFICATION_MAX_RETRY_ATTEMPTS) {
         await new Promise((resolve) => setTimeout(resolve, CLASSIFICATION_RETRY_DELAY_MS));
       }
