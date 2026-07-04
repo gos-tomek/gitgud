@@ -2,7 +2,11 @@
 -- bot rows that the caller would discard anyway.  Return only `id` (sorted, so
 -- offset-based pagination via .range() is deterministic) — the caller no longer
 -- needs `commenter_login` since bots are excluded here.
-CREATE OR REPLACE FUNCTION public.get_unclassified_root_comments_for_board(p_board_id uuid)
+--
+-- DROP first because CREATE OR REPLACE cannot change the return type.
+DROP FUNCTION IF EXISTS public.get_unclassified_root_comments_for_board(uuid);
+
+CREATE FUNCTION public.get_unclassified_root_comments_for_board(p_board_id uuid)
 RETURNS TABLE (id bigint)
 LANGUAGE sql
 STABLE
@@ -25,3 +29,6 @@ AS $$
     )
   ORDER BY grc.id;
 $$;
+
+REVOKE ALL ON FUNCTION public.get_unclassified_root_comments_for_board(uuid) FROM public, anon;
+GRANT EXECUTE ON FUNCTION public.get_unclassified_root_comments_for_board(uuid) TO authenticated;
