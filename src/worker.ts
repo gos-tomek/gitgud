@@ -10,7 +10,7 @@ import {
   GQL_PRS_PER_QUERY,
   type PrRef,
 } from "@/lib/services/github-sync";
-import { classifyThreads, isBotComment } from "@/lib/services/classification";
+import { classifyThreads } from "@/lib/services/classification";
 import { logger } from "@/lib/logger";
 
 // --- Workflow params --- //
@@ -39,7 +39,7 @@ export interface ClassificationBatchParams {
 
 // --- Constants --- //
 
-const CLASSIFICATION_BATCH_SIZE = 48;
+const CLASSIFICATION_BATCH_SIZE = 20;
 const CLASSIFY_MAX_SPAWNS_PER_DISPATCHER = 45;
 const DEFAULT_BACKFILL_WINDOW_MS = 90 * 24 * 60 * 60 * 1000;
 
@@ -47,7 +47,6 @@ const DEFAULT_BACKFILL_WINDOW_MS = 90 * 24 * 60 * 60 * 1000;
 
 interface UnclassifiedRootCommentRow {
   id: number;
-  commenter_login: string;
 }
 
 function chunk<T>(items: T[], size: number): T[][] {
@@ -409,11 +408,20 @@ export class ClassificationBatchWorkflow extends WorkflowEntrypoint<Env, Classif
     } else {
       const supabase = createServiceClient(this.env.SUPABASE_URL, this.env.SUPABASE_SERVICE_KEY);
       allThreadIds = await runStep(step, "fetch-unclassified", async () => {
-        const result = await supabase.rpc("get_unclassified_root_comments_for_board", { p_board_id: boardId });
-        if (result.error) throw result.error;
-        return (result.data as UnclassifiedRootCommentRow[])
-          .filter((row) => !isBotComment(row.commenter_login))
-          .map((row) => row.id);
+        const PAGE_SIZE = 1000;
+        const ids: number[] = [];
+        let offset = 0;
+        for (;;) {
+          const result = await supabase
+            .rpc("get_unclassified_root_comments_for_board", { p_board_id: boardId })
+            .range(offset, offset + PAGE_SIZE - 1);
+          if (result.error) throw result.error;
+          const rows = result.data as UnclassifiedRootCommentRow[];
+          for (const row of rows) ids.push(row.id);
+          if (rows.length < PAGE_SIZE) break;
+          offset += PAGE_SIZE;
+        }
+        return ids;
       });
     }
 
