@@ -31,13 +31,16 @@ export interface ClassificationBatchParams {
   chunkIndex?: number;
   // reviews: page index for chained review instances
   reviewPageIndex?: number;
+  // classify: pre-fetched thread root IDs for recursive dispatcher (avoids re-querying DB)
+  threadRootIds?: number[];
   // classify-chunk: slice of thread root IDs for this chunk
   threadChunk?: number[];
 }
 
 // --- Constants --- //
 
-const CLASSIFICATION_BATCH_SIZE = 10;
+const CLASSIFICATION_BATCH_SIZE = 48;
+const CLASSIFY_MAX_SPAWNS_PER_DISPATCHER = 45;
 const DEFAULT_BACKFILL_WINDOW_MS = 90 * 24 * 60 * 60 * 1000;
 
 // --- Helpers --- //
@@ -394,33 +397,55 @@ export class ClassificationBatchWorkflow extends WorkflowEntrypoint<Env, Classif
 
   // Phase 5: classify dispatcher — fetches unclassified thread IDs, chunks them,
   // and spawns classify-chunk instances (fire-and-forget). Each chunk gets its own
-  // 50-subrequest budget, same pattern as prdetails.
+  // 50-subrequest budget. When there are more chunks than one dispatcher can spawn
+  // (50-subrequest limit), it spawns a recursive dispatcher with the remaining IDs.
   private async runClassify(event: WorkflowEvent<ClassificationBatchParams>, step: WorkflowStep) {
     const { boardId } = event.payload;
-    const supabase = createServiceClient(this.env.SUPABASE_URL, this.env.SUPABASE_SERVICE_KEY);
 
-    const threadRootIds = await runStep(step, "fetch-unclassified", async () => {
-      const result = await supabase.rpc("get_unclassified_root_comments_for_board", { p_board_id: boardId });
-      if (result.error) throw result.error;
-      return (result.data as UnclassifiedRootCommentRow[])
-        .filter((row) => !isBotComment(row.commenter_login))
-        .map((row) => row.id);
-    });
+    let allThreadIds: number[];
+    if (event.payload.threadRootIds && event.payload.threadRootIds.length > 0) {
+      allThreadIds = event.payload.threadRootIds;
+      logger.info(`[classify] board ${boardId}: recursive dispatcher received ${allThreadIds.length} thread IDs`);
+    } else {
+      const supabase = createServiceClient(this.env.SUPABASE_URL, this.env.SUPABASE_SERVICE_KEY);
+      allThreadIds = await runStep(step, "fetch-unclassified", async () => {
+        const result = await supabase.rpc("get_unclassified_root_comments_for_board", { p_board_id: boardId });
+        if (result.error) throw result.error;
+        return (result.data as UnclassifiedRootCommentRow[])
+          .filter((row) => !isBotComment(row.commenter_login))
+          .map((row) => row.id);
+      });
+    }
 
-    if (threadRootIds.length === 0) return;
+    if (allThreadIds.length === 0) return;
 
-    const batches = chunk(threadRootIds, CLASSIFICATION_BATCH_SIZE);
+    const batches = chunk(allThreadIds, CLASSIFICATION_BATCH_SIZE);
+    const spawnBatch = batches.slice(0, CLASSIFY_MAX_SPAWNS_PER_DISPATCHER);
+    const remaining = batches.slice(CLASSIFY_MAX_SPAWNS_PER_DISPATCHER);
+
     await runStep(step, "spawn-classify-chunks", async () => {
       const ids: string[] = [];
-      for (let i = 0; i < batches.length; i++) {
+      for (let i = 0; i < spawnBatch.length; i++) {
         const id = `classify-chunk-${boardId}-${i}-${Date.now()}`;
         await this.env.CLASSIFICATION_BATCH.create({
           id,
-          params: { boardId, phase: "classify-chunk", threadChunk: batches[i], chunkIndex: i },
+          params: { boardId, phase: "classify-chunk", threadChunk: spawnBatch[i], chunkIndex: i },
         });
         ids.push(id);
       }
-      logger.info(`[classify] board ${boardId}: spawned ${ids.length} classify-chunk instance(s)`);
+      if (remaining.length > 0) {
+        const remainingIds = remaining.flat();
+        const dispatcherId = `classify-dispatch-${boardId}-${Date.now()}`;
+        await this.env.CLASSIFICATION_BATCH.create({
+          id: dispatcherId,
+          params: { boardId, phase: "classify", threadRootIds: remainingIds },
+        });
+        logger.info(
+          `[classify] board ${boardId}: spawned ${ids.length} chunk(s) + recursive dispatcher for ${remainingIds.length} remaining threads`,
+        );
+      } else {
+        logger.info(`[classify] board ${boardId}: spawned ${ids.length} classify-chunk instance(s)`);
+      }
       return ids;
     });
   }
