@@ -386,6 +386,7 @@ async function callClassificationBatchWithRetry(
         `[classification] attempt ${attempt}/${CLASSIFICATION_MAX_RETRY_ATTEMPTS} failed for threads ${batch.map((p) => p.thread_id).join(",")}: ${errMsg}`,
       );
       if (errMsg.includes("Too many subrequests")) break;
+      if (errMsg.includes("4006")) break;
       if (attempt < CLASSIFICATION_MAX_RETRY_ATTEMPTS) {
         await new Promise((resolve) => setTimeout(resolve, CLASSIFICATION_RETRY_DELAY_MS));
       }

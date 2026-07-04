@@ -183,7 +183,7 @@ export class ClassificationBatchWorkflow extends WorkflowEntrypoint<Env, Classif
         return { updated: true };
       });
       await runStep(step, "spawn-classify", async () => {
-        const classifyId = `classify-${boardId}-${repoId}-${syncStamp}`;
+        const classifyId = `classify-${boardId}-${syncStamp}`;
         await this.env.CLASSIFICATION_BATCH.create({
           id: classifyId,
           params: { boardId, phase: "classify" },
@@ -378,7 +378,7 @@ export class ClassificationBatchWorkflow extends WorkflowEntrypoint<Env, Classif
 
       await runStep(step, "spawn-classify", async () => {
         try {
-          const classifyId = `classify-${boardId}-${repoId}-${syncStamp}`;
+          const classifyId = `classify-${boardId}-${syncStamp}`;
           await this.env.CLASSIFICATION_BATCH.create({
             id: classifyId,
             params: { boardId, phase: "classify" },
