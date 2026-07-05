@@ -301,29 +301,29 @@ No invocation exceeds ~28 subrequests. All phases have ≥44% headroom from the 
 
 #### Automated
 
-- [x] 2.1 Type checking passes (`npx tsc --noEmit`)
-- [x] 2.2 Linting passes (`npm run lint`)
-- [x] 2.3 Build succeeds (`npm run build`)
-- [x] 2.4 No import errors (`grep` confirms no references to removed exports)
+- [x] 2.1 Type checking passes (`npx tsc --noEmit`) — 9ac661c
+- [x] 2.2 Linting passes (`npm run lint`) — 9ac661c
+- [x] 2.3 Build succeeds (`npm run build`) — 9ac661c
+- [x] 2.4 No import errors (`grep` confirms no references to removed exports) — 9ac661c
 
 #### Manual
 
-- [x] 2.5 Dashboard sync button still works
+- [x] 2.5 Dashboard sync button still works — 9ac661c
 
 ### Phase 3: Hermetic Tests
 
 #### Automated
 
-- [x] 3.1 Hermetic tests pass (`vitest run tests/hermetic/sync-pr-batch.test.ts tests/hermetic/sync-review-comments.test.ts`)
-- [x] 3.2 Test type checking passes (`npm run test:typecheck`)
-- [x] 3.3 Linting passes on test files (`npm run lint`)
-- [x] 3.4 Pre-commit hooks pass
+- [x] 3.1 Hermetic tests pass (`vitest run tests/hermetic/sync-pr-batch.test.ts tests/hermetic/sync-review-comments.test.ts`) — 9ac661c
+- [x] 3.2 Test type checking passes (`npm run test:typecheck`) — 9ac661c
+- [x] 3.3 Linting passes on test files (`npm run lint`) — 9ac661c
+- [x] 3.4 Pre-commit hooks pass — 9ac661c
 
 #### Manual
 
-- [x] 3.5 Review test output for clear test names and assertions
+- [x] 3.5 Review test output for clear test names and assertions — 9ac661c
 
 #### Automated (scope extension, added during review discussion)
 
-- [x] 3.6 Subrequest-budget hermetic tests for Sync-repo/Prdetails/Reviews/Classify-chunk (`list-and-upsert-prs.test.ts`, `sync-pr-batch.test.ts`, `sync-review-comments.test.ts`, `classification-voting.test.ts`) — each asserts worst-case external-request count stays under the 50-subrequest free-plan limit
-- [x] 3.7 AI majority-vote hermetic tests (`classification-voting.test.ts`) — 2-of-3 agreement, 3-way split/invalid-domain drop, out-of-enum category from AI, non-JSON AI response exhausting retries
+- [x] 3.6 Subrequest-budget hermetic tests for Sync-repo/Prdetails/Reviews/Classify-chunk (`list-and-upsert-prs.test.ts`, `sync-pr-batch.test.ts`, `sync-review-comments.test.ts`, `classification-voting.test.ts`) — each asserts worst-case external-request count stays under the 50-subrequest free-plan limit — 9ac661c
+- [x] 3.7 AI majority-vote hermetic tests (`classification-voting.test.ts`) — 2-of-3 agreement, 3-way split/invalid-domain drop, out-of-enum category from AI, non-JSON AI response exhausting retries — 9ac661c
