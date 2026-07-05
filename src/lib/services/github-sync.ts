@@ -1,6 +1,5 @@
 import type { Octokit } from "@octokit/rest";
 import type { createClient } from "@/lib/supabase";
-import { createGitHubClient } from "@/lib/github";
 import { logger } from "@/lib/logger";
 
 // Default cap protecting the in-request API route from Worker timeouts. The
@@ -62,24 +61,6 @@ async function withRetry<T>(fn: () => Promise<T>): Promise<T> {
       await new Promise<void>((resolve) => setTimeout(resolve, delays[attempt]));
     }
   }
-}
-
-export interface SyncResult {
-  repos: number;
-  pullRequests: number;
-  reviews: number;
-  comments: number;
-  errors: string[];
-}
-
-export interface SyncOptions {
-  since?: Date;
-  /** Pre-built Octokit instance — skips internal `createGitHubClient` (used by the Workflow, which already decrypted the PAT). */
-  octokit?: Octokit;
-  /** Overrides MAX_PRS_PER_REPO. Pass `Number.POSITIVE_INFINITY` to lift the cap entirely. */
-  maxPrsPerRepo?: number;
-  /** Forwarded to `createGitHubClient` when no `octokit` is provided. */
-  encryptionKey?: string;
 }
 
 export type PrItem = Awaited<ReturnType<Octokit["rest"]["pulls"]["list"]>>["data"][number];
@@ -636,40 +617,4 @@ export async function syncPrBatch(
     `[syncPrBatch] ${owner}/${repoName}: DONE in ${Date.now() - t0}ms — ${prs.length} PRs, ${gqlCalls} GQL call(s), ${reviewCount} reviews, ${errors.length} error(s)`,
   );
   return { reviews: reviewCount, errors };
-}
-
-export async function syncBoardGitHubData(
-  supabase: SupabaseClient,
-  boardId: string,
-  options?: SyncOptions,
-): Promise<SyncResult> {
-  const { since, octokit: providedOctokit, maxPrsPerRepo = MAX_PRS_PER_REPO, encryptionKey } = options ?? {};
-
-  const repos = await listBoardRepos(supabase, boardId);
-  if (repos.length === 0) return { repos: 0, pullRequests: 0, reviews: 0, comments: 0, errors: [] };
-
-  const octokit = providedOctokit ?? (await createGitHubClient(supabase, boardId, encryptionKey));
-
-  const result: SyncResult = { repos: repos.length, pullRequests: 0, reviews: 0, comments: 0, errors: [] };
-
-  for (const repo of repos) {
-    const cappedPrs = await listAndUpsertPrsForRepo(supabase, octokit, repo, since, maxPrsPerRepo);
-    result.pullRequests += cappedPrs.length;
-
-    const { reviews, errors } = await syncPrBatch(supabase, octokit, repo.repo_owner, repo.repo_name, cappedPrs);
-    result.reviews += reviews;
-    result.errors.push(...errors);
-
-    const { comments } = await syncReviewCommentsForRepo(
-      supabase,
-      octokit,
-      repo.id,
-      repo.repo_owner,
-      repo.repo_name,
-      since,
-    );
-    result.comments += comments;
-  }
-
-  return result;
 }
