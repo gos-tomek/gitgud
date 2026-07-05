@@ -289,12 +289,12 @@ No invocation exceeds 31 subrequests. All phases have ≥36% headroom from the 5
 
 #### Manual
 
-- [ ] 1.6 Trigger manual sync from dashboard for a board with repos
-- [ ] 1.7 Workflow instances visible in Cloudflare dashboard: 1 dispatch + N sync-repo + N classify
-- [ ] 1.8 No "Too many subrequests" errors in logs
-- [ ] 1.9 Classify runs after sync-repo completes (check timestamps in Cloudflare Workflow dashboard)
-- [ ] 1.10 DB tables populated correctly
-- [ ] 1.11 `github_repos.last_synced_at` updated for all synced repos
+- [x] 1.6 Trigger manual sync from dashboard for a board with repos
+- [x] 1.7 Workflow instances visible in Cloudflare dashboard: 1 dispatch + N sync-repo + N classify
+- [x] 1.8 No "Too many subrequests" errors in logs
+- [x] 1.9 Classify runs after sync-repo completes (check timestamps in Cloudflare Workflow dashboard)
+- [x] 1.10 DB tables populated correctly
+- [x] 1.11 `github_repos.last_synced_at` updated for all synced repos
 
 ### Phase 2: Dead Code Removal
 
