@@ -20,17 +20,17 @@ Nine prior PRs (#47–#55) each shifted the crash point without eliminating it b
 - `worker.ts:113-129` — dispatcher PR listing loop also has no `step.sleep` between repos (crashes on first sync of 2+ large repos)
 - `worker.ts:160-169` — classify spawned simultaneously with sync-repo from dispatcher's `spawn-children` step
 - `worker.ts:229` — classify uses 3-minute `step.sleep` as timing hack instead of real dependency
-- `syncBoardGitHubData` (github-sync.ts:483-517) — dead code, not imported anywhere, has the same subrequest bug at scale
+- `syncBoardGitHubData` (github-sync.ts:641-675) — dead code, not imported anywhere, has the same subrequest bug at scale
 
 ## Desired End State
 
-Every workflow invocation stays under 32 subrequests (36% headroom from the 50-subrequest free-plan limit). The dispatcher makes exactly 1 external call (Supabase query). Each sync-repo is self-contained: it lists its own PRs, enriches them, syncs review comments with budget resets between iterations, updates `last_synced_at`, and spawns classify. Classify runs after sync completes — no timing hacks.
+Every workflow invocation stays well under the 50-subrequest free-plan limit. The dispatcher makes exactly 1 external call (Supabase query). PR listing, enrichment, and review comment sync each run in their own workflow instance with a fresh subrequest budget. Classify runs after sync completes — no timing hacks. Large classify workloads are chunked into separate instances with a recursive dispatcher pattern.
 
-Verification: trigger a manual sync for a board with 3 repos. All three phases complete without "Too many subrequests" errors. Classify sees all synced data. DB tables populated identically to current behavior.
+Verification: trigger a manual sync for a board with 3 repos. All phases complete without "Too many subrequests" errors. Classify sees all synced data. DB tables populated identically to current behavior.
 
 ## What We're NOT Doing
 
-- Changing `GQL_PRS_PER_QUERY` (stays at 500 — fits in one invocation at ~30 subrequests, well within budget)
+- Changing `GQL_PRS_PER_QUERY` (stays at 100 — fits in one invocation at ~4-6 subrequests per chunk)
 - Modifying sync functions in `github-sync.ts` (`syncPrBatch`, `syncReviewCommentsForRepo`, `listAndUpsertPrsForRepo`)
 - Adding rate-limit guards (6-14% of GitHub's 5,000/hr budget used worst-case)
 - Fixing the non-workflow `syncBoardGitHubData` (removing it instead — it's dead code)
@@ -38,76 +38,73 @@ Verification: trigger a manual sync for a board with 3 repos. All three phases c
 
 ## Implementation Approach
 
-Move PR listing from the dispatcher into sync-repo so each instance manages its own subrequest budget. Add `step.sleep` between all loops that make external calls. Spawn classify from sync-repo's final step instead of from the dispatcher.
+Decompose the monolithic sync-repo into a chain of single-responsibility workflow instances, each with its own fresh 50-subrequest budget. The chain is: dispatch → sync-repo (list PRs) → orchestrate (read PR refs from DB, spawn children) → prdetails (GQL enrichment per chunk) + reviews (review comments, chains if truncated, finalizes with update-last-synced + spawn classify) → classify dispatcher → classify-chunk.
+
+This eliminates subrequest overflows structurally — no instance needs more than ~30 subrequests — rather than relying on `step.sleep` budget resets within a single instance. Fire-and-forget spawning avoids the need for `.get()`/`.status()` polling (which itself burns subrequests).
 
 The three fixes are interdependent (all touch the same orchestration code in `worker.ts`), so they ship as a single phase. Dead code removal and hermetic tests follow as separate phases.
 
 ---
 
-## Phase 1: Rebuild Workflow Orchestration
+## Phase 1: Rebuild Workflow Orchestration (COMPLETED — 280dd0b)
 
 ### Overview
 
-Rewrite the three workflow phases in `worker.ts` to fix all three defects. The sync functions in `github-sync.ts` are not modified — only how `worker.ts` calls them changes.
+Decomposed the monolithic workflow into a chain of single-responsibility instances. Instead of sync-repo doing everything in one invocation with `step.sleep` budget resets, each operation now runs in its own workflow instance with a fresh 50-subrequest budget.
 
-### Changes Required:
+### Architecture (as implemented)
 
-#### 1. Simplify dispatcher
+```
+dispatch (1 Supabase query)
+  └─ spawn N × sync-repo (list + upsert PRs for one repo)
+       └─ spawn 1 × orchestrate (read PR refs from DB, spawn children)
+            ├─ spawn M × prdetails (GQL enrichment for one chunk of GQL_PRS_PER_QUERY PRs)
+            └─ spawn 1 × reviews (review comments, 25 REST pages per instance)
+                 ├─ if truncated → chain to next reviews instance (since=cursor)
+                 └─ if done → update-last-synced + spawn classify
 
-**File**: `src/worker.ts` — `runDispatch` method
+classify (dispatcher — fetch unclassified thread IDs, chunk, spawn children)
+  ├─ spawn K × classify-chunk (classify one batch of 20 threads via Workers AI)
+  └─ if >45 chunks → spawn recursive classify dispatcher for remainder
+```
 
-**Intent**: Remove all GitHub interaction from the dispatcher. It should only read repos from Supabase and spawn sync-repo instances with lightweight metadata. This eliminates the subrequest overflow on first sync of multiple large repos.
+### Changes Made:
 
-**Contract**: `runDispatch` makes exactly 1 external subrequest (the `list-board-repos` Supabase query). Steps become:
+#### 1. Simplified dispatcher (`runDispatch`)
 
-- `read-sync-state` — pure computation (0 subrequests), returns `new Date().toISOString()` for consistent `last_synced_at` across all repos
-- `list-board-repos` — 1× Supabase select (1 subrequest)
-- `spawn-children` — iterates repos, computes `since` from `repo.last_synced_at` (pure), calls `workflow.create` per repo (~0 subrequests, binding calls). Does NOT spawn classify — that's sync-repo's job now.
+**File**: `src/worker.ts:114-153`
 
-Remove: `get-github-token` step, `makeOctokit` call, `RepoTarget` interface, the `sync-list-prs-{r}` loop, `budget-reset-before-spawn` sleep, classify spawning from `spawn-children`.
+Removed all GitHub interaction. Makes 1 Supabase query (`list-board-repos`), computes `since` per repo from `last_synced_at`, spawns sync-repo instances. Uses ms-precision `syncStamp` (not per-day `dateStamp`) so same-day re-syncs get unique child IDs.
 
-#### 2. Update ClassificationBatchParams
+#### 2. Expanded ClassificationBatchParams
 
-**File**: `src/worker.ts` — `ClassificationBatchParams` interface
+**File**: `src/worker.ts:20-38`
 
-**Intent**: Remove `prs` field since sync-repo now lists its own PRs.
+Replaced `prs?: PrRef[]` with granular fields for the new phases: `prChunk`, `chunkIndex`, `reviewPageIndex`, `threadRootIds`, `threadChunk`. Added `orchestrate`, `prdetails`, `reviews`, `classify-chunk` to the `phase` union.
 
-**Contract**: Remove `prs?: PrRef[]` from the interface. Other fields (`repoId`, `owner`, `repoName`, `since`, `syncStartedAt`) remain — they carry lightweight metadata from dispatcher to sync-repo.
+#### 3. Split sync-repo into sync-repo + orchestrate + prdetails + reviews
 
-#### 3. Make sync-repo self-contained
+**Files**: `src/worker.ts:158-395`
 
-**File**: `src/worker.ts` — `runSyncRepo` method
+- **sync-repo** (`runSyncRepo`, line 158): Lists + upserts PRs via `listAndUpsertPrsForRepo`. If 0 PRs, short-circuits to update-last-synced + spawn classify. Otherwise spawns one `orchestrate` instance.
+- **orchestrate** (`runOrchestrate`, line 221): Re-reads PR refs from DB (paginated), chunks by `GQL_PRS_PER_QUERY`, spawns N `prdetails` instances + 1 `reviews` instance. Fire-and-forget — no polling.
+- **prdetails** (`runPrDetails`, line 298): Enriches one chunk of PRs via `syncPrBatch`. Own invocation = own budget (~4-6 subrequests per chunk).
+- **reviews** (`runReviews`, line 318): Syncs review comments via `syncReviewCommentsForRepo` with `maxPages=25`. If truncated (`nextSince` returned), chains to next `reviews` instance. When done (not truncated), finalizes: `update-last-synced` + `spawn-classify`. Classify spawn is try-caught (non-fatal).
 
-**Intent**: Sync-repo lists its own PRs (moved from dispatcher), resets subrequest budget between all phases, and spawns classify as its final step.
+#### 4. Rebuilt classify as dispatcher + chunk pattern
 
-**Contract**: `runSyncRepo` steps become:
+**Files**: `src/worker.ts:401-487`
 
-- `get-github-token` — 1× Supabase (1 subrequest)
-- `list-and-upsert-prs` — REST pagination + 1× upsert (≤26 subrequests for supabase/supabase scale). Calls `listAndUpsertPrsForRepo(supabase, octokit, repoRow, sinceDate, Number.POSITIVE_INFINITY)` where `repoRow` is constructed from params. Returns `PrRef[]`.
-- `step.sleep("budget-reset-before-details")` — resets subrequest budget
-- `sync-pr-details` — unchanged, ~30 subrequests
-- `step.sleep("budget-reset-before-reviews")` — already exists
-- `sync-review-comments-{p}` loop — `maxPages` reduced from 45 to 25 (≤27 subrequests per iteration). `step.sleep("budget-reset-review-{p}")` added between iterations (only when `nextSince` is non-null, i.e., more pages remain).
-- `update-last-synced` — unchanged
-- `spawn-classify` — new step, calls `workflow.create` with `{ boardId, phase: "classify" }` and ID `classify-{boardId}-{repoId}-{dateStamp}`. Wrapped in try-catch (non-fatal if classify spawn fails).
+- **classify** (`runClassify`, line 401): Fetches unclassified thread IDs (paginated, 1000 per page), chunks by `CLASSIFICATION_BATCH_SIZE=20`, spawns up to `CLASSIFY_MAX_SPAWNS_PER_DISPATCHER=45` `classify-chunk` instances. If more chunks remain, spawns a recursive classify dispatcher with remaining IDs.
+- **classify-chunk** (`runClassifyChunk`, line 462): Classifies one batch of threads via `classifyThreads` (Workers AI) and upserts results.
 
-Remove: the guard that checks for `prs` in params.
+#### 5. Added shared helpers
 
-#### 4. Remove classify wait hack
+**File**: `src/worker.ts:48-89`
 
-**File**: `src/worker.ts` — `runClassify` method
-
-**Intent**: Remove the 3-minute `step.sleep("wait-for-syncs")` since classify is now spawned after sync-repo completes.
-
-**Contract**: Remove the single `step.sleep("wait-for-syncs", "3 minutes")` line. The rest of `runClassify` is unchanged.
-
-#### 5. Clean up dispatcher-only declarations
-
-**File**: `src/worker.ts` — `runDispatch` method
-
-**Intent**: Remove the inline `RepoTarget` interface that is no longer needed after dispatcher simplification.
-
-**Contract**: Remove the `RepoTarget` interface declared inside `runDispatch` (used only by the old PR-listing loop). Top-level imports stay unchanged — `getGitHubToken` and `makeOctokit` are still used by `runSyncRepo`.
+- `chunk<T>()` — generic array chunking
+- `describeError()` — error serialization (handles non-Error objects)
+- `runStep()` — wrapper around `step.do` with structured error logging
 
 ### Success Criteria:
 
@@ -122,13 +119,11 @@ Remove: the guard that checks for `prs` in params.
 #### Manual Verification:
 
 - Trigger manual sync from dashboard for a board with repos
-- Workflow instances visible in Cloudflare dashboard: 1 dispatch + N sync-repo + N classify
+- Workflow instances visible in Cloudflare dashboard: 1 dispatch + N sync-repo + N orchestrate + M prdetails + N reviews chains + classify dispatchers + K classify-chunks
 - No "Too many subrequests" errors in logs
 - Classify runs after sync-repo completes (check timestamps in Cloudflare Workflow dashboard)
 - DB tables populated: `github_pull_requests`, `github_reviews`, `github_review_comments`, `thread_classifications` contain expected data
 - `github_repos.last_synced_at` updated for all synced repos
-
-**Implementation Note**: After completing this phase and all automated verification passes, pause here for manual confirmation from the human that the manual testing was successful before proceeding to the next phase.
 
 ---
 
@@ -148,9 +143,9 @@ Remove `syncBoardGitHubData` and its exclusive dependencies from `github-sync.ts
 
 **Contract**: Remove the following exports:
 
-- `SyncResult` interface (line 39-45) — only used as return type of `syncBoardGitHubData`
-- `SyncOptions` interface (line 47-55) — only used as parameter type of `syncBoardGitHubData`
-- `syncBoardGitHubData` function (line 483-517) — dead code, not imported anywhere
+- `SyncResult` interface (line 67-73) — only used as return type of `syncBoardGitHubData`
+- `SyncOptions` interface (line 75-83) — only used as parameter type of `syncBoardGitHubData`
+- `syncBoardGitHubData` function (line 641-675) — dead code, not imported anywhere
 
 Remove the `createGitHubClient` import from `@/lib/github` (line 3) — only used inside `syncBoardGitHubData`.
 
@@ -235,9 +230,9 @@ Add tests for `syncPrBatch` and `syncReviewCommentsForRepo` with stubbed Octokit
 ### Manual Testing:
 
 1. Trigger sync from dashboard button
-2. Verify Cloudflare Workflow dashboard shows correct instance chain: dispatch → sync-repo(s) → classify(s)
+2. Verify Cloudflare Workflow dashboard shows correct instance chain: dispatch → sync-repo → orchestrate → prdetails + reviews → classify → classify-chunk
 3. Check logs for absence of "Too many subrequests" errors
-4. Verify classify timestamps are after sync-repo completion
+4. Verify classify timestamps are after reviews completion
 5. Spot-check DB tables for expected data
 
 ### What's NOT Tested:
@@ -248,22 +243,28 @@ Add tests for `syncPrBatch` and `syncReviewCommentsForRepo` with stubbed Octokit
 
 ## Performance Considerations
 
-- `step.sleep("1 second")` adds ~1s wall time per budget reset. For supabase/supabase-scale sync-repo: ~4 sleeps = ~4s overhead. Negligible vs the 13-minute total sync time.
-- Multiple classify instances (one per repo) may redundantly classify some threads. The overlap is bounded by the time between the first and last sync-repo completing. For 3 repos of similar size, overlap is minimal. Upsert makes it safe.
-- `maxPages` reduced from 45 to 25 means more review comment iterations for very large repos (2 iterations instead of 1 for supabase/supabase). Each adds 1 step.do + 1 step.sleep — well within the 1,024 step limit.
+- Each phase spawns a new workflow instance (~100ms overhead per spawn). For a board with 3 repos: ~10-15 instances total. Negligible vs the sync time.
+- prdetails chunks run concurrently (fire-and-forget from orchestrate). M chunks of 100 PRs each run in parallel, bounded only by Cloudflare's concurrent instance limit.
+- Reviews chain sequentially (each 25-page instance spawns the next). For supabase/supabase: ~2 review instances. Acceptable latency.
+- Multiple classify instances (one per repo's reviews chain) may redundantly classify some threads. Upsert makes overlap safe.
+- classify-chunk instances run concurrently (fire-and-forget from classify dispatcher). Up to 45 chunks per dispatcher; recursive dispatcher handles overflow.
 
 ## Subrequest Budget Summary
 
-| Phase                                          | Max subreqs/invocation                 | Headroom |
-| ---------------------------------------------- | -------------------------------------- | -------- |
-| Dispatch: list-board-repos + spawn             | **1**                                  | 98%      |
-| Sync-repo: get-token + list PRs                | **≤27** (24 pages + upsert + token)    | 46%      |
-| Sync-repo: PR details                          | **~31** (5 GQL × 6 + token)            | 38%      |
-| Sync-repo: review comments (per iteration)     | **≤27** (25 pages + map + upsert)      | 46%      |
-| Sync-repo: update-last-synced + spawn-classify | **≤2** (shares last review invocation) | —        |
-| Classify: fetch + batch + store                | **~3-5**                               | 90%+     |
+Each phase runs in its own workflow instance with a fresh 50-subrequest budget.
 
-No invocation exceeds 31 subrequests. All phases have ≥36% headroom from the 50-subrequest ceiling.
+| Instance                          | Max subreqs/invocation                               | Headroom |
+| --------------------------------- | ---------------------------------------------------- | -------- |
+| Dispatch                          | **~1** (1 Supabase query + N binding spawns)         | 98%      |
+| Sync-repo (list + upsert PRs)     | **≤27** (REST pagination + upsert + token)           | 46%      |
+| Orchestrate (read refs + spawn)   | **~2-3** (paginated DB read + binding spawns)        | 94%      |
+| Prdetails (per chunk)             | **~4-6** (1 token + 1 GQL + overflow + RPC + upsert) | 88%      |
+| Reviews (per 25-page iteration)   | **≤28** (1 token + 25 pages + map + upsert)          | 44%      |
+| Reviews (finalize, last instance) | **+2** (update-last-synced + spawn-classify)         | —        |
+| Classify dispatcher               | **~2-3** (1 DB query + binding spawns)               | 94%      |
+| Classify-chunk                    | **~3** (1 AI call + 1 upsert)                        | 94%      |
+
+No invocation exceeds ~28 subrequests. All phases have ≥44% headroom from the 50-subrequest ceiling.
 
 ## References
 
@@ -289,35 +290,40 @@ No invocation exceeds 31 subrequests. All phases have ≥36% headroom from the 5
 
 #### Manual
 
-- [ ] 1.6 Trigger manual sync from dashboard for a board with repos
-- [ ] 1.7 Workflow instances visible in Cloudflare dashboard: 1 dispatch + N sync-repo + N classify
-- [ ] 1.8 No "Too many subrequests" errors in logs
-- [ ] 1.9 Classify runs after sync-repo completes (check timestamps in Cloudflare Workflow dashboard)
-- [ ] 1.10 DB tables populated correctly
-- [ ] 1.11 `github_repos.last_synced_at` updated for all synced repos
+- [x] 1.6 Trigger manual sync from dashboard for a board with repos — 280dd0b
+- [x] 1.7 Workflow instances visible in Cloudflare dashboard: dispatch + sync-repo + orchestrate + prdetails + reviews + classify — 280dd0b
+- [x] 1.8 No "Too many subrequests" errors in logs — 280dd0b
+- [x] 1.9 Classify runs after sync-repo completes (check timestamps in Cloudflare Workflow dashboard) — 280dd0b
+- [x] 1.10 DB tables populated correctly — 280dd0b
+- [x] 1.11 `github_repos.last_synced_at` updated for all synced repos — 280dd0b
 
 ### Phase 2: Dead Code Removal
 
 #### Automated
 
-- [ ] 2.1 Type checking passes (`npx tsc --noEmit`)
-- [ ] 2.2 Linting passes (`npm run lint`)
-- [ ] 2.3 Build succeeds (`npm run build`)
-- [ ] 2.4 No import errors (`grep` confirms no references to removed exports)
+- [x] 2.1 Type checking passes (`npx tsc --noEmit`) — 9ac661c
+- [x] 2.2 Linting passes (`npm run lint`) — 9ac661c
+- [x] 2.3 Build succeeds (`npm run build`) — 9ac661c
+- [x] 2.4 No import errors (`grep` confirms no references to removed exports) — 9ac661c
 
 #### Manual
 
-- [ ] 2.5 Dashboard sync button still works
+- [x] 2.5 Dashboard sync button still works — 9ac661c
 
 ### Phase 3: Hermetic Tests
 
 #### Automated
 
-- [ ] 3.1 Hermetic tests pass (`vitest run tests/hermetic/sync-pr-batch.test.ts tests/hermetic/sync-review-comments.test.ts`)
-- [ ] 3.2 Test type checking passes (`npm run test:typecheck`)
-- [ ] 3.3 Linting passes on test files (`npm run lint`)
-- [ ] 3.4 Pre-commit hooks pass
+- [x] 3.1 Hermetic tests pass (`vitest run tests/hermetic/sync-pr-batch.test.ts tests/hermetic/sync-review-comments.test.ts`) — 9ac661c
+- [x] 3.2 Test type checking passes (`npm run test:typecheck`) — 9ac661c
+- [x] 3.3 Linting passes on test files (`npm run lint`) — 9ac661c
+- [x] 3.4 Pre-commit hooks pass — 9ac661c
 
 #### Manual
 
-- [ ] 3.5 Review test output for clear test names and assertions
+- [x] 3.5 Review test output for clear test names and assertions — 9ac661c
+
+#### Automated (scope extension, added during review discussion)
+
+- [x] 3.6 Subrequest-budget hermetic tests for Sync-repo/Prdetails/Reviews/Classify-chunk (`list-and-upsert-prs.test.ts`, `sync-pr-batch.test.ts`, `sync-review-comments.test.ts`, `classification-voting.test.ts`) — each asserts worst-case external-request count stays under the 50-subrequest free-plan limit — 9ac661c
+- [x] 3.7 AI majority-vote hermetic tests (`classification-voting.test.ts`) — 2-of-3 agreement, 3-way split/invalid-domain drop, out-of-enum category from AI, non-JSON AI response exhausting retries — 9ac661c

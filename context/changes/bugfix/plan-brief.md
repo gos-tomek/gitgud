@@ -14,19 +14,20 @@ Post-PR #55, the workflow is split into dispatch/sync-repo/classify, but three d
 
 ## Desired End State
 
-Every workflow invocation stays under 30 subrequests (40% headroom). The dispatcher makes 1 external call (Supabase). Each sync-repo is fully self-contained: lists PRs, enriches them, syncs review comments with budget resets, and spawns classify after completing. No timing hacks, no shared-budget crashes.
+Every workflow instance stays well under the 50-subrequest limit (~28 max, 44%+ headroom). Each operation runs in its own instance with a fresh budget. The chain is: dispatch → sync-repo → orchestrate → prdetails + reviews → classify → classify-chunk. No timing hacks, no shared-budget crashes.
 
 ## Key Decisions Made
 
-| Decision                 | Choice                            | Why (1 sentence)                                                                                                                                 | Source   |
-| ------------------------ | --------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ | -------- |
-| PR listing location      | Move from dispatcher to sync-repo | Dispatcher listing all repos in one invocation crashes at 50 subrequests on first sync of large repos.                                           | Plan     |
-| GQL_PRS_PER_QUERY        | Keep at 500 (no change)           | 5 batches × 6 subreqs = 30 fits comfortably; reducing to 50 would require PR details chunking with 10× more queries for no crash-fixing benefit. | Plan     |
-| Classify triggering      | Each sync-repo spawns classify    | No "wait for other instances" primitive in CF Workflows; per-repo spawn is simple and idempotent via upsert.                                     | Plan     |
-| Review comments maxPages | Reduce from 45 to 25              | 27 subreqs/invocation (54%) vs 47 (94%) — provides 40% headroom matching research recommendation.                                                | Research |
-| syncBoardGitHubData      | Remove (dead code)                | Not imported anywhere; dashboard button uses the Workflow, not this function.                                                                    | Plan     |
-| Rate limit guards        | Skip                              | 6-14% of GitHub's 5,000/hr budget used worst-case; each check costs a subrequest.                                                                | Research |
-| Testing                  | Hermetic tests for sync functions | Workflow orchestration (step.do/step.sleep) can't run in Vitest; sync function logic can.                                                        | Plan     |
+| Decision            | Choice                            | Why (1 sentence)                                                                                     | Source   |
+| ------------------- | --------------------------------- | ---------------------------------------------------------------------------------------------------- | -------- |
+| PR listing location | Own sync-repo instance            | Each instance gets fresh 50-sub budget; listing alone can use 20+ subs on large repos.               | Plan     |
+| GQL enrichment      | Separate prdetails instances      | One per GQL_PRS_PER_QUERY (100) chunk — ~4-6 subs each, run concurrently.                            | Plan     |
+| Review comments     | Chained reviews instances         | 25 pages per instance; chains via `since` cursor when truncated. Last instance finalizes.            | Plan     |
+| Classify triggering | Last reviews instance spawns it   | No "wait for other instances" primitive in CF Workflows; reviews chain knows when sync is done.      | Plan     |
+| Classify chunking   | Dispatcher + classify-chunk       | Each chunk of 20 threads gets own instance + Workers AI budget. Recursive dispatcher for >45 chunks. | Plan     |
+| syncBoardGitHubData | Remove (dead code)                | Not imported anywhere; dashboard button uses the Workflow, not this function.                        | Plan     |
+| Rate limit guards   | Skip                              | 6-14% of GitHub's 5,000/hr budget used worst-case; each check costs a subrequest.                    | Research |
+| Testing             | Hermetic tests for sync functions | Workflow orchestration (step.do/step.sleep) can't run in Vitest; sync function logic can.            | Plan     |
 
 ## Scope
 
@@ -41,7 +42,7 @@ Every workflow invocation stays under 30 subrequests (40% headroom). The dispatc
 
 **Out of scope:**
 
-- Changing GQL_PRS_PER_QUERY (stays at 500)
+- Changing GQL_PRS_PER_QUERY (stays at 100)
 - Modifying sync functions in `github-sync.ts`
 - Rate limit guards
 - Workflow-level integration tests (requires workerd)
@@ -49,27 +50,27 @@ Every workflow invocation stays under 30 subrequests (40% headroom). The dispatc
 ## Architecture / Approach
 
 ```
-Cron/Button → DISPATCH (1 subreq)
-                ├── list repos from Supabase
-                └── spawn N × SYNC-REPO instances (binding calls)
-                      ├── list PRs (≤27 subreqs) → sleep → reset
-                      ├── enrich PRs via GQL (~30 subreqs) → sleep → reset
-                      ├── review comments loop (≤27 subreqs/iter, sleep between) → reset
-                      ├── update last_synced
-                      └── spawn CLASSIFY (binding call)
-                            ├── fetch unclassified threads
-                            └── classify + store in batches (~3-5 subreqs)
+Cron/Button → DISPATCH (~1 subreq)
+                └── spawn N × SYNC-REPO (~27 subreqs: list + upsert PRs)
+                      └── spawn ORCHESTRATE (~3 subreqs: read PR refs from DB)
+                            ├── spawn M × PRDETAILS (~4-6 subreqs each, concurrent)
+                            └── spawn REVIEWS (~28 subreqs: 25 REST pages)
+                                 ├── if truncated → chain next REVIEWS (since=cursor)
+                                 └── if done → update last_synced + spawn CLASSIFY
+                                       └── CLASSIFY dispatcher (~3 subreqs)
+                                            ├── spawn K × CLASSIFY-CHUNK (~3 subreqs each)
+                                            └── if >45 chunks → recursive CLASSIFY
 ```
 
 Sync functions (`syncPrBatch`, `syncReviewCommentsForRepo`, `listAndUpsertPrsForRepo`) are unchanged — only the orchestration in `worker.ts` changes.
 
 ## Phases at a Glance
 
-| Phase                             | What it delivers                                                              | Key risk                                                                                                 |
-| --------------------------------- | ----------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------- |
-| 1. Rebuild workflow orchestration | All three defects fixed: no crashes, correct ordering, lightweight dispatcher | Largest code change — rewriting `runDispatch` and `runSyncRepo`. Requires manual workflow run to verify. |
-| 2. Dead code removal              | Remove `syncBoardGitHubData` + unused types/imports                           | Minimal risk — grep confirms no references.                                                              |
-| 3. Hermetic tests                 | Tests for `syncPrBatch` and `syncReviewCommentsForRepo`                       | Stubbing Octokit GraphQL responses requires matching the actual GitHub response shape.                   |
+| Phase                             | What it delivers                                                              | Key risk                                                                               |
+| --------------------------------- | ----------------------------------------------------------------------------- | -------------------------------------------------------------------------------------- |
+| 1. Rebuild workflow orchestration | **DONE (280dd0b)** — all three defects fixed via instance-per-operation chain | Verified: no crashes, correct ordering, all DB tables populated.                       |
+| 2. Dead code removal              | Remove `syncBoardGitHubData` + unused types/imports                           | Minimal risk — grep confirms no references.                                            |
+| 3. Hermetic tests                 | Tests for `syncPrBatch` and `syncReviewCommentsForRepo`                       | Stubbing Octokit GraphQL responses requires matching the actual GitHub response shape. |
 
 **Prerequisites:** Working Cloudflare Workers dev environment for manual testing of Phase 1.
 **Estimated effort:** ~1-2 sessions across 3 phases.
