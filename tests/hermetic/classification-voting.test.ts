@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import type { createClient } from "@/lib/supabase";
 import { classifyThreads, CLASSIFICATION_MODEL, type AiBinding } from "@/lib/services/classification";
 
@@ -65,17 +65,22 @@ function jsonResponse(items: unknown[]) {
   return { response: JSON.stringify(items) };
 }
 
-const rootComment: FakeCommentRow = {
-  id: 1,
-  pull_request_id: 100,
-  in_reply_to_id: null,
-  commenter_login: "reviewer-1",
-  body: "why this approach?",
-  path: null,
-  position_line: null,
-  created_at: "2025-01-01T00:00:00.000Z",
-};
-const prRow: FakePrRow = { id: 100, title: "Add feature", author_login: "author-1" };
+function makeRootComment(): FakeCommentRow {
+  return {
+    id: 1,
+    pull_request_id: 100,
+    in_reply_to_id: null,
+    commenter_login: "reviewer-1",
+    body: "why this approach?",
+    path: null,
+    position_line: null,
+    created_at: "2025-01-01T00:00:00.000Z",
+  };
+}
+
+function makePrRow(): FakePrRow {
+  return { id: 100, title: "Add feature", author_login: "author-1" };
+}
 
 describe("classifyThreads — majority voting", () => {
   beforeEach(() => {
@@ -83,7 +88,7 @@ describe("classifyThreads — majority voting", () => {
   });
 
   it("2 of 3 repeats agreeing wins over the third's differing vote", async () => {
-    const { supabase } = makeFakeSupabase({ comments: [rootComment], prs: [prRow] });
+    const { supabase } = makeFakeSupabase({ comments: [makeRootComment()], prs: [makePrRow()] });
     const { ai, run } = makeFakeAi();
     run
       .mockResolvedValueOnce(jsonResponse([{ thread_id: 1, intent: "bug-catch", domain: "functional" }]))
@@ -105,7 +110,7 @@ describe("classifyThreads — majority voting", () => {
   });
 
   it("3-way split falls back to 'unknown', which is invalid for domain, so the thread is dropped", async () => {
-    const { supabase } = makeFakeSupabase({ comments: [rootComment], prs: [prRow] });
+    const { supabase } = makeFakeSupabase({ comments: [makeRootComment()], prs: [makePrRow()] });
     const { ai, run } = makeFakeAi();
     run
       .mockResolvedValueOnce(jsonResponse([{ thread_id: 1, intent: "bug-catch", domain: "functional" }]))
@@ -119,7 +124,7 @@ describe("classifyThreads — majority voting", () => {
   });
 
   it("AI returns an out-of-enum category for one repeat: that vote is dropped by schema validation, the other two still form a majority", async () => {
-    const { supabase } = makeFakeSupabase({ comments: [rootComment], prs: [prRow] });
+    const { supabase } = makeFakeSupabase({ comments: [makeRootComment()], prs: [makePrRow()] });
     const { ai, run } = makeFakeAi();
     run
       .mockResolvedValueOnce(jsonResponse([{ thread_id: 1, intent: "bug-catch", domain: "functional" }]))
@@ -141,10 +146,17 @@ describe("classifyThreads — majority voting", () => {
     expect(mockLogger.warn).toHaveBeenCalledWith(expect.stringContaining("item validation failed"));
   });
 
-  it("AI responds in an unexpected (non-JSON) format on every attempt: retries exhaust, thread is dropped without throwing", async () => {
-    vi.useFakeTimers();
-    try {
-      const { supabase } = makeFakeSupabase({ comments: [rootComment], prs: [prRow] });
+  describe("with frozen time", () => {
+    beforeEach(() => {
+      vi.useFakeTimers();
+    });
+
+    afterEach(() => {
+      vi.useRealTimers();
+    });
+
+    it("AI responds in an unexpected (non-JSON) format on every attempt: retries exhaust, thread is dropped without throwing", async () => {
+      const { supabase } = makeFakeSupabase({ comments: [makeRootComment()], prs: [makePrRow()] });
       const { ai, run } = makeFakeAi();
       // No JSON array anywhere in the text — extractJsonArray returns it unchanged, JSON.parse throws.
       run.mockResolvedValue({ response: "Sorry, I can't help with that." });
@@ -157,9 +169,7 @@ describe("classifyThreads — majority voting", () => {
       expect(mockLogger.warn).toHaveBeenCalledWith(expect.stringContaining("Batch call failed after"));
       // Every one of the 3 repeats retried more than once before giving up.
       expect(run.mock.calls.length).toBeGreaterThan(3);
-    } finally {
-      vi.useRealTimers();
-    }
+    });
   });
 });
 
@@ -175,8 +185,8 @@ describe("classifyThreads — subrequest budget", () => {
     // classifyBatch fans out to many ai.run() calls internally (sub-batches x vote repeats).
     const CLASSIFICATION_BATCH_SIZE = 20; // mirrors worker.ts's private constant of the same name
     const threadIds = Array.from({ length: CLASSIFICATION_BATCH_SIZE }, (_, i) => i + 1);
-    const comments = threadIds.map((id) => ({ ...rootComment, id, pull_request_id: 100 }));
-    const { supabase, commentsBuilder, prsBuilder } = makeFakeSupabase({ comments, prs: [prRow] });
+    const comments = threadIds.map((id) => ({ ...makeRootComment(), id, pull_request_id: 100 }));
+    const { supabase, commentsBuilder, prsBuilder } = makeFakeSupabase({ comments, prs: [makePrRow()] });
     const { ai, run } = makeFakeAi();
     run.mockResolvedValue(
       jsonResponse(threadIds.map((id) => ({ thread_id: id, intent: "bug-catch", domain: "functional" }))),

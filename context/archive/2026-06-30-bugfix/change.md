@@ -1,10 +1,10 @@
 ---
 change_id: bugfix
 title: Fix GitHub sync workflow subrequest crashes and chain ordering
-status: implemented
+status: archived
 created: 2026-06-30
-updated: "2026-07-05"
-archived_at: null
+updated: "2026-07-06"
+archived_at: "2026-07-06T11:29:06Z"
 ---
 
 ## Notes
