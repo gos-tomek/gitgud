@@ -50,7 +50,9 @@ function makeFakeOctokit(pages: Record<string, unknown>[][]) {
   return { octokit, paginate };
 }
 
-const repo: RepoRow = { id: "repo-1", repo_owner: "acme", repo_name: "widgets", last_synced_at: null };
+function makeRepo(): RepoRow {
+  return { id: "repo-1", repo_owner: "acme", repo_name: "widgets", last_synced_at: null };
+}
 
 describe("listAndUpsertPrsForRepo", () => {
   beforeEach(() => {
@@ -61,7 +63,7 @@ describe("listAndUpsertPrsForRepo", () => {
     const { supabase, upsertCalls } = makeFakeSupabase();
     const { octokit } = makeFakeOctokit([[makePr({ id: 1, number: 1 }), makePr({ id: 2, number: 2 })]]);
 
-    const refs = await listAndUpsertPrsForRepo(supabase, octokit, repo);
+    const refs = await listAndUpsertPrsForRepo(supabase, octokit, makeRepo());
 
     expect(refs).toEqual([
       { id: 1, number: 1 },
@@ -76,7 +78,7 @@ describe("listAndUpsertPrsForRepo", () => {
     const { supabase, upsertCalls } = makeFakeSupabase();
     const { octokit } = makeFakeOctokit([prs]);
 
-    const refs = await listAndUpsertPrsForRepo(supabase, octokit, repo, undefined, 3);
+    const refs = await listAndUpsertPrsForRepo(supabase, octokit, makeRepo(), undefined, 3);
 
     expect(refs).toHaveLength(3);
     expect(upsertCalls[0]).toHaveLength(3);
@@ -95,7 +97,7 @@ describe("listAndUpsertPrsForRepo", () => {
     const { supabase, upsertCalls } = makeFakeSupabase();
     const { octokit } = makeFakeOctokit(pages);
 
-    await listAndUpsertPrsForRepo(supabase, octokit, repo, undefined, Number.POSITIVE_INFINITY);
+    await listAndUpsertPrsForRepo(supabase, octokit, makeRepo(), undefined, Number.POSITIVE_INFINITY);
 
     // The fake paginate() collapses all pages into one JS call — count real REST pages via the
     // pages array (what actual Octokit.paginate would issue as separate HTTP requests), not
