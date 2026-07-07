@@ -15,7 +15,7 @@ const supabaseAvailable = await checkSupabase();
 
 // The encryption key the server uses to decrypt the PAT on every sync request.
 // We must use the same key in test setup when storing the sentinel PAT so that
-// the server's `get_board_github_pat` RPC can decrypt it and trigger a GitHub
+// the server's `get_user_github_pat_by_user_id` RPC can decrypt it and trigger a GitHub
 // auth failure (rather than a decrypt failure, which would not reach the PAT).
 const ENCRYPTION_KEY = process.env.GITHUB_TOKEN_ENCRYPTION_KEY ?? readDevVarsKey("GITHUB_TOKEN_ENCRYPTION_KEY");
 
