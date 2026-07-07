@@ -18,7 +18,11 @@ export default defineConfig({
         // built-in module lists (cloudflare:*) from the @cloudflare/vite-plugin Rolldown
         // resolver, nor Astro virtual modules (virtual:*, astro:*). Mark them all external
         // so esbuild skips resolution during pre-bundling.
+        // apply: "serve" — dep optimization only runs during dev; the build uses Rolldown
+        // which resolves these modules via the adapter plugins. Applying to build environments
+        // (including "prerender") breaks the prerender-entry output.
         name: "vite7-esbuild-external-fix",
+        apply: "serve",
         configEnvironment() {
           return /** @type {import('vite').EnvironmentOptions} */ ({
             optimizeDeps: {
