@@ -10,6 +10,9 @@ import {
 } from "@/lib/services/boards";
 import BoardTopbar from "@/components/BoardTopbar.astro";
 import BoardNav from "@/components/BoardNav.astro";
+import BoardNameEditor from "@/components/BoardNameEditor";
+import RepoManager from "@/components/RepoManager";
+import ContributorManager from "@/components/ContributorManager";
 
 const { user } = Astro.locals;
 const { id } = Astro.params;
@@ -28,6 +31,7 @@ const [repos, contributors, boards, ownProfile] = await Promise.all([
   supabase && user ? getUserProfile(supabase, user.id).catch(() => null) : null,
 ]);
 
+const isSupervisor = board.role === "supervisor";
 const userInitial = user?.email?.[0]?.toUpperCase() ?? "?";
 ---
 
@@ -37,49 +41,82 @@ const userInitial = user?.email?.[0]?.toUpperCase() ?? "?";
     <BoardNav boardId={board.id} />
 
     <div class="mx-auto max-w-6xl space-y-4 p-4">
+      <!-- Board name -->
       <div class="border-border bg-card rounded-lg border px-4 py-3">
-        <p class="text-muted-foreground text-xs font-semibold tracking-wide uppercase">Linked repositories</p>
-        {
-          repos.length === 0 ? (
-            <p class="text-muted-foreground mt-1 text-sm italic">No repositories linked</p>
-          ) : (
-            <ul class="mt-2 space-y-1">
-              {repos.map((repo) => (
-                <li class="text-foreground font-mono text-sm">
-                  {repo.repoOwner}/{repo.repoName}
-                </li>
-              ))}
-            </ul>
-          )
-        }
+        <p class="text-muted-foreground text-xs font-semibold tracking-wide uppercase">Board name</p>
+        <div class="mt-2">
+          {
+            isSupervisor ? (
+              <BoardNameEditor client:load boardId={board.id} currentName={board.name} />
+            ) : (
+              <span class="text-foreground font-medium">{board.name}</span>
+            )
+          }
+        </div>
       </div>
 
+      <!-- Linked repositories -->
+      <div class="border-border bg-card rounded-lg border px-4 py-3">
+        <p class="text-muted-foreground text-xs font-semibold tracking-wide uppercase">Linked repositories</p>
+        <div class="mt-2">
+          {
+            isSupervisor ? (
+              <RepoManager
+                client:load
+                boardId={board.id}
+                initialRepos={repos.map((r) => ({ repoOwner: r.repoOwner, repoName: r.repoName }))}
+              />
+            ) : repos.length === 0 ? (
+              <p class="text-muted-foreground text-sm italic">No repositories linked</p>
+            ) : (
+              <ul class="space-y-1">
+                {repos.map((repo) => (
+                  <li class="text-foreground font-mono text-sm">
+                    {repo.repoOwner}/{repo.repoName}
+                  </li>
+                ))}
+              </ul>
+            )
+          }
+        </div>
+      </div>
+
+      <!-- Contributors -->
       <div class="border-border bg-card rounded-lg border px-4 py-3">
         <p class="text-muted-foreground text-xs font-semibold tracking-wide uppercase">Contributors</p>
-        {
-          contributors.length === 0 ? (
-            <p class="text-muted-foreground mt-1 text-sm italic">No contributors yet</p>
-          ) : (
-            <ul class="mt-2 space-y-1">
-              {contributors.map((contributor) => (
-                <li>
-                  <a
-                    href={`/board/${board.id}/impact/${contributor.githubLogin}/90d`}
-                    class="hover:bg-muted flex items-center gap-2 rounded-md px-2 py-1.5 transition-colors"
-                  >
-                    {contributor.avatarUrl ? (
-                      <img src={contributor.avatarUrl} alt={contributor.githubLogin} class="h-6 w-6 rounded-full" />
-                    ) : (
-                      <div class="bg-muted h-6 w-6 rounded-full" />
-                    )}
-                    <span class="text-foreground font-mono text-sm">@{contributor.githubLogin}</span>
-                    <span class="text-muted-foreground ml-auto text-xs">→</span>
-                  </a>
-                </li>
-              ))}
-            </ul>
-          )
-        }
+        <div class="mt-2">
+          {
+            isSupervisor ? (
+              <ContributorManager
+                client:load
+                boardId={board.id}
+                initialContributors={contributors}
+                repos={repos.map((r) => ({ repoOwner: r.repoOwner, repoName: r.repoName }))}
+              />
+            ) : contributors.length === 0 ? (
+              <p class="text-muted-foreground text-sm italic">No contributors yet</p>
+            ) : (
+              <ul class="space-y-1">
+                {contributors.map((contributor) => (
+                  <li>
+                    <a
+                      href={`/board/${board.id}/impact/${contributor.githubLogin}/90d`}
+                      class="hover:bg-muted flex items-center gap-2 rounded-md px-2 py-1.5 transition-colors"
+                    >
+                      {contributor.avatarUrl ? (
+                        <img src={contributor.avatarUrl} alt={contributor.githubLogin} class="h-6 w-6 rounded-full" />
+                      ) : (
+                        <div class="bg-muted h-6 w-6 rounded-full" />
+                      )}
+                      <span class="text-foreground font-mono text-sm">@{contributor.githubLogin}</span>
+                      <span class="text-muted-foreground ml-auto text-xs">→</span>
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            )
+          }
+        </div>
       </div>
     </div>
   </div>

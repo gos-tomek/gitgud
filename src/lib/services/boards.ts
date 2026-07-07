@@ -1,6 +1,12 @@
 import type { createClient } from "@/lib/supabase";
 import type { BoardContributor, UserBoard } from "@/types";
 
+interface ContributorInput {
+  githubId: number;
+  githubLogin: string;
+  avatarUrl?: string | null;
+}
+
 type SupabaseClient = NonNullable<ReturnType<typeof createClient>>;
 
 interface BoardRow {
@@ -118,4 +124,66 @@ export async function getBoardContributors(supabase: SupabaseClient, boardId: st
     avatarUrl: row.avatar_url as string | null,
     addedAt: row.added_at as string,
   }));
+}
+
+export async function renameBoard(supabase: SupabaseClient, boardId: string, name: string): Promise<void> {
+  const { error } = await supabase.from("boards").update({ name }).eq("id", boardId);
+  if (error) throw error;
+}
+
+export async function addBoardRepo(
+  supabase: SupabaseClient,
+  boardId: string,
+  repoOwner: string,
+  repoName: string,
+): Promise<{ id: string }> {
+  const { data, error } = await supabase
+    .from("github_repos")
+    .insert({ board_id: boardId, repo_owner: repoOwner, repo_name: repoName })
+    .select("id")
+    .single();
+  if (error) throw error;
+  return { id: data.id as string };
+}
+
+export async function removeBoardRepo(
+  supabase: SupabaseClient,
+  boardId: string,
+  repoOwner: string,
+  repoName: string,
+): Promise<void> {
+  const { error } = await supabase
+    .from("github_repos")
+    .delete()
+    .match({ board_id: boardId, repo_owner: repoOwner, repo_name: repoName });
+  if (error) throw error;
+}
+
+export async function addBoardContributors(
+  supabase: SupabaseClient,
+  boardId: string,
+  contributors: ContributorInput[],
+): Promise<void> {
+  const rows = contributors.map((c) => ({
+    board_id: boardId,
+    github_id: c.githubId,
+    github_login: c.githubLogin,
+    avatar_url: c.avatarUrl ?? null,
+  }));
+  const { error } = await supabase
+    .from("board_contributors")
+    .upsert(rows, { onConflict: "board_id,github_id", ignoreDuplicates: true });
+  if (error) throw error;
+}
+
+export async function removeBoardContributor(
+  supabase: SupabaseClient,
+  boardId: string,
+  githubId: number,
+): Promise<void> {
+  const { error } = await supabase
+    .from("board_contributors")
+    .delete()
+    .match({ board_id: boardId, github_id: githubId });
+  if (error) throw error;
 }

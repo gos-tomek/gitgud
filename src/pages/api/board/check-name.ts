@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase";
 
 const schema = z.object({
   name: z.string().trim().min(1, "Board name is required").max(80, "Keep it under 80 characters"),
+  boardId: z.uuid().optional(),
 });
 
 function json(body: unknown, status = 200): Response {
@@ -39,12 +40,17 @@ export const POST: APIRoute = async (context) => {
     return json({ error: firstIssue?.message ?? "Invalid input" }, 400);
   }
 
-  const { data } = await supabase
-    .from("boards")
-    .select("id")
-    .eq("owner_user_id", user.id)
-    .ilike("name", parsed.data.name)
-    .maybeSingle();
+  let query = supabase.from("boards").select("id").eq("owner_user_id", user.id).ilike("name", parsed.data.name);
+
+  if (parsed.data.boardId) {
+    query = query.neq("id", parsed.data.boardId);
+  }
+
+  const { data, error } = await query.maybeSingle();
+
+  if (error) {
+    return json({ error: "Failed to check name availability" }, 500);
+  }
 
   if (data) {
     return json({ error: "You already have a board with that name" }, 409);
