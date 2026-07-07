@@ -134,9 +134,9 @@ None — single row delete with cascade is fast even for boards with substantial
 
 #### Automated
 
-- [x] 1.1 Type checking passes (src + tests)
-- [x] 1.2 Linting passes
-- [x] 1.3 Build succeeds
+- [x] 1.1 Type checking passes (src + tests) — 9661aac
+- [x] 1.2 Linting passes — 9661aac
+- [x] 1.3 Build succeeds — 9661aac
 
 #### Manual
 
