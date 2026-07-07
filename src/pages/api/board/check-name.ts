@@ -46,7 +46,11 @@ export const POST: APIRoute = async (context) => {
     query = query.neq("id", parsed.data.boardId);
   }
 
-  const { data } = await query.maybeSingle();
+  const { data, error } = await query.maybeSingle();
+
+  if (error) {
+    return json({ error: "Failed to check name availability" }, 500);
+  }
 
   if (data) {
     return json({ error: "You already have a board with that name" }, 409);
