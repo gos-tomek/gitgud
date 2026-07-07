@@ -387,10 +387,10 @@ Add integration tests for all mutation API routes (real Supabase, RLS enforcemen
 
 #### Automated
 
-- [x] 4.1 All new tests pass: `npm test`
-- [x] 4.2 Integration tests pass: `npx vitest run tests/integration/board-settings.test.ts`
-- [x] 4.3 Test type checking passes: `npm run test:typecheck`
-- [x] 4.4 No regressions in existing tests
+- [x] 4.1 All new tests pass: `npm test` — 1efe890
+- [x] 4.2 Integration tests pass: `npx vitest run tests/integration/board-settings.test.ts` — 1efe890
+- [x] 4.3 Test type checking passes: `npm run test:typecheck` — 1efe890
+- [x] 4.4 No regressions in existing tests — 1efe890
 
 #### Manual
 
