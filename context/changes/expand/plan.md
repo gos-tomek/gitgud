@@ -120,14 +120,14 @@ Write the contract migration, update the stale test comment, verify everything p
 
 #### Automated
 
-- [x] 1.1 Migration applies cleanly
-- [x] 1.2 Column and function verified gone
-- [x] 1.3 board_contributors grants narrowed to SELECT+INSERT
-- [x] 1.4 Type checking passes
-- [x] 1.5 Linting passes
-- [x] 1.6 Non-integration tests pass
-- [x] 1.7 Integration tests pass
+- [x] 1.1 Migration applies cleanly — 5609340
+- [x] 1.2 Column and function verified gone — 5609340
+- [x] 1.3 board_contributors grants narrowed to SELECT+INSERT — 5609340
+- [x] 1.4 Type checking passes — 5609340
+- [x] 1.5 Linting passes — 5609340
+- [x] 1.6 Non-integration tests pass — 5609340
+- [x] 1.7 Integration tests pass — 5609340
 
 #### Manual
 
-- [x] 1.8 Board creation and sync work with user-profile PAT
+- [x] 1.8 Board creation and sync work with user-profile PAT — 5609340
