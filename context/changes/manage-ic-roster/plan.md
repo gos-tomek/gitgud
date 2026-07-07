@@ -343,28 +343,28 @@ Add integration tests for all mutation API routes (real Supabase, RLS enforcemen
 
 #### Automated
 
-- [x] 1.1 Migration applies cleanly: `npx supabase db reset`
-- [x] 1.2 Type checking passes: `npx tsc --noEmit`
-- [x] 1.3 Lint passes: `npm run lint`
-- [x] 1.4 Existing tests pass: `npm test`
+- [x] 1.1 Migration applies cleanly: `npx supabase db reset` — 0f6e315
+- [x] 1.2 Type checking passes: `npx tsc --noEmit` — 0f6e315
+- [x] 1.3 Lint passes: `npm run lint` — 0f6e315
+- [x] 1.4 Existing tests pass: `npm test` — 0f6e315
 
 #### Manual
 
-- [x] 1.5 Confirm board_contributors grants include DELETE after migration
+- [x] 1.5 Confirm board_contributors grants include DELETE after migration — 0f6e315
 
 ### Phase 2: API Routes
 
 #### Automated
 
-- [ ] 2.1 Type checking passes: `npx tsc --noEmit`
-- [ ] 2.2 Lint passes: `npm run lint`
-- [ ] 2.3 Existing tests pass: `npm test`
+- [x] 2.1 Type checking passes: `npx tsc --noEmit`
+- [x] 2.2 Lint passes: `npm run lint`
+- [x] 2.3 Existing tests pass: `npm test`
 
 #### Manual
 
-- [ ] 2.4 Test each endpoint with curl against local dev server
-- [ ] 2.5 Verify RLS enforcement: non-owner requests denied
-- [ ] 2.6 Verify repo DELETE cascades downstream data
+- [x] 2.4 Test each endpoint with curl against local dev server
+- [x] 2.5 Verify RLS enforcement: non-owner requests denied
+- [x] 2.6 Verify repo DELETE cascades downstream data
 
 ### Phase 3: Settings Page UI
 
