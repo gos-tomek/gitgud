@@ -11,7 +11,27 @@ export default defineConfig({
   output: "server",
   integrations: [react(), sitemap()],
   vite: {
-    plugins: [tailwindcss()],
+    plugins: [
+      tailwindcss(),
+      {
+        // Vite 7 dep-optimizer uses esbuild per environment and doesn't inherit Cloudflare
+        // built-in module lists (cloudflare:*) from the @cloudflare/vite-plugin Rolldown
+        // resolver, nor Astro virtual modules (virtual:*, astro:*). Mark them all external
+        // so esbuild skips resolution during pre-bundling.
+        name: "vite7-esbuild-external-fix",
+        configEnvironment() {
+          return /** @type {import('vite').EnvironmentOptions} */ ({
+            optimizeDeps: {
+              // Vite 7 omits `external` from DepOptimizationOptions.esbuildOptions types
+              // but esbuild at runtime does respect it — cast to bypass the type restriction.
+              esbuildOptions: /** @type {any} */ ({
+                external: ["cloudflare:*", "virtual:*", "astro:*"],
+              }),
+            },
+          });
+        },
+      },
+    ],
   },
   adapter: cloudflare({ imageService: "passthrough" }),
   // Disable Astro's built-in session (auth is handled by Supabase SSR cookies, not KV).

@@ -356,32 +356,32 @@ Add integration tests for all mutation API routes (real Supabase, RLS enforcemen
 
 #### Automated
 
-- [x] 2.1 Type checking passes: `npx tsc --noEmit`
-- [x] 2.2 Lint passes: `npm run lint`
-- [x] 2.3 Existing tests pass: `npm test`
+- [x] 2.1 Type checking passes: `npx tsc --noEmit` — 4e4af90
+- [x] 2.2 Lint passes: `npm run lint` — 4e4af90
+- [x] 2.3 Existing tests pass: `npm test` — 4e4af90
 
 #### Manual
 
-- [x] 2.4 Test each endpoint with curl against local dev server
-- [x] 2.5 Verify RLS enforcement: non-owner requests denied
-- [x] 2.6 Verify repo DELETE cascades downstream data
+- [x] 2.4 Test each endpoint with curl against local dev server — 4e4af90
+- [x] 2.5 Verify RLS enforcement: non-owner requests denied — 4e4af90
+- [x] 2.6 Verify repo DELETE cascades downstream data — 4e4af90
 
 ### Phase 3: Settings Page UI
 
 #### Automated
 
-- [ ] 3.1 Type checking passes: `npx tsc --noEmit` and `npm run test:typecheck`
-- [ ] 3.2 Lint passes: `npm run lint`
+- [x] 3.1 Type checking passes: `npx tsc --noEmit` and `npm run test:typecheck`
+- [x] 3.2 Lint passes: `npm run lint`
 - [ ] 3.3 Build succeeds: `npm run build`
-- [ ] 3.4 Existing tests pass: `npm test`
+- [x] 3.4 Existing tests pass: `npm test`
 
 #### Manual
 
-- [ ] 3.5 Board rename with debounced uniqueness check
-- [ ] 3.6 Repo add and remove with type-to-confirm CASCADE dialog
-- [ ] 3.7 Contributor add via collaborator list and remove with reversibility message
-- [ ] 3.8 Non-owner view: edit controls hidden
-- [ ] 3.9 Empty states display correctly
+- [x] 3.5 Board rename with debounced uniqueness check
+- [x] 3.6 Repo add and remove with type-to-confirm CASCADE dialog
+- [x] 3.7 Contributor add via collaborator list and remove with reversibility message
+- [x] 3.8 Non-owner view: edit controls hidden
+- [x] 3.9 Empty states display correctly
 
 ### Phase 4: Testing
 
