@@ -140,8 +140,8 @@ None — single row delete with cascade is fast even for boards with substantial
 
 #### Manual
 
-- [ ] 1.4 Owner can delete board via settings page and is redirected to dashboard
-- [ ] 1.5 Wrong board name keeps delete button disabled
-- [ ] 1.6 Cancel collapses dialog without side effects
-- [ ] 1.7 Contributors do not see danger zone
-- [ ] 1.8 Deleted board is no longer accessible
+- [x] 1.4 Owner can delete board via settings page and is redirected to dashboard
+- [x] 1.5 Wrong board name keeps delete button disabled
+- [x] 1.6 Cancel collapses dialog without side effects
+- [x] 1.7 Contributors do not see danger zone
+- [x] 1.8 Deleted board is no longer accessible
