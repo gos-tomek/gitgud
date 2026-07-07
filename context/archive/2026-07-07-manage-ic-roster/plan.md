@@ -372,7 +372,7 @@ Add integration tests for all mutation API routes (real Supabase, RLS enforcemen
 
 - [x] 3.1 Type checking passes: `npx tsc --noEmit` and `npm run test:typecheck`
 - [x] 3.2 Lint passes: `npm run lint`
-- [ ] 3.3 Build succeeds: `npm run build`
+- [x] 3.3 Build succeeds: `npm run build`
 - [x] 3.4 Existing tests pass: `npm test`
 
 #### Manual
@@ -394,5 +394,5 @@ Add integration tests for all mutation API routes (real Supabase, RLS enforcemen
 
 #### Manual
 
-- [ ] 4.5 Review test coverage for API routes and UI paths
-- [ ] 4.6 Verify RLS denial tests assert actual denial
+- [x] 4.5 Review test coverage for API routes and UI paths
+- [x] 4.6 Verify RLS denial tests assert actual denial

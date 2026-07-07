@@ -3,7 +3,7 @@ project: GitGud
 version: 1
 status: draft
 created: 2026-05-27
-updated: 2026-06-25
+updated: 2026-07-07
 prd_version: 1
 main_goal: market-feedback
 top_blocker: skills
@@ -41,7 +41,7 @@ Mentoring, code-review quality, and unblocking — the "glue work" that keeps en
 | S-06 | em-switch-ic-dropdown          | switch between ICs on a board without a full page reload                                      | S-04             | FR-007, US-01                                                                 | done     |
 | S-07 | flag-classification-inaccurate | flag a comment's assigned category as inaccurate                                              | S-05             | FR-013                                                                        | blocked  |
 | S-08 | edit-board-connection          | update Board PAT and linked org; both forms re-validate accessible repos/ICs when PAT changes | S-01, S-02       | FR-018, FR-020                                                                | done     |
-| S-09 | manage-ic-roster               | add or remove ICs from a Board after initial setup                                            | S-03             | FR-019                                                                        | proposed |
+| S-09 | manage-ic-roster               | add or remove ICs from a Board after initial setup                                            | S-03             | FR-019                                                                        | done     |
 | S-10 | delete-board                   | delete a Board and all associated membership and profile data                                 | S-01             | FR-021                                                                        | ready    |
 | S-11 | board-pat-expiry-freeze        | see the Board frozen and be prompted to update PAT when it expires or becomes invalid         | S-08             | FR-022                                                                        | proposed |
 
@@ -247,7 +247,7 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **Unknowns:**
   - What happens to an IC's historical profile data when they are removed from a board — retained for the EM's record or purged? — Owner: user. Block: no.
 - **Risk:** Removal without a clear retention policy could silently discard classification data that the EM may still need. Define the retention default before implementing the delete path.
-- **Status:** proposed
+- **Status:** done
 
 ### S-10: EM deletes a Board
 
@@ -326,3 +326,4 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **F-04: (foundation) a user can connect their GitGud account to GitHub via OAuth, establishing a verified bridge between `auth.users.id` and their GitHub numeric ID. When an IC with an existing `board_contributors` record links GitHub, the system auto-matches via `github_id`.** — Archived 2026-06-23 → `context/archive/2026-06-22-link-github-account/`. Lesson: —.
 - **S-05: An IC can see their own review comments broken down by semantic category (mentoring, architecture, bug-catch, nitpick, unblocking, question) — the same breakdown an EM sees for that profile — with click-through to per-comment labels.** — Archived 2026-06-24 → `context/archive/2026-06-23-profile-classified-comments/`. Lesson: —.
 - **S-08: update Board PAT and linked org; both forms re-validate accessible repos/ICs when PAT changes** — Archived 2026-06-25 → `context/archive/2026-06-25-edit-board-connection/`. Lesson: —.
+- **S-09: An EM can add new ICs to a Board and remove existing ICs from the Board after initial setup.** — Archived 2026-07-07 → `context/archive/2026-07-07-manage-ic-roster/`. Lesson: —.
