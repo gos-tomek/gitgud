@@ -10,5 +10,5 @@ DROP FUNCTION IF EXISTS public.get_board_github_pat(uuid, text);
 ALTER TABLE public.boards DROP COLUMN IF EXISTS github_pat_encrypted;
 
 -- 3. Narrow board_contributors grants to append-only (SELECT + INSERT)
-REVOKE ALL ON public.board_contributors FROM authenticated;
+REVOKE ALL ON public.board_contributors FROM anon, authenticated;
 GRANT SELECT, INSERT ON public.board_contributors TO authenticated;
