@@ -13,6 +13,7 @@ import BoardNav from "@/components/BoardNav.astro";
 import BoardNameEditor from "@/components/BoardNameEditor";
 import RepoManager from "@/components/RepoManager";
 import ContributorManager from "@/components/ContributorManager";
+import DeleteBoardDialog from "@/components/DeleteBoardDialog";
 
 const { user } = Astro.locals;
 const { id } = Astro.params;
@@ -118,6 +119,18 @@ const userInitial = user?.email?.[0]?.toUpperCase() ?? "?";
           }
         </div>
       </div>
+
+      <!-- Danger zone (owner only) -->
+      {
+        isSupervisor && (
+          <div class="rounded-lg border border-red-500/30 bg-red-50 px-4 py-3">
+            <p class="text-xs font-semibold tracking-wide text-red-600/70 uppercase">Danger zone</p>
+            <div class="mt-2">
+              <DeleteBoardDialog client:load boardId={board.id} boardName={board.name} />
+            </div>
+          </div>
+        )
+      }
     </div>
   </div>
 </Layout>

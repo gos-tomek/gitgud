@@ -42,7 +42,7 @@ Mentoring, code-review quality, and unblocking — the "glue work" that keeps en
 | S-07 | flag-classification-inaccurate | flag a comment's assigned category as inaccurate                                              | S-05             | FR-013                                                                        | blocked  |
 | S-08 | edit-board-connection          | update Board PAT and linked org; both forms re-validate accessible repos/ICs when PAT changes | S-01, S-02       | FR-018, FR-020                                                                | done     |
 | S-09 | manage-ic-roster               | add or remove ICs from a Board after initial setup                                            | S-03             | FR-019                                                                        | done     |
-| S-10 | delete-board                   | delete a Board and all associated membership and profile data                                 | S-01             | FR-021                                                                        | ready    |
+| S-10 | delete-board                   | delete a Board and all associated membership and profile data                                 | S-01             | FR-021                                                                        | done     |
 | S-11 | board-pat-expiry-freeze        | see the Board frozen and be prompted to update PAT when it expires or becomes invalid         | S-08             | FR-022                                                                        | proposed |
 
 ## Streams
@@ -260,7 +260,7 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **Unknowns:**
   - Data-retention policy on board delete: cascade-delete all profile and classification data immediately, or soft-delete for an audit window? — Owner: user. Block: no.
 - **Risk:** Destructive operation with no automatic undo. Cascades into membership, profile, and classification data could be expensive at scale. A confirmation gate is required; define the retention default before implementing.
-- **Status:** ready
+- **Status:** done
 
 ### S-11: Board is frozen when PAT expires
 
@@ -327,3 +327,4 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **S-05: An IC can see their own review comments broken down by semantic category (mentoring, architecture, bug-catch, nitpick, unblocking, question) — the same breakdown an EM sees for that profile — with click-through to per-comment labels.** — Archived 2026-06-24 → `context/archive/2026-06-23-profile-classified-comments/`. Lesson: —.
 - **S-08: update Board PAT and linked org; both forms re-validate accessible repos/ICs when PAT changes** — Archived 2026-06-25 → `context/archive/2026-06-25-edit-board-connection/`. Lesson: —.
 - **S-09: An EM can add new ICs to a Board and remove existing ICs from the Board after initial setup.** — Archived 2026-07-07 → `context/archive/2026-07-07-manage-ic-roster/`. Lesson: —.
+- **S-10: delete a Board and all associated membership and profile data** — Archived 2026-07-07 → `context/archive/2026-07-07-delete-board/`. Lesson: —.
