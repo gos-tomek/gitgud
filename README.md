@@ -33,10 +33,12 @@ SUPABASE_URL=https://<project-ref>.supabase.co
 SUPABASE_KEY=<anon key>
 SUPABASE_SERVICE_KEY=<service-role key>
 GITHUB_TOKEN_ENCRYPTION_KEY=<pgcrypto passphrase>
+SENTRY_DSN=https://...@o....ingest.sentry.io/...
 ```
 
 - `SUPABASE_KEY` (anon key) is used by the cookie-based SSR client (`src/lib/supabase.ts`) for everything request-scoped.
 - `SUPABASE_SERVICE_KEY` (service-role key — bypasses RLS) is used only by the Worker's cron dispatcher and the classification-batch Workflow (`src/worker.ts`), which run outside a user session and can't use the cookie-based client. **Never** substitute the anon key here — the Workflow's board-scoped queries rely on RLS being bypassed.
+- `SENTRY_DSN` — obtained from **Sentry.io → Project → Settings → Client Keys (DSN)**. Create a single project (Platform: Cloudflare Workers); both the SSR handler and the background Workflow run in the same Worker process and share the DSN. Errors are distinguished in Sentry by transaction name (`GET /dashboard`, `scheduled`, etc.). Without this value Sentry silently no-ops — the app still works.
 - `GITHUB_TOKEN_ENCRYPTION_KEY` is the pgcrypto passphrase `create_board_atomic` uses to encrypt the GitHub PAT a user pastes when creating a board, and that the Workflow uses to decrypt it before calling the GitHub API. Pick any random string (e.g. `openssl rand -base64 32`); it has no SQL `DEFAULT`, so a missing value breaks board creation with a `PGRST202` error.
 
 Ask the team for production values. For local dev, spin up a local Supabase stack:
@@ -113,6 +115,33 @@ For local dev, Miniflare auto-provisions both bindings — no manual setup requi
      gh secret set CF_KV_HOMEPAGE_CACHE_ID --repo gos-tomek/gitgud
      ```
      The deploy pipeline substitutes it into `wrangler.jsonc` at deploy time; the real ID is never committed to the repo.
+
+## Error Monitoring (Sentry)
+
+Error monitoring uses `@sentry/cloudflare` wrapped around the Worker's default export in `src/worker.ts`. Both the SSR handler (`fetch`) and the background sync (`scheduled` + Workflows) report to the same Sentry project — transactions are automatically named by Sentry so you can filter them in the dashboard.
+
+### Local dev
+
+Add `SENTRY_DSN` to `.dev.vars` (Cloudflare workerd dev):
+
+```
+SENTRY_DSN=https://...@o....ingest.sentry.io/...
+```
+
+`.dev.vars` is gitignored — never commit it. The `.env` file (used only by Node/Vitest) does **not** need `SENTRY_DSN`; the DSN is read at runtime from the Worker's `env` object, not from `astro:env/server`.
+
+### Production
+
+Set `SENTRY_DSN` as a Cloudflare Worker secret (one-time, per account):
+
+```bash
+npx wrangler secret put SENTRY_DSN
+# paste the DSN value when prompted
+```
+
+This stores the secret in Cloudflare's encrypted secret store and injects it into `env` at runtime — it is never embedded in the Worker bundle. No GitHub Secret is needed; `SENTRY_DSN` is not used during the build.
+
+To verify: trigger an intentional error in dev and check the Sentry dashboard for the event.
 
 ## CI / Deployment
 
