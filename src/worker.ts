@@ -1,3 +1,4 @@
+import * as Sentry from "@sentry/cloudflare";
 import { handle } from "@astrojs/cloudflare/handler";
 import { WorkflowEntrypoint, type WorkflowEvent, type WorkflowStep } from "cloudflare:workers";
 import { createServiceClient } from "@/lib/supabase-admin";
@@ -487,28 +488,34 @@ export class ClassificationBatchWorkflow extends WorkflowEntrypoint<Env, Classif
   }
 }
 
-export default {
-  fetch: handle,
-  async scheduled(_controller, env, _ctx) {
-    const supabase = createServiceClient(env.SUPABASE_URL, env.SUPABASE_SERVICE_KEY);
+export default Sentry.withSentry(
+  (env) => ({
+    dsn: env.SENTRY_DSN,
+    integrations: [Sentry.captureConsoleIntegration({ levels: ["warn", "error"] })],
+  }),
+  {
+    fetch: handle,
+    async scheduled(_controller, env, _ctx) {
+      const supabase = createServiceClient(env.SUPABASE_URL, env.SUPABASE_SERVICE_KEY);
 
-    const { data, error } = await supabase.from("github_repos").select("board_id");
-    if (error) {
-      logger.error("[classification-batch] Failed to query active boards", error);
-      return;
-    }
+      const { data, error } = await supabase.from("github_repos").select("board_id");
+      if (error) {
+        logger.error("[classification-batch] Failed to query active boards", error);
+        return;
+      }
 
-    const boardIds = [...new Set((data as { board_id: string }[]).map((row) => row.board_id))];
-    const dateStamp = new Date().toISOString().slice(0, 10);
+      const boardIds = [...new Set((data as { board_id: string }[]).map((row) => row.board_id))];
+      const dateStamp = new Date().toISOString().slice(0, 10);
 
-    await Promise.all(
-      boardIds.map((boardId) =>
-        env.CLASSIFICATION_BATCH.create({ id: `board-${boardId}-${dateStamp}`, params: { boardId } }).catch(
-          (err: unknown) => {
-            logger.error(`[classification-batch] Failed to dispatch Workflow for board ${boardId}`, err);
-          },
+      await Promise.all(
+        boardIds.map((boardId) =>
+          env.CLASSIFICATION_BATCH.create({ id: `board-${boardId}-${dateStamp}`, params: { boardId } }).catch(
+            (err: unknown) => {
+              logger.error(`[classification-batch] Failed to dispatch Workflow for board ${boardId}`, err);
+            },
+          ),
         ),
-      ),
-    );
-  },
-} satisfies ExportedHandler<Env>;
+      );
+    },
+  } satisfies ExportedHandler<Env>,
+);

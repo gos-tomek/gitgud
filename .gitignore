@@ -36,3 +36,6 @@ pnpm-debug.log*
 
 # lefthook local overrides
 .lefthook-local.yml
+
+# local scripts
+scripts/

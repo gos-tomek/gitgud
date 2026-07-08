@@ -3,6 +3,11 @@
     "cloudflare": {
       "type": "http",
       "url": "https://mcp.cloudflare.com/mcp"
+    },
+    "playwright": {
+      "type": "stdio",
+      "command": "npx",
+      "args": ["@playwright/mcp@latest"]
     }
   }
 }
