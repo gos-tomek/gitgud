@@ -39,3 +39,6 @@ pnpm-debug.log*
 
 # local scripts
 scripts/
+
+# playwright local auth settings
+playwright/.auth/

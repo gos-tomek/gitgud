@@ -1,0 +1,84 @@
+- generic [ref=e2]:
+  - navigation [ref=e3]:
+    - generic [ref=e4]:
+      - link "GitGud" [ref=e5] [cursor=pointer]:
+        - /url: /
+        - img "GitGud" [ref=e6]
+      - generic [ref=e7]:
+        - link "Sign In" [ref=e8] [cursor=pointer]:
+          - /url: /auth/signin
+        - link "Sign Up" [ref=e9] [cursor=pointer]:
+          - /url: /auth/signup
+  - generic [ref=e11]:
+    - generic [ref=e13]:
+      - link "OPEN SOURCE" [ref=e14] [cursor=pointer]:
+        - /url: https://github.com/gos-tomek/gitgud
+      - text: Self-hosted · Transparent · No ranking
+    - heading "See your engineering contributions. Grow from them." [level=1] [ref=e15]
+    - paragraph [ref=e16]: GitGud reads your GitHub activity, classifies every review comment by intent, and builds your contribution profile — so you can see where your energy goes.
+    - generic [ref=e17]:
+      - link "Get Started" [ref=e18] [cursor=pointer]:
+        - /url: /auth/signup
+      - link "Sign In" [ref=e19] [cursor=pointer]:
+        - /url: /auth/signin
+  - generic [ref=e21]:
+    - paragraph [ref=e22]: On this instance right now
+    - generic [ref=e23]:
+      - generic [ref=e24]: 51%
+      - generic [ref=e25]: of review threads classified as high-impact
+      - generic [ref=e26]: architecture · mentoring · bug-catch · unblocking
+    - generic [ref=e27]:
+      - generic [ref=e28]:
+        - generic [ref=e29]: "8"
+        - generic [ref=e30]: Contributors
+      - generic [ref=e31]:
+        - generic [ref=e32]: "21"
+        - generic [ref=e33]: PRs tracked
+      - generic [ref=e34]:
+        - generic [ref=e35]: "2"
+        - generic [ref=e36]: Repos connected
+    - generic [ref=e37]:
+      - generic [ref=e38]:
+        - generic [ref=e39]: "94"
+        - generic [ref=e40]: Threads classified
+      - generic [ref=e41]:
+        - generic [ref=e42]: "7"
+        - generic [ref=e43]: Deep discussions
+        - generic [ref=e44]: 3+ messages
+      - generic [ref=e45]:
+        - generic [ref=e46]: "22"
+        - generic [ref=e47]: Multi-person threads
+        - generic [ref=e48]: 2+ participants
+      - generic [ref=e49]:
+        - generic [ref=e50]: "2"
+        - generic [ref=e51]: Boards
+  - generic [ref=e53]:
+    - heading "What you can do with it" [level=2] [ref=e55]
+    - generic [ref=e56]:
+      - generic [ref=e57]:
+        - img [ref=e59]
+        - heading "Growth conversations" [level=3] [ref=e61]
+        - paragraph [ref=e62]: Walk into your 1:1 with your supervisor with data. "38% of my reviews are high-signal — architecture, mentoring, bug catches." Talk about where you want to go, grounded in where you are.
+      - generic [ref=e63]:
+        - img [ref=e65]
+        - heading "Spot your patterns" [level=3] [ref=e67]
+        - paragraph [ref=e68]: Mostly nitpicks? All in one repo? Discussion-sparking ratio at 12%? See where your review energy clusters and decide if that's where you want it to be.
+      - generic [ref=e69]:
+        - img [ref=e71]
+        - heading "Find areas to grow" [level=3] [ref=e74]
+        - paragraph [ref=e75]: Low involvement %? Pickup time creeping up? Author engagement falling? GitGud gives you the specifics — you decide what to do with them.
+    - paragraph [ref=e77]: Your supervisor may have already set up a board for your team. If not, create one yourself — connect a GitHub org and add your co-contributors.
+  - generic [ref=e79]:
+    - heading "See where your energy goes" [level=2] [ref=e80]
+    - paragraph [ref=e81]: Your contributions are already in GitHub. Sign up and explore them.
+    - link "Get Started" [ref=e82] [cursor=pointer]:
+      - /url: /auth/signup
+  - contentinfo [ref=e83]:
+    - generic [ref=e84]:
+      - link "GitGud" [ref=e85] [cursor=pointer]:
+        - /url: https://github.com/gos-tomek/gitgud
+        - img "GitGud" [ref=e86]
+      - paragraph [ref=e87]:
+        - link "Open source" [ref=e88] [cursor=pointer]:
+          - /url: https://github.com/gos-tomek/gitgud
+        - text: · Self-hosted · No ranking · Full transparency
