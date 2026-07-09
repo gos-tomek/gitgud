@@ -338,8 +338,8 @@ Update all metric aggregation queries to exclude threads voted as `false` (thumb
 
 #### Automated
 
-- [x] 1.1 Migration applies cleanly against local Supabase
-- [x] 1.2 TypeScript compiles
+- [x] 1.1 Migration applies cleanly against local Supabase — be29a37
+- [x] 1.2 TypeScript compiles — be29a37
 
 #### Manual
 
@@ -351,16 +351,16 @@ Update all metric aggregation queries to exclude threads voted as `false` (thumb
 
 #### Automated
 
-- [ ] 2.1 Migration applies cleanly
-- [ ] 2.2 TypeScript compiles (src and tests)
-- [ ] 2.3 Lint passes
-- [ ] 2.4 Non-integration tests pass
+- [x] 2.1 Migration applies cleanly
+- [x] 2.2 TypeScript compiles (src and tests)
+- [x] 2.3 Lint passes
+- [x] 2.4 Non-integration tests pass
 
 #### Manual
 
-- [ ] 2.5 Vote PATCH endpoint works for all vote values
-- [ ] 2.6 Threads list API returns vote field
-- [ ] 2.7 Vote query param filters correctly
+- [x] 2.5 Vote PATCH endpoint works for all vote values
+- [x] 2.6 Threads list API returns vote field
+- [x] 2.7 Vote query param filters correctly
 
 ### Phase 3: UI — Vote Buttons, Filter & Visual Treatment
 

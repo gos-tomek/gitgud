@@ -126,6 +126,7 @@ export interface ClassifiedThread {
   classifiedAt: string;
   createdAt: string;
   messageCount: number;
+  vote: boolean | null;
 }
 
 export interface ClassifiedThreadsPage {
