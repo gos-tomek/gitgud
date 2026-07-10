@@ -254,7 +254,15 @@ Update all metric aggregation queries to exclude threads voted as `false` (thumb
 
 **Contract**: `CREATE OR REPLACE` the function. Add `WHERE vote IS DISTINCT FROM false` (or equivalent) to the `classified` CTE, which feeds all downstream stats.
 
-#### 3. Verify impact-metrics.ts needs no changes
+#### 3. Update thread-coverage denominator RPC _(discovered during implementation)_
+
+**File**: `supabase/migrations/20260709120000_thread_classification_vote.sql` (same migration)
+
+**Intent**: Update `get_board_started_root_comments_for_commenter` to exclude `vote = false` threads from the denominator it returns. Without this, the thread-coverage % denominator would still include excluded threads while the numerator (from the metrics RPC) would not, producing systematically deflated coverage percentages.
+
+**Contract**: `CREATE OR REPLACE` the function. Add a LEFT JOIN to `thread_classifications` on `thread_root_comment_id` and append `AND (tc.vote IS DISTINCT FROM false)` to the WHERE clause.
+
+#### 4. Verify impact-metrics.ts needs no changes
 
 **File**: `src/lib/services/impact-metrics.ts`
 
