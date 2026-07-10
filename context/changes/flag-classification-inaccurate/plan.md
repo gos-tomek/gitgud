@@ -343,9 +343,9 @@ Update all metric aggregation queries to exclude threads voted as `false` (thumb
 
 #### Manual
 
-- [x] 1.3 Vote column exists with NULL default
-- [x] 1.4 set_thread_classification_vote succeeds for board member
-- [x] 1.5 set_thread_classification_vote raises error for non-member
+- [x] 1.3 Vote column exists with NULL default — 8573bc7
+- [x] 1.4 set_thread_classification_vote succeeds for board member — 8573bc7
+- [x] 1.5 set_thread_classification_vote raises error for non-member — 8573bc7
 
 ### Phase 2: API & Service Layer
 
@@ -384,14 +384,14 @@ Update all metric aggregation queries to exclude threads voted as `false` (thumb
 
 #### Automated
 
-- [x] 4.1 Migration applies cleanly
-- [x] 4.2 TypeScript compiles
-- [x] 4.3 Non-integration tests pass
+- [x] 4.1 Migration applies cleanly — 8573bc7
+- [x] 4.2 TypeScript compiles — 8573bc7
+- [x] 4.3 Non-integration tests pass — 8573bc7
 
 #### Manual
 
-- [x] 4.4 Thumbs-down thread decreases contributor metrics
-- [x] 4.5 Thumbs-up thread leaves metrics unchanged
-- [x] 4.6 Clearing excluded vote restores metrics
-- [x] 4.7 Homepage stats reflect exclusions
-- [x] 4.8 All threads excluded → high-signal % shows 0
+- [x] 4.4 Thumbs-down thread decreases contributor metrics — 8573bc7
+- [x] 4.5 Thumbs-up thread leaves metrics unchanged — 8573bc7
+- [x] 4.6 Clearing excluded vote restores metrics — 8573bc7
+- [x] 4.7 Homepage stats reflect exclusions — 8573bc7
+- [x] 4.8 All threads excluded → high-signal % shows 0 — 8573bc7
