@@ -976,6 +976,7 @@ interface ClassifiedThreadRow {
   classified_at: string;
   created_at: string;
   message_count: number;
+  vote: boolean | null;
 }
 
 export async function getClassifiedThreads(
@@ -988,6 +989,7 @@ export async function getClassifiedThreads(
     domain?: TechnicalDomain;
     pullRequestId?: number;
     role?: "started" | "received" | "self" | "joined" | "all";
+    vote?: "confirmed" | "excluded" | "unconfirmed";
   },
   page: number,
   pageSize: number,
@@ -1021,6 +1023,7 @@ export async function getClassifiedThreads(
       p_pr_id: filters.pullRequestId ?? null,
       p_limit: pageSize,
       p_offset: offset,
+      p_vote: filters.vote ?? null,
     }),
     supabase.rpc("get_board_classified_threads_count", {
       p_repo_ids: repoIds,
@@ -1031,6 +1034,7 @@ export async function getClassifiedThreads(
       p_intent: filters.intent ?? null,
       p_domain: filters.domain ?? null,
       p_pr_id: filters.pullRequestId ?? null,
+      p_vote: filters.vote ?? null,
     }),
     supabase.rpc("get_board_thread_coverage", {
       p_repo_ids: repoIds,
@@ -1066,6 +1070,7 @@ export async function getClassifiedThreads(
       classifiedAt: row.classified_at,
       createdAt: row.created_at,
       messageCount: row.message_count,
+      vote: row.vote,
     };
   });
 

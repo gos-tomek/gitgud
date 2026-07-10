@@ -35,6 +35,7 @@ const queryParamsSchema = z.object({
   domain: z.enum(["functional", "refactoring", "documentation", "discussion", "false-positive"]).optional(),
   prId: z.coerce.number().int().positive().optional(),
   role: z.enum(["started", "received", "self", "joined", "all"]).default("all"),
+  vote: z.enum(["confirmed", "excluded", "unconfirmed"]).optional(),
 });
 
 export const GET: APIRoute = async (context) => {
@@ -66,11 +67,12 @@ export const GET: APIRoute = async (context) => {
     domain: sp.get("domain") ?? undefined,
     prId: sp.get("prId") ?? undefined,
     role: sp.get("role") ?? undefined,
+    vote: sp.get("vote") ?? undefined,
   });
   if (!parsedQuery.success) {
     return json({ error: parsedQuery.error.issues.at(0)?.message ?? "Invalid query parameters" }, 400);
   }
-  const { page, pageSize, intent, domain, prId, role } = parsedQuery.data;
+  const { page, pageSize, intent, domain, prId, role, vote } = parsedQuery.data;
 
   const { data: contributor, error: contribError } = await supabase
     .from("board_contributors")
@@ -99,7 +101,7 @@ export const GET: APIRoute = async (context) => {
       boardId,
       contributor.github_id as number,
       parsePeriodSlug(periodSlug),
-      { intent, domain, pullRequestId: prId, role },
+      { intent, domain, pullRequestId: prId, role, vote },
       page,
       pageSize,
     );
