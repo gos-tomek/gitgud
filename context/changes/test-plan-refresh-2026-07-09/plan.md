@@ -265,8 +265,8 @@ None — the test plan is a living document. Previous versions are in git histor
 
 #### Manual
 
-- [ ] 1.4 Risk descriptions match research findings
-- [ ] 1.5 Response guidance is actionable
+- [x] 1.4 Risk descriptions match research findings
+- [x] 1.5 Response guidance is actionable
 
 ### Phase 2: Phased Rollout Update (§3)
 
@@ -284,12 +284,12 @@ None — the test plan is a living document. Previous versions are in git histor
 
 #### Automated
 
-- [x] 3.1 Freshness dates updated to 2026-07-09
-- [x] 3.2 Stack profile says "meaningful" and "32"
-- [x] 3.3 §6.7 is non-empty
+- [x] 3.1 Freshness dates updated to 2026-07-09 — ba4ca79
+- [x] 3.2 Stack profile says "meaningful" and "32" — ba4ca79
+- [x] 3.3 §6.7 is non-empty — ba4ca79
 
 #### Manual
 
-- [ ] 3.4 Stack versions match package.json
-- [ ] 3.5 Cookbook cross-references point to existing files
-- [ ] 3.6 §7 homepage note is accurate
+- [x] 3.4 Stack versions match package.json
+- [x] 3.5 Cookbook cross-references point to existing files
+- [x] 3.6 §7 homepage note is accurate
