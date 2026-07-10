@@ -3,7 +3,7 @@ project: GitGud
 version: 1
 status: draft
 created: 2026-05-27
-updated: 2026-07-07
+updated: 2026-07-10
 prd_version: 1
 main_goal: market-feedback
 top_blocker: skills
@@ -39,7 +39,7 @@ Mentoring, code-review quality, and unblocking — the "glue work" that keeps en
 | S-04 | profile-raw-github-metrics     | view a contribution profile: PRs, reviews, comment counts                                     | F-02, S-02, S-03 | FR-006, FR-008, FR-009, FR-010, FR-011, NFR progressive-load, NFR data-parity | done     |
 | S-05 | profile-classified-comments    | see own review comments broken down by semantic category                                      | F-03, F-04, S-04 | FR-012, Business Logic, NFR accuracy-floor, NFR data-parity                   | done     |
 | S-06 | em-switch-ic-dropdown          | switch between ICs on a board without a full page reload                                      | S-04             | FR-007, US-01                                                                 | done     |
-| S-07 | flag-classification-inaccurate | flag a comment's assigned category as inaccurate                                              | S-05             | FR-013                                                                        | blocked  |
+| S-07 | flag-classification-inaccurate | flag a comment's assigned category as inaccurate                                              | S-05             | FR-013                                                                        | done     |
 | S-08 | edit-board-connection          | update Board PAT and linked org; both forms re-validate accessible repos/ICs when PAT changes | S-01, S-02       | FR-018, FR-020                                                                | done     |
 | S-09 | manage-ic-roster               | add or remove ICs from a Board after initial setup                                            | S-03             | FR-019                                                                        | done     |
 | S-10 | delete-board                   | delete a Board and all associated membership and profile data                                 | S-01             | FR-021                                                                        | done     |
@@ -221,7 +221,7 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **Unknowns:**
   - What constitutes the correction-signal pathway that must exist before FR-013 ships? FR-013 must not ship as standalone UI without a pathway to act on flags (PRD Open Question 2) — Owner: user. Block: yes.
 - **Risk:** Nice-to-have, dependency-constrained. Delivers the secondary success criterion (IC can signal agreement/correction), but only once a correction-signal pathway exists.
-- **Status:** blocked
+- **Status:** done
 
 ### S-08: EM updates Board connection settings
 
@@ -327,4 +327,5 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **S-05: An IC can see their own review comments broken down by semantic category (mentoring, architecture, bug-catch, nitpick, unblocking, question) — the same breakdown an EM sees for that profile — with click-through to per-comment labels.** — Archived 2026-06-24 → `context/archive/2026-06-23-profile-classified-comments/`. Lesson: —.
 - **S-08: update Board PAT and linked org; both forms re-validate accessible repos/ICs when PAT changes** — Archived 2026-06-25 → `context/archive/2026-06-25-edit-board-connection/`. Lesson: —.
 - **S-09: An EM can add new ICs to a Board and remove existing ICs from the Board after initial setup.** — Archived 2026-07-07 → `context/archive/2026-07-07-manage-ic-roster/`. Lesson: —.
+- **S-07: IC flags a classified comment as inaccurate** — Archived 2026-07-10 → `context/archive/2026-07-09-flag-classification-inaccurate/`. Lesson: —.
 - **S-10: delete a Board and all associated membership and profile data** — Archived 2026-07-07 → `context/archive/2026-07-07-delete-board/`. Lesson: —.
