@@ -223,6 +223,60 @@ Update remaining sections to reflect the current test base, tooling, and coverag
 
 ---
 
+## Phase 4: E2E Core User Flows Phase (§3)
+
+### Overview
+
+Add Phase 8 to the §3 Phased Rollout table: "E2E core user flows" covering the board lifecycle end-to-end via Playwright against local dev server + local Supabase. This phase addresses the three highest-frequency manual test patterns identified in the follow-up research (8, 6, and 3 manual repetitions respectively) that have zero E2E coverage.
+
+### Changes Required:
+
+#### 1. Rollout Table — Phase 8 Row
+
+**File**: `context/foundation/test-plan.md` (§3 Phased Rollout table)
+
+**Intent**: Add Phase 8 targeting the board lifecycle E2E gap. The research's manual test frequency analysis found that board wizard (8 repetitions), dashboard verification (6), and board deletion (3) are the most-repeated manual steps across 25 archived changes — none have E2E coverage. Phase 8 runs against local infra (dev server + local Supabase), unlike Phase 7 which requires a deployed Cloudflare preview.
+
+**Contract**: New row in the rollout table:
+
+| #   | Phase name          | Goal                                                                                                                                                                                                                              | Risks covered  | Test types       | Status      | Change folder |
+| --- | ------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------- | ---------------- | ----------- | ------------- |
+| 8   | E2E core user flows | Board lifecycle E2E: signup → create board → verify on dashboard → add contributor → change contributor → remove contributor → verify contributor removal → delete board → verify gone from dashboard; non-owner denied scenarios | #3, #8, R5, #1 | e2e (Playwright) | not started | —             |
+
+#### 2. Risk Response Guidance — E2E Notes
+
+**File**: `context/foundation/test-plan.md` (§2 Risk Response Guidance table)
+
+**Intent**: Add a note to the existing response guidance for risks #3, #8, R5, and #1 indicating that Phase 8 E2E tests will provide browser-level coverage complementing existing integration/hermetic tests.
+
+**Contract**: Append to the "Likely cheapest layer" cell for risks #3, #8, R5, #1: `+ E2E (Phase 8) for full browser flow confidence`.
+
+#### 3. Stack Table — Playwright Status
+
+**File**: `context/foundation/test-plan.md` (§4 Stack table, e2e row)
+
+**Intent**: Update the Playwright row to reflect that Phase 8 also uses Playwright (not only Phase 7).
+
+**Contract**: Change `Playwright — planned (Phase 7)` to `Playwright — planned (Phases 7–8)`.
+
+### Success Criteria:
+
+#### Automated Verification:
+
+- Phase 8 row exists in §3 table
+- Phase numbers are sequential (1–8)
+- All risk numbers in Phase 8 exist in §2
+
+#### Manual Verification:
+
+- Phase 8 scope covers the three highest-frequency manual test patterns from the research
+- Phase 8 prerequisites are clear (local dev server + local Supabase, no deployed preview needed)
+- The board lifecycle flow described matches the user's specification
+
+**Implementation Note**: After completing this phase and all automated verification passes, pause here for manual confirmation from the human that the manual testing was successful before proceeding to the next phase.
+
+---
+
 ## Testing Strategy
 
 This plan updates a documentation file, not application code. Testing is manual review.
@@ -293,3 +347,16 @@ None — the test plan is a living document. Previous versions are in git histor
 - [x] 3.4 Stack versions match package.json
 - [x] 3.5 Cookbook cross-references point to existing files
 - [x] 3.6 §7 homepage note is accurate
+
+### Phase 4: E2E Core User Flows Phase (§3)
+
+#### Automated
+
+- [x] 4.1 Phase 8 row exists in §3 table
+- [x] 4.2 Phase numbers are sequential (1–8)
+- [x] 4.3 All risk numbers in Phase 8 exist in §2
+
+#### Manual
+
+- [x] 4.4 Phase 8 scope covers highest-frequency manual test patterns
+- [x] 4.5 Phase 8 prerequisites are clear
