@@ -5,10 +5,12 @@ git_commit: 268fcfe401c87fe7ec759a04e16a1855a3341275
 branch: GitGud-e2e
 repository: GitGud-e2e
 topic: "Refresh test plan to reflect 10 features shipped since June 2026"
-tags: [research, testing, risk-map, test-plan, workflow, settings, metrics, deletion]
+tags:
+  [research, testing, risk-map, test-plan, workflow, settings, metrics, deletion, manual-test-frequency, e2e-candidates]
 status: complete
-last_updated: 2026-07-09
+last_updated: 2026-07-10
 last_updated_by: Claude (10x-research)
+last_updated_note: "Added follow-up research: manual test frequency analysis across 25 archived changes"
 ---
 
 # Research: Test Plan Refresh — 10 Features Shipped Since June 2026
@@ -200,3 +202,92 @@ The dashboard page (`src/pages/dashboard.astro`) is a redirect-only page — act
 4. **What is the correct behavior for ghost contributors?** When a user deletes their account, `board_contributors.user_id` becomes NULL but the row persists. Is this intended behavior or a bug? The test plan needs to document the expected behavior before writing a test.
 
 5. **Phase numbering**: Should new phases be 5–7 (as change.md suggests) or should Phase 5 ("Slice-ready contracts") be retired and replaced? The organic test growth suggests retiring Phase 5 and defining new phases around the 4 gap areas.
+
+---
+
+## Follow-up Research: Manual Test Frequency Analysis (2026-07-10)
+
+### Research Question
+
+Which manual verification steps repeat most often across the 25 archived changes, and which are the strongest candidates for E2E automation?
+
+### Methodology
+
+Scanned all `.md` files in all 25 `context/archive/*/` folders, extracting every manual verification step from "Verification", "Manual Testing Steps", and "Testing Strategy" sections. Grouped by behavioral pattern (not literal wording), counted distinct archive folders each pattern appears in.
+
+### Repeating Manual Test Patterns — Ranked by Frequency
+
+| #   | Pattern                                                      | Count | Archives (abbreviated)                                                                                                                                                              | Currently Automated?                                                   |
+| --- | ------------------------------------------------------------ | ----- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------- |
+| 1   | **Board wizard E2E** — create board → lands on dashboard     | 8     | board-create-with-em-role, invite-and-join-board, link-board-to-github-org, test-fix-gaps, edit-board-connection, expand, manage-ic-roster, delete-board                            | Component + hermetic (wizard state); no E2E                            |
+| 2   | **RLS / cross-board isolation** — non-owner denied           | 8     | access-control-and-membership, invite-and-join-board, github-ingestion-access, classification-batch, board-create-with-em-role, manage-ic-roster, delete-board, link-github-account | Integration (access-boundary, board-settings); no E2E                  |
+| 3   | **Dashboard correctness** — boards list, badges, empty state | 6     | board-create-with-em-role, access-control-and-membership, link-github-account, test-fix-gaps, delete-board, homepage                                                                | No                                                                     |
+| 4   | **Schema verification in Supabase Studio**                   | 6     | invite-and-join-board, github-ingestion-access, classification-batch, link-github-account, test-fix-gaps, edit-board-connection                                                     | Migration applies (CI `supabase start`); no assertion on columns       |
+| 5   | **Trigger sync → data in DB**                                | 5     | github-ingestion-access, classification-batch, bugfix, edit-board-connection, profile-raw-github-metrics                                                                            | Hermetic (individual sync functions); no chain-level E2E               |
+| 6   | **Auth flow** — signup/signin/redirect guards                | 5     | board-create-with-em-role, access-control-and-membership, link-github-account, edit-board-connection, github-ingestion-access                                                       | Component (SignUpForm); middleware integration (smoke.test.ts); no E2E |
+| 7   | **Empty states render correctly**                            | 5     | access-control-and-membership, invite-and-join-board, profile-raw-github-metrics, profile-classified-comments, manage-ic-roster                                                     | Partial (some component tests); no E2E                                 |
+| 8   | **PAT validation UX** — valid/invalid/fine-grained/expiry    | 4     | link-board-to-github-org, edit-board-connection, test-fix-gaps, profile-raw-github-metrics                                                                                          | Hermetic (validate-pat.test.ts); component (PatUpdateForm); no E2E     |
+| 9   | **Page navigation / no visual regressions**                  | 4     | profile-raw-github-metrics, profile-classified-comments, homepage, test-fix-gaps                                                                                                    | No                                                                     |
+| 10  | **Wizard back-nav preserves state**                          | 3     | link-board-to-github-org, invite-and-join-board, test-fix-gaps                                                                                                                      | Component (wizard-reducer.test.ts, CreateBoardForm.test.tsx); no E2E   |
+| 11  | **Deletion cascade** — board or account                      | 3     | edit-board-connection, delete-board, manage-ic-roster                                                                                                                               | Integration (account-deletion.test.ts); no board-only cascade test     |
+| 12  | **Impact page renders with correct data**                    | 3     | profile-raw-github-metrics, em-switch-ic-dropdown, profile-classified-comments                                                                                                      | Component + hermetic; no E2E                                           |
+
+### Analysis: What This Tells Us About E2E Priorities
+
+**The top 3 patterns (#1, #2, #3) each repeat 6–8 times and are never fully automated.** Every new feature that touches boards, auth, or data access required someone to manually walk through the same flows. This is the clearest signal for E2E investment.
+
+#### Tier A — High-frequency, high-value E2E candidates
+
+| Pattern                          | Why E2E                                                                                                                                  | What it replaces                      | Risk map alignment                                                        |
+| -------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------- | ------------------------------------------------------------------------- |
+| **Board wizard E2E**             | 8 manual repetitions; spans 3 pages, API calls, DB writes, redirect. Component tests cover state machine but not the full browser flow.  | ~15 min manual walkthrough per change | Risk #3 (wizard regression), #4 (partial failure)                         |
+| **Dashboard after state change** | 6 repetitions; always verified after create/delete/signup. No automated assertion that the dashboard reflects the new state.             | ~5 min manual check per change        | Risk #8 (deletion cascade visible), #10 (identity bridge → board appears) |
+| **Auth guards E2E**              | 5 repetitions; protected-route redirect, signup→dashboard, signout. Middleware integration test exists but doesn't drive a real browser. | ~5 min manual check per change        | Risk #5 (RLS gap), #10 (OAuth identity)                                   |
+
+#### Tier B — Medium-frequency, specialized
+
+| Pattern                 | Why E2E                                                                                                                                             | Caveat                                                                                                               |
+| ----------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------- |
+| **Sync → data appears** | 5 repetitions; but Cloudflare Workflows can't run in Vitest. E2E against preview deployment is the only option.                                     | Requires deployed preview environment; slower, costlier. Aligns with Risk R1 (workflow chain).                       |
+| **PAT validation UX**   | 4 repetitions; but hermetic + component tests already cover the API layer. E2E would add browser-level confidence (paste, debounce, error display). | Lower marginal value — existing tests catch most regressions.                                                        |
+| **Empty states**        | 5 repetitions; but each is a different page. Would need per-page E2E fixtures.                                                                      | Better as assertions within other E2E tests (e.g., "new user signup → empty dashboard" is already part of auth E2E). |
+
+#### Tier C — Low-frequency or already covered
+
+| Pattern                           | Why NOT prioritize                                                                                                                                |
+| --------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Schema verification in Studio** | 6 repetitions, but `supabase start` + migration apply in CI already catches broken schemas. A column-existence assertion is cheap but low-signal. |
+| **Wizard back-nav**               | 3 repetitions; already well-covered by component tests (wizard-reducer + CreateBoardForm).                                                        |
+| **Page navigation / regressions** | 4 repetitions; too broad for targeted E2E — better as smoke-level "pages render" test.                                                            |
+
+### Recommended E2E Test Roster (from this analysis)
+
+Based on frequency × automation gap × risk map alignment:
+
+1. **`e2e/board-wizard-happy-path.spec.ts`** — signup → create board (name + PAT + repos + contributors) → verify on dashboard → navigate to board detail. Covers patterns #1, #3, #6, #10.
+2. **`e2e/auth-guards.spec.ts`** — unauthenticated user hits protected routes → redirect to signin; signup → lands on dashboard; signout → redirect. Covers pattern #6.
+3. **`e2e/board-deletion.spec.ts`** — create board → delete via settings → verify gone from dashboard, non-owner cannot see danger zone. Covers patterns #3, #11, Risk #8.
+4. **`e2e/rls-cross-board.spec.ts`** — two users, two boards; user A cannot access user B's board via direct URL navigation. Covers pattern #2. (May be better as integration test — E2E adds browser-level redirect assertion.)
+5. **`e2e/sync-trigger.spec.ts`** — (against preview deployment only) trigger sync → data appears on impact page. Covers pattern #5, Risk R1. Depends on Cloudflare preview availability.
+
+### Mapping to Test Plan Phases
+
+These E2E tests align with the new phases proposed in the original research:
+
+- **Phase 5** (workflow chain): `sync-trigger.spec.ts` (#5)
+- **Phase 6** (settings + deletion): `board-deletion.spec.ts` (#3), `auth-guards.spec.ts` (#2)
+- **Phase 7** (metric correctness + parity): impact page assertions could be added to `board-wizard-happy-path.spec.ts` (#1) as a post-sync verification step
+
+### Historical References
+
+- `context/archive/2026-06-09-testing-access-boundary/plan.md` — established integration test patterns; every subsequent change re-tested RLS manually
+- `context/archive/2026-06-10-board-creation-contract/plan.md` — established component test patterns; wizard flow still verified manually 8 times after
+- `context/archive/2026-06-14-quality-gates/plan.md` — CI wiring; no E2E in CI pipeline
+- `context/archive/2026-06-30-bugfix/plan.md` — documented Cloudflare Workflow untestability in Vitest; manual sync verification repeated 5 times
+- `context/archive/2026-07-07-delete-board/plan.md` — most recent manual deletion cascade walkthrough
+
+### Open Questions (follow-up)
+
+1. **E2E infrastructure**: Playwright needs a running dev server + local Supabase. Should E2E run in CI (add a third job) or remain local-only initially?
+2. **Preview deployment for sync E2E**: The sync→data flow requires Cloudflare Workflows. Is there a staging/preview environment available for E2E, or should this test be deferred?
+3. **Test data strategy**: Board wizard E2E needs a real GitHub PAT to validate. Should we use a dedicated bot account's PAT, or mock the GitHub API at the network level (e.g., Playwright route interception)?
