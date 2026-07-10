@@ -1,11 +1,12 @@
 import { useState, useEffect } from "react";
-import { ChevronRight, ChevronDown, MessageSquare, Check } from "lucide-react";
+import { ChevronRight, ChevronDown, MessageSquare, Check, ThumbsUp, ThumbsDown, Info } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import type {
   ClassifiedThread,
   ClassifiedThreadsPage,
@@ -37,9 +38,9 @@ const PAGE_SIZE = 25;
 type Role = "started" | "received" | "self" | "joined" | "all";
 
 const ROLE_LABELS: Record<Role, string> = {
-  all: "All",
+  all: "All threads",
   started: "Started",
-  received: "Received",
+  received: "Answered",
   self: "Self-reviewed",
   joined: "Joined",
 };
@@ -54,6 +55,7 @@ interface Filters {
   domain?: TechnicalDomain;
   prId?: number;
   role: Role;
+  vote?: "confirmed" | "excluded" | "unconfirmed";
 }
 
 interface Props {
@@ -100,6 +102,7 @@ function buildQuery(period: PeriodSlug, filters: Filters, page: number): string 
   if (filters.domain) params.set("domain", filters.domain);
   if (filters.prId) params.set("prId", String(filters.prId));
   if (filters.role !== "all") params.set("role", filters.role);
+  if (filters.vote) params.set("vote", filters.vote);
   return params.toString();
 }
 
@@ -243,21 +246,50 @@ function ThreadRow({
   thread,
   boardId,
   viewerLogin,
+  onVoteChange,
 }: {
   thread: ClassifiedThread;
   boardId: string;
   viewerLogin: string;
+  onVoteChange: (threadId: number, vote: boolean | null) => void;
 }) {
   const [expanded, setExpanded] = useState(false);
+  const [vote, setVote] = useState<boolean | null>(thread.vote);
+  const [voting, setVoting] = useState(false);
+
   const isViewerPr = thread.prAuthorLogin === viewerLogin;
   const isViewerCommenter = thread.commenterLogin === viewerLogin;
-  // Neither the root commenter nor the PR author: the viewer only shows up here via a reply
-  // (the "joined" role) — someone else's thread on someone else's PR.
   const role: ThreadRole = isViewerCommenter ? (isViewerPr ? "self" : "started") : isViewerPr ? "received" : "joined";
+
+  async function handleVote(newVote: boolean) {
+    const next = vote === newVote ? null : newVote;
+    const prev = vote;
+    setVote(next);
+    onVoteChange(thread.threadRootCommentId, next);
+    setVoting(true);
+    try {
+      const res = await fetch(`/api/board/${boardId}/threads/${viewerLogin}/${thread.threadRootCommentId}/vote`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ vote: next }),
+      });
+      if (!res.ok) {
+        setVote(prev);
+        onVoteChange(thread.threadRootCommentId, prev);
+      }
+    } catch {
+      setVote(prev);
+      onVoteChange(thread.threadRootCommentId, prev);
+    } finally {
+      setVoting(false);
+    }
+  }
+
+  const isExcluded = vote === false;
 
   return (
     <>
-      <tr className="border-border/50 hover:bg-muted border-t">
+      <tr className={cn("border-border/50 hover:bg-muted border-t", isExcluded && "opacity-50")}>
         <td className="py-2 pr-1 align-top">
           <button
             onClick={() => {
@@ -271,6 +303,9 @@ function ThreadRow({
           </button>
         </td>
         <td className="max-w-[320px] py-2 pr-3">
+          <span className="text-muted-foreground block text-xs">
+            {new Date(thread.createdAt).toLocaleDateString("en-GB")}
+          </span>
           <p className="text-foreground line-clamp-2 text-sm">{thread.commentSnippet}</p>
           <div className="flex items-center gap-2">
             <span className="text-muted-foreground font-mono text-xs">@{thread.commenterLogin}</span>
@@ -300,7 +335,38 @@ function ThreadRow({
         <td className="py-2 pr-3">
           <DomainBadge domain={thread.domain} />
         </td>
-        <td className="text-muted-foreground py-2 text-xs">{new Date(thread.createdAt).toLocaleDateString("en-GB")}</td>
+        <td className="py-2 opacity-100">
+          <div className="flex items-center gap-1">
+            <button
+              onClick={() => {
+                void handleVote(true);
+              }}
+              disabled={voting}
+              aria-label="Confirm classification"
+              className={cn(
+                "rounded p-1 transition-colors",
+                vote === true
+                  ? "text-emerald-600 hover:text-emerald-700"
+                  : "text-muted-foreground hover:text-emerald-600",
+              )}
+            >
+              <ThumbsUp size={14} fill={vote === true ? "currentColor" : "none"} />
+            </button>
+            <button
+              onClick={() => {
+                void handleVote(false);
+              }}
+              disabled={voting}
+              aria-label="Exclude classification"
+              className={cn(
+                "rounded p-1 transition-colors",
+                vote === false ? "text-red-500 hover:text-red-600" : "text-muted-foreground hover:text-red-500",
+              )}
+            >
+              <ThumbsDown size={14} fill={vote === false ? "currentColor" : "none"} />
+            </button>
+          </div>
+        </td>
       </tr>
       {expanded && (
         <tr className="border-border/50 bg-muted/30 border-t">
@@ -375,6 +441,19 @@ export default function ThreadsView({
     setFilters((f) => ({ ...f, ...patch }));
   }
 
+  function handleVoteChange(threadId: number, vote: boolean | null) {
+    setState((s) => {
+      if (!s.data) return s;
+      return {
+        ...s,
+        data: {
+          ...s.data,
+          threads: s.data.threads.map((t) => (t.threadRootCommentId === threadId ? { ...t, vote } : t)),
+        },
+      };
+    });
+  }
+
   const totalPages = state.data ? Math.max(1, Math.ceil(state.data.total / state.data.pageSize)) : 1;
 
   return (
@@ -428,6 +507,18 @@ export default function ThreadsView({
             updateFilters({ role: (v || "all") as Role });
           }}
         />
+        <FilterDropdown
+          value={filters.vote ?? ""}
+          options={[
+            { value: "", label: "All cross-checks" },
+            { value: "unconfirmed", label: "Unconfirmed" },
+            { value: "confirmed", label: "Confirmed" },
+            { value: "excluded", label: "Excluded" },
+          ]}
+          onChange={(v) => {
+            updateFilters({ vote: v ? (v as "confirmed" | "excluded" | "unconfirmed") : undefined });
+          }}
+        />
 
         {filters.prId !== undefined && (
           <button
@@ -467,7 +558,21 @@ export default function ThreadsView({
                     <th className="text-muted-foreground pr-3 pb-2 text-xs font-medium">PR</th>
                     <th className="text-muted-foreground pr-3 pb-2 text-xs font-medium">Intent</th>
                     <th className="text-muted-foreground pr-3 pb-2 text-xs font-medium">Domain</th>
-                    <th className="text-muted-foreground pb-2 text-xs font-medium">Date</th>
+                    <th className="text-muted-foreground pb-2 text-xs font-medium">
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <span className="flex cursor-default items-center gap-1">
+                              Cross-check
+                              <Info className="size-3" />
+                            </span>
+                          </TooltipTrigger>
+                          <TooltipContent className="max-w-[220px]">
+                            Confirm or exclude AI classification. Excluded threads are removed from metric aggregates.
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
@@ -477,6 +582,7 @@ export default function ThreadsView({
                       thread={thread}
                       boardId={boardId}
                       viewerLogin={currentLogin}
+                      onVoteChange={handleVoteChange}
                     />
                   ))}
                 </tbody>

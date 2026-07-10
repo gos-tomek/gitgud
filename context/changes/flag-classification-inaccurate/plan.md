@@ -351,34 +351,34 @@ Update all metric aggregation queries to exclude threads voted as `false` (thumb
 
 #### Automated
 
-- [x] 2.1 Migration applies cleanly
-- [x] 2.2 TypeScript compiles (src and tests)
-- [x] 2.3 Lint passes
-- [x] 2.4 Non-integration tests pass
+- [x] 2.1 Migration applies cleanly — dc68d90
+- [x] 2.2 TypeScript compiles (src and tests) — dc68d90
+- [x] 2.3 Lint passes — dc68d90
+- [x] 2.4 Non-integration tests pass — dc68d90
 
 #### Manual
 
-- [x] 2.5 Vote PATCH endpoint works for all vote values
-- [x] 2.6 Threads list API returns vote field
-- [x] 2.7 Vote query param filters correctly
+- [x] 2.5 Vote PATCH endpoint works for all vote values — dc68d90
+- [x] 2.6 Threads list API returns vote field — dc68d90
+- [x] 2.7 Vote query param filters correctly — dc68d90
 
 ### Phase 3: UI — Vote Buttons, Filter & Visual Treatment
 
 #### Automated
 
-- [ ] 3.1 TypeScript compiles
-- [ ] 3.2 Lint passes
-- [ ] 3.3 Non-integration tests pass
+- [x] 3.1 TypeScript compiles
+- [x] 3.2 Lint passes
+- [x] 3.3 Non-integration tests pass
 
 #### Manual
 
-- [ ] 3.4 Thumbs-up/down buttons work and highlight correctly
-- [ ] 3.5 Clicking same thumb clears vote
-- [ ] 3.6 Excluded rows appear dimmed
-- [ ] 3.7 Vote filter dropdown shows 4 options and filters correctly
-- [ ] 3.8 Optimistic update works, reverts on error
-- [ ] 3.9 Both supervisor and contributor can vote
-- [ ] 3.10 Table responsive on narrow screens
+- [x] 3.4 Thumbs-up/down buttons work and highlight correctly
+- [x] 3.5 Clicking same thumb clears vote
+- [x] 3.6 Excluded rows appear dimmed
+- [x] 3.7 Vote filter dropdown shows 4 options and filters correctly
+- [x] 3.8 Optimistic update works, reverts on error
+- [x] 3.9 Both supervisor and contributor can vote
+- [x] 3.10 Table responsive on narrow screens
 
 ### Phase 4: Metrics Exclusion
 
