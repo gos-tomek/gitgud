@@ -272,21 +272,21 @@ None — the test plan is a living document. Previous versions are in git histor
 
 #### Automated
 
-- [x] 2.1 Risk numbers in Phase rows exist in §2
-- [x] 2.2 Phase numbers are sequential (1–7)
+- [x] 2.1 Risk numbers in Phase rows exist in §2 — 929e04b
+- [x] 2.2 Phase numbers are sequential (1–7) — 929e04b
 
 #### Manual
 
-- [x] 2.3 Phase 5–7 scopes cover all research gaps
-- [x] 2.4 Phase ordering matches agreed priority
+- [x] 2.3 Phase 5–7 scopes cover all research gaps — 929e04b
+- [x] 2.4 Phase ordering matches agreed priority — 929e04b
 
 ### Phase 3: Stack, Cookbook, Exclusions & Freshness (§4, §6, §7, §8)
 
 #### Automated
 
-- [ ] 3.1 Freshness dates updated to 2026-07-09
-- [ ] 3.2 Stack profile says "meaningful" and "32"
-- [ ] 3.3 §6.7 is non-empty
+- [x] 3.1 Freshness dates updated to 2026-07-09
+- [x] 3.2 Stack profile says "meaningful" and "32"
+- [x] 3.3 §6.7 is non-empty
 
 #### Manual
 

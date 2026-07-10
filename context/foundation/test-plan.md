@@ -6,7 +6,7 @@
 >
 > Refresh: re-run `/10x-test-plan --refresh` when stale (see §8).
 >
-> Last updated: 2026-06-14
+> Last updated: 2026-07-09
 
 ## 1. Strategy
 
@@ -99,22 +99,22 @@ orchestrator updates Status as artifacts appear on disk.
 
 ## 4. Stack
 
-Test-base profile: **none** — no test runner config, no test files. Phase 1 bootstraps the runner.
+Test-base profile: **meaningful** — 32 test files (6 unit, 6 component, 14 hermetic, 6 integration) + 5 helpers.
 
-| Layer              | Tool                   | Version | Notes                                                      |
-| ------------------ | ---------------------- | ------- | ---------------------------------------------------------- |
-| unit + integration | none yet — see Phase 1 | —       | Vitest recommended (Astro 6 / TypeScript / Vite ecosystem) |
-| component          | none yet — see Phase 2 | —       | @testing-library/react for React islands                   |
-| API mocking        | none yet — see Phase 2 | —       | Stubbed Supabase client for hermetic tests                 |
-| e2e                | none yet               | —       | Not in rollout scope; evaluate at --refresh                |
-| accessibility      | none yet               | —       | Not in rollout scope                                       |
+| Layer              | Tool                           | Version | Notes                                                  |
+| ------------------ | ------------------------------ | ------- | ------------------------------------------------------ |
+| unit + integration | Vitest                         | ^4.1.8  | Installed; Astro 6 / TypeScript / Vite ecosystem       |
+| component          | @testing-library/react         | ^16.3.2 | Installed; happy-dom for DOM environment per test file |
+| API mocking        | vi.mock / vi.hoisted pattern   | —       | See §6.3; stubbed Supabase client for hermetic tests   |
+| e2e                | Playwright — planned (Phase 7) | ^1.61.1 | In devDependencies; rollout target Phase 7             |
+| accessibility      | none yet                       | —       | Not in rollout scope                                   |
 
 **Stack grounding tools (current session):**
 
-- Docs: Context7 — available; Astro 6 and Vitest docs accessible; checked: 2026-06-09
-- Search: Exa.ai — available; can verify current tool support and APIs; checked: 2026-06-09
-- Runtime/browser: none — no Playwright MCP in current session
-- Provider/platform: Cloudflare MCP — available (docs/search/execute); relevant for Workers-specific test setup; checked: 2026-06-09
+- Docs: Context7 — available; Astro 6 and Vitest docs accessible; checked: 2026-07-09
+- Search: Exa.ai — available; can verify current tool support and APIs; checked: 2026-07-09
+- Runtime/browser: Playwright MCP — available in current session; checked: 2026-07-09
+- Provider/platform: Cloudflare MCP — available (docs/search/execute); relevant for Workers-specific test setup; checked: 2026-07-09
 
 ## 5. Quality Gates
 
@@ -434,21 +434,65 @@ table for the operation(s) the new table's policies define.
 
 ### 6.7 Per-rollout-phase notes
 
-(Filled in as each phase ships.)
+Organically added test files through Phase 4 — cross-referenced to the cookbook pattern each follows.
+
+#### §6.1 Integration (6 files)
+
+- `tests/integration/access-boundary.test.ts` — two-client RLS isolation for cross-board IDOR (#1, #5); reference implementation for §6.1 and §6.6.
+- `tests/integration/pat-leak.test.ts` — dev server output capture verifying no raw PAT appears in API responses (#2); reference for the server output capture pattern in §6.1.
+- `tests/integration/smoke.test.ts` — connectivity guard; confirms local Supabase is reachable before other integration suites run.
+- `tests/integration/impact-access.test.ts` — IC and EM role authentication against a real Supabase instance; groundwork for IC-vs-EM parity assertion (#7; comparative assertion gap remains for Phase 5).
+- `tests/integration/board-settings.test.ts` — owner vs. non-owner mutation RLS for rename/delete/repo/contributor endpoints (R5).
+- `tests/integration/account-deletion.test.ts` — full deletion cascade via admin client; verifies no orphaned child rows after user account delete (#8).
+
+#### §6.2 Component (6 files)
+
+- `tests/component/CreateBoardForm.test.tsx` — 3-step wizard state machine, step transitions, and full submit (#3, #4); reference implementation for §6.2.
+- `tests/component/ChangePasswordForm.test.tsx` — password change form interactions and error states.
+- `tests/component/DeleteAccountDialog.test.tsx` — account deletion confirmation dialog, destructive-action guard (#8).
+- `tests/component/PatUpdateForm.test.tsx` — PAT update form; live validation debounce and masked display (#2).
+- `tests/component/SignUpForm.test.tsx` — signup form interactions and client-side validation.
+- `tests/component/impact.test.tsx` — impact view components: period selector, KPI card rendering, contributor selector (#7, R8).
+
+#### §6.3 Hermetic (14 files)
+
+- `tests/hermetic/board-creation.test.ts` — board creation API route with stubbed Supabase; reference implementation for §6.3 and §6.4 validation template.
+- `tests/hermetic/validate-pat.test.ts` — PAT validation endpoint with mocked GitHub client (#2).
+- `tests/hermetic/github-pat-fallback.test.ts` — PAT fallback behavior when primary token expires or fails (#2).
+- `tests/hermetic/profile-pat.test.ts` — profile PAT update handler; encryption and storage (#2).
+- `tests/hermetic/profile-password.test.ts` — password change handler; success, wrong-password, and weak-password paths.
+- `tests/hermetic/delete-account.test.ts` — account deletion API handler; admin-client cascade and auth.admin.deleteUser call (#8).
+- `tests/hermetic/board-settings.test.tsx` — board name editor, repo manager, and contributor manager UI components (R5).
+- `tests/hermetic/impact-api.test.ts` — impact metrics API handler; route validation and service delegation (#7).
+- `tests/hermetic/impact-metrics.test.ts` — impact-metrics service: self-review exclusion, division-by-zero, and date-range boundary fixtures (R8).
+- `tests/hermetic/sync-pr-batch.test.ts` — PR sync batch service with mocked Octokit and Supabase; partial-failure path (R1).
+- `tests/hermetic/sync-review-comments.test.ts` — review comment sync with mocked clients; stale-data and retry behavior (R1).
+- `tests/hermetic/list-and-upsert-prs.test.ts` — PR list-and-upsert service; upsert idempotency and GitHub pagination (R1).
+- `tests/hermetic/threads-api.test.ts` — classification threads API handler; filters and response shape (#9).
+- `tests/hermetic/classification-voting.test.ts` — classification service: AI binding mock verifying stored output contains labels only, not raw comment text (#9).
+
+#### §6.4 Unit (6 files)
+
+- `tests/unit/wizard-reducer.test.ts` — board wizard state reducer; step transitions and validation preconditions (#3, #4).
+- `tests/unit/classification.test.ts` — classification label logic and dedup rules (#9).
+- `tests/unit/date-range.test.ts` — period slug parsing and validation; boundary and edge-case coverage for date-range logic (R8).
+- `tests/unit/github.test.ts` — GitHub utility functions; URL parsing and identifier normalization.
+- `tests/unit/logger.test.ts` — logger module; consola wrapper behavior.
+- `tests/unit/token-status.test.ts` — PAT token status helper; expiry detection and warning thresholds (#2).
 
 ## 7. What We Deliberately Don't Test
 
 Exclusions agreed during the rollout (Phase 2 interview, Q5). Future
 contributors should respect these unless the underlying assumption changes.
 
-- **Static pages** (landing, index, layout) — rarely change, low blast radius, no business logic. Re-evaluate if these pages gain dynamic content or auth-gated sections. (Source: Phase 2 interview Q5.)
+- **Static pages** (landing, index, layout) — rarely change, low blast radius, no business logic. Re-evaluate if these pages gain dynamic content or auth-gated sections. (Source: Phase 2 interview Q5.) Note: homepage (`src/pages/index.astro`) now includes dynamic stats via `get_homepage_stats` RPC — re-evaluate if stats accuracy becomes a risk.
 - **Generated types** (Supabase-generated types, Zod inferred types) — the generator is the test; snapshot-testing generated output catches nothing meaningful. Re-evaluate if custom type transforms are layered on top. (Source: Phase 2 interview Q5.)
 
 ## 8. Freshness Ledger
 
-- Strategy (§1–§5) last reviewed: 2026-06-09
-- Stack versions last verified: 2026-06-09
-- AI-native tool references last verified: 2026-06-09
+- Strategy (§1–§5) last reviewed: 2026-07-09
+- Stack versions last verified: 2026-07-09
+- AI-native tool references last verified: 2026-07-09
 
 Refresh (`/10x-test-plan --refresh`) when:
 
