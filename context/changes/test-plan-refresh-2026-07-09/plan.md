@@ -259,9 +259,9 @@ None — the test plan is a living document. Previous versions are in git histor
 
 #### Automated
 
-- [x] 1.1 Document renders valid markdown (no broken table syntax)
-- [x] 1.2 All risk numbers in §3 exist in §2
-- [x] 1.3 No duplicate risk numbers
+- [x] 1.1 Document renders valid markdown (no broken table syntax) — ecb9859
+- [x] 1.2 All risk numbers in §3 exist in §2 — ecb9859
+- [x] 1.3 No duplicate risk numbers — ecb9859
 
 #### Manual
 
@@ -272,13 +272,13 @@ None — the test plan is a living document. Previous versions are in git histor
 
 #### Automated
 
-- [ ] 2.1 Risk numbers in Phase rows exist in §2
-- [ ] 2.2 Phase numbers are sequential (1–7)
+- [x] 2.1 Risk numbers in Phase rows exist in §2
+- [x] 2.2 Phase numbers are sequential (1–7)
 
 #### Manual
 
-- [ ] 2.3 Phase 5–7 scopes cover all research gaps
-- [ ] 2.4 Phase ordering matches agreed priority
+- [x] 2.3 Phase 5–7 scopes cover all research gaps
+- [x] 2.4 Phase ordering matches agreed priority
 
 ### Phase 3: Stack, Cookbook, Exclusions & Freshness (§4, §6, §7, §8)
 
