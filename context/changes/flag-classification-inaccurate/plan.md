@@ -343,9 +343,9 @@ Update all metric aggregation queries to exclude threads voted as `false` (thumb
 
 #### Manual
 
-- [ ] 1.3 Vote column exists with NULL default
-- [ ] 1.4 set_thread_classification_vote succeeds for board member
-- [ ] 1.5 set_thread_classification_vote raises error for non-member
+- [x] 1.3 Vote column exists with NULL default
+- [x] 1.4 set_thread_classification_vote succeeds for board member
+- [x] 1.5 set_thread_classification_vote raises error for non-member
 
 ### Phase 2: API & Service Layer
 
@@ -366,32 +366,32 @@ Update all metric aggregation queries to exclude threads voted as `false` (thumb
 
 #### Automated
 
-- [x] 3.1 TypeScript compiles
-- [x] 3.2 Lint passes
-- [x] 3.3 Non-integration tests pass
+- [x] 3.1 TypeScript compiles — a93bca7
+- [x] 3.2 Lint passes — a93bca7
+- [x] 3.3 Non-integration tests pass — a93bca7
 
 #### Manual
 
-- [x] 3.4 Thumbs-up/down buttons work and highlight correctly
-- [x] 3.5 Clicking same thumb clears vote
-- [x] 3.6 Excluded rows appear dimmed
-- [x] 3.7 Vote filter dropdown shows 4 options and filters correctly
-- [x] 3.8 Optimistic update works, reverts on error
-- [x] 3.9 Both supervisor and contributor can vote
-- [x] 3.10 Table responsive on narrow screens
+- [x] 3.4 Thumbs-up/down buttons work and highlight correctly — a93bca7
+- [x] 3.5 Clicking same thumb clears vote — a93bca7
+- [x] 3.6 Excluded rows appear dimmed — a93bca7
+- [x] 3.7 Vote filter dropdown shows 4 options and filters correctly — a93bca7
+- [x] 3.8 Optimistic update works, reverts on error — a93bca7
+- [x] 3.9 Both supervisor and contributor can vote — a93bca7
+- [x] 3.10 Table responsive on narrow screens — a93bca7
 
 ### Phase 4: Metrics Exclusion
 
 #### Automated
 
-- [ ] 4.1 Migration applies cleanly
-- [ ] 4.2 TypeScript compiles
-- [ ] 4.3 Non-integration tests pass
+- [x] 4.1 Migration applies cleanly
+- [x] 4.2 TypeScript compiles
+- [x] 4.3 Non-integration tests pass
 
 #### Manual
 
-- [ ] 4.4 Thumbs-down thread decreases contributor metrics
-- [ ] 4.5 Thumbs-up thread leaves metrics unchanged
-- [ ] 4.6 Clearing excluded vote restores metrics
-- [ ] 4.7 Homepage stats reflect exclusions
-- [ ] 4.8 All threads excluded → high-signal % shows 0
+- [x] 4.4 Thumbs-down thread decreases contributor metrics
+- [x] 4.5 Thumbs-up thread leaves metrics unchanged
+- [x] 4.6 Clearing excluded vote restores metrics
+- [x] 4.7 Homepage stats reflect exclusions
+- [x] 4.8 All threads excluded → high-signal % shows 0
