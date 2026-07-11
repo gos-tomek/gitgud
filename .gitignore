@@ -42,3 +42,4 @@ scripts/
 
 # playwright local auth settings
 playwright/.auth/
+test-results/
