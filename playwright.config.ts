@@ -24,6 +24,12 @@ export default defineConfig({
       name: "setup",
       testMatch: /auth\.setup\.ts/,
     },
+    // auth-viewer.setup.ts logs in the non-owner viewer user and writes
+    // playwright/.auth/viewer.json. Used by the non-owner-denied spec.
+    {
+      name: "setup-viewer",
+      testMatch: /auth-viewer\.setup\.ts/,
+    },
     {
       name: "chromium",
       use: {

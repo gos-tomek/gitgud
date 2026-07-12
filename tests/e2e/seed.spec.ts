@@ -1,4 +1,5 @@
 import { test, expect } from "@playwright/test";
+import { mockGitHubApis } from "./fixtures.js";
 
 // Seed test — demonstrates E2E patterns for this project.
 // Playwright Test Agents (Planner/Generator) use this file as the template for
@@ -22,32 +23,7 @@ import { test, expect } from "@playwright/test";
 // page.route() must be registered before the navigation that triggers the request.
 // beforeEach runs before each test, so this guarantee holds automatically.
 test.beforeEach(async ({ page }) => {
-  await page.route("**/api/github/repos", (route) =>
-    route.fulfill({
-      status: 200,
-      contentType: "application/json",
-      body: JSON.stringify({
-        repos: [{ owner: "acme-org", name: "backend", fullName: "acme-org/backend", private: false, pushAccess: true }],
-      }),
-    }),
-  );
-
-  await page.route("**/api/github/collaborators", (route) =>
-    route.fulfill({
-      status: 200,
-      contentType: "application/json",
-      body: JSON.stringify({
-        collaborators: [
-          {
-            id: 99001,
-            login: "alice-dev",
-            avatarUrl: "https://avatars.githubusercontent.com/u/99001",
-            type: "Collaborator",
-          },
-        ],
-      }),
-    }),
-  );
+  await mockGitHubApis(page);
 });
 
 test("board lifecycle: wizard completes and board survives until explicit delete", async ({ page }) => {
