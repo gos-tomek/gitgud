@@ -14,7 +14,10 @@
     "test:watch": "vitest",
     "test:typecheck": "tsc --project tests/tsconfig.json --noEmit",
     "prepare": "lefthook install",
-    "e2e": "playwright test"
+    "e2e": "playwright test",
+    "graph": "depcruise src --config --output-type dot | dot -T svg > dependency-graph.svg",
+    "graph:archi": "depcruise src --config --output-type archi | dot -T svg > dependency-archi.svg",
+    "lint:deps": "depcruise src --config"
   },
   "dependencies": {
     "@astrojs/check": "^0.9.9",
@@ -52,11 +55,13 @@
     "@cloudflare/workers-types": "^4.20260617.1",
     "@eslint/compat": "^2.0.3",
     "@eslint/js": "^9.29.0",
+    "@hpcc-js/wasm-graphviz": "^1.28.0",
     "@playwright/test": "^1.61.1",
     "@testing-library/dom": "^10.4.1",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",
     "@testing-library/user-event": "^14.6.1",
+    "dependency-cruiser": "^18.1.0",
     "eslint": "^9.29.0",
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-astro": "^1.7.0",
