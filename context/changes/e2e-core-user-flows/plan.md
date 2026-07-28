@@ -362,25 +362,25 @@ Required new GitHub repository secrets: `E2E_EMAIL`, `E2E_PASSWORD`, `E2E_GITHUB
 
 #### Automated
 
-- [x] 1.1 Seed test passes with shared fixtures: `npx playwright test seed.spec.ts`
-- [x] 1.2 Viewer auth setup completes: `npx playwright test --project=setup-viewer`
-- [x] 1.3 TypeScript compiles: `npx tsc --noEmit`
+- [x] 1.1 Seed test passes with shared fixtures: `npx playwright test seed.spec.ts` — 2799708
+- [x] 1.2 Viewer auth setup completes: `npx playwright test --project=setup-viewer` — 2799708
+- [x] 1.3 TypeScript compiles: `npx tsc --noEmit` — 2799708
 
 #### Manual
 
-- [x] 1.4 `playwright/.auth/viewer.json` created after setup
-- [x] 1.5 `npm run e2e` runs the full suite
+- [x] 1.4 `playwright/.auth/viewer.json` created after setup — 2799708
+- [x] 1.5 `npm run e2e` runs the full suite — 2799708
 
 ### Phase 2: Board Lifecycle Spec
 
 #### Automated
 
-- [ ] 2.1 Spec passes: `npx playwright test board-lifecycle.spec.ts`
-- [ ] 2.2 Full suite still green: `npx playwright test`
+- [x] 2.1 Spec passes: `npx playwright test board-lifecycle.spec.ts`
+- [x] 2.2 Full suite still green: `npx playwright test`
 
 #### Manual
 
-- [ ] 2.3 Headed run visually matches expectations
+- [x] 2.3 Headed run visually matches expectations
 
 ### Phase 3: Contributor Management Spec
 
