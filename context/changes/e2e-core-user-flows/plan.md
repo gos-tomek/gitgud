@@ -398,8 +398,8 @@ Required new GitHub repository secrets: `E2E_EMAIL`, `E2E_PASSWORD`, `E2E_GITHUB
 
 #### Automated
 
-- [x] 4.1 Spec passes: `npx playwright test non-owner-denied.spec.ts`
-- [x] 4.2 Full suite still green: `npx playwright test`
+- [x] 4.1 Spec passes: `npx playwright test non-owner-denied.spec.ts` — e6414ea
+- [x] 4.2 Full suite still green: `npx playwright test` — e6414ea
 
 #### Manual
 

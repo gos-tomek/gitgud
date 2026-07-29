@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-import { mockGitHubApis } from "./fixtures.js";
+import { createBoardViaWizard, deleteBoardViaUI, mockGitHubApis } from "./fixtures.js";
 
 // Seed test — demonstrates E2E patterns for this project.
 // Playwright Test Agents (Planner/Generator) use this file as the template for
@@ -29,45 +29,13 @@ test.beforeEach(async ({ page }) => {
 test("board lifecycle: wizard completes and board survives until explicit delete", async ({ page }) => {
   const boardName = `Seed Board ${Date.now()}`;
 
-  // ── Step 1: board name ────────────────────────────────────────────────────
-  await page.goto("/board/new");
-  await page.waitForLoadState("networkidle");
-  await expect(page.getByText(/Connected as/)).toBeVisible();
-
-  await page.getByRole("textbox", { name: "Board name" }).pressSequentially(boardName);
-  await expect(page.getByRole("button", { name: "Next" })).toBeEnabled();
-
-  await page.getByRole("button", { name: "Next" }).click();
-
-  // ── Step 2: select repository ──────────────────────────────────────────────
-  await page.waitForLoadState("networkidle");
-  await expect(page.getByText("Step 2 of 3")).toBeVisible();
-  await expect(page.getByText("acme-org/backend")).toBeVisible();
-
-  await page.getByRole("checkbox", { name: /acme-org\/backend/ }).click();
-  await expect(page.getByRole("button", { name: "Next" })).toBeEnabled();
-
-  await page.getByRole("button", { name: "Next" }).click();
-
-  // ── Step 3: select contributor ─────────────────────────────────────────────
-  await page.waitForLoadState("networkidle");
-  await expect(page.getByText("Step 3 of 3")).toBeVisible();
-  await expect(page.getByText("@alice-dev")).toBeVisible();
-
-  await page.getByText("@alice-dev").click();
-  await expect(page.getByRole("button", { name: "Create Board" })).toBeEnabled();
-
-  await page.getByRole("button", { name: "Create Board" }).click();
-
   // ── Create ─────────────────────────────────────────────────────────────────
-  await page.waitForURL(/\/board\/[^/]+\//);
-  const boardId = /\/board\/([^/]+)\//.exec(page.url())?.[1] ?? "";
+  const boardId = await createBoardViaWizard(page, boardName);
 
   await page.waitForLoadState("networkidle");
   await expect(page.getByText(boardName).first()).toBeVisible();
 
   // ── Assert board data in settings ─────────────────────────────────────────
-
   await page.getByRole("link", { name: "Settings" }).click();
   await page.waitForURL(/\/settings$/);
   await page.waitForLoadState("networkidle");
@@ -77,14 +45,6 @@ test("board lifecycle: wizard completes and board survives until explicit delete
   await expect(page.getByText("@alice-dev")).toBeVisible();
 
   // ── Delete ─────────────────────────────────────────────────────────────────
-  await page.getByRole("button", { name: "Delete board" }).click();
-  await expect(page.getByRole("button", { name: "Cancel" })).toBeVisible();
-
-  await page.getByRole("textbox", { name: /Type .* to confirm/i }).fill(boardName);
-  await expect(page.getByRole("button", { name: "Permanently delete board" })).toBeEnabled();
-
-  await page.getByRole("button", { name: "Permanently delete board" }).click();
-
-  await page.waitForURL((url) => !url.href.includes(boardId));
+  await deleteBoardViaUI(page, boardId, boardName);
   await expect(page).not.toHaveURL(new RegExp(boardId));
 });

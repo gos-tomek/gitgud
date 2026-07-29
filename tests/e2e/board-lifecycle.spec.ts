@@ -1,6 +1,6 @@
 import { createClient } from "@supabase/supabase-js";
 import { test, expect } from "@playwright/test";
-import { mockGitHubApis } from "./fixtures.js";
+import { createBoardViaWizard, deleteBoardViaUI, mockGitHubApis } from "./fixtures.js";
 
 // Risk coverage (test-plan.md §2):
 //   Risk #8  — board DELETE cascades cleanly; board URL unreachable after deletion
@@ -50,30 +50,8 @@ test("board lifecycle: dashboard redirects to created board, board URL unreachab
   await expect(page.getByRole("heading", { name: "Welcome to GitGud" })).toBeVisible();
   await expect(page.getByRole("link", { name: "+ Create your first board" })).toBeVisible();
 
-  // ── Step 2: Create board via wizard (same pattern as seed test) ───────────
-  await page.goto("/board/new");
-  await page.waitForLoadState("networkidle");
-  await expect(page.getByText(/Connected as/)).toBeVisible();
-
-  await page.getByRole("textbox", { name: "Board name" }).pressSequentially(boardName);
-  await expect(page.getByRole("button", { name: "Next" })).toBeEnabled();
-  await page.getByRole("button", { name: "Next" }).click();
-
-  await page.waitForLoadState("networkidle");
-  await expect(page.getByText("Step 2 of 3")).toBeVisible();
-  await page.getByRole("checkbox", { name: /acme-org\/backend/ }).click();
-  await expect(page.getByRole("button", { name: "Next" })).toBeEnabled();
-  await page.getByRole("button", { name: "Next" }).click();
-
-  await page.waitForLoadState("networkidle");
-  await expect(page.getByText("Step 3 of 3")).toBeVisible();
-  await page.getByText("@alice-dev").click();
-  await expect(page.getByRole("button", { name: "Create Board" })).toBeEnabled();
-  await page.getByRole("button", { name: "Create Board" }).click();
-
-  await page.waitForURL(/\/board\/[^/]+\//);
-  const boardId = /\/board\/([^/]+)\//.exec(page.url())?.[1] ?? "";
-  expect(boardId).toBeTruthy();
+  // ── Step 2: Create board via wizard ──────────────────────────────────────
+  const boardId = await createBoardViaWizard(page, boardName);
 
   // ── Step 3: /dashboard redirects to a board after creation ────────────────
   // getUserBoards sorts by created_at DESC; in parallel mode another spec may
@@ -87,14 +65,7 @@ test("board lifecycle: dashboard redirects to created board, board URL unreachab
 
   // ── Step 4: Delete board from settings ───────────────────────────────────
   // Already on the settings page from Step 3 — no second goto needed.
-  await page.getByRole("button", { name: "Delete board" }).click();
-  await expect(page.getByRole("button", { name: "Cancel" })).toBeVisible();
-
-  await page.getByRole("textbox", { name: /Type .* to confirm/i }).fill(boardName);
-  await expect(page.getByRole("button", { name: "Permanently delete board" })).toBeEnabled();
-  await page.getByRole("button", { name: "Permanently delete board" }).click();
-
-  await page.waitForURL((url) => !url.href.includes(boardId));
+  await deleteBoardViaUI(page, boardId, boardName);
   await expect(page).not.toHaveURL(new RegExp(boardId));
 
   // ── Step 5: Deleted board URL is unreachable (Risk #8 cascade) ───────────

@@ -1,6 +1,6 @@
 import { test, expect } from "@playwright/test";
 import { createClient } from "@supabase/supabase-js";
-import { mockGitHubApis } from "./fixtures.js";
+import { createBoardViaWizard, deleteBoardViaUI, mockGitHubApis } from "./fixtures.js";
 
 // Risk coverage (test-plan.md §2):
 //   R5 — settings API unauthorized mutation
@@ -64,29 +64,7 @@ test.beforeAll(async ({ browser }) => {
   const page = await ctx.newPage();
   await mockGitHubApis(page);
 
-  await page.goto("/board/new");
-  await page.waitForLoadState("networkidle");
-  await expect(page.getByText(/Connected as/)).toBeVisible();
-
-  await page.getByRole("textbox", { name: "Board name" }).pressSequentially(boardName);
-  await expect(page.getByRole("button", { name: "Next" })).toBeEnabled();
-  await page.getByRole("button", { name: "Next" }).click();
-
-  await page.waitForLoadState("networkidle");
-  await expect(page.getByText("Step 2 of 3")).toBeVisible();
-  await page.getByRole("checkbox", { name: /acme-org\/backend/ }).click();
-  await expect(page.getByRole("button", { name: "Next" })).toBeEnabled();
-  await page.getByRole("button", { name: "Next" }).click();
-
-  await page.waitForLoadState("networkidle");
-  await expect(page.getByText("Step 3 of 3")).toBeVisible();
-  await page.getByText("@alice-dev").click();
-  await expect(page.getByRole("button", { name: "Create Board" })).toBeEnabled();
-  await page.getByRole("button", { name: "Create Board" }).click();
-
-  await page.waitForURL(/\/board\/[^/]+\//);
-  boardId = /\/board\/([^/]+)\//.exec(page.url())?.[1] ?? "";
-  expect(boardId).toBeTruthy();
+  boardId = await createBoardViaWizard(page, boardName);
 
   // ── Seed viewer as contributor via owner's authenticated session ────────────
   // Using the owner's page.request avoids the need for service_role table access
@@ -121,12 +99,7 @@ test.afterAll(async ({ browser }) => {
     return;
   }
 
-  await deleteBtn.click();
-  await expect(page.getByRole("button", { name: "Cancel" })).toBeVisible();
-  await page.getByRole("textbox", { name: /Type .* to confirm/i }).fill(boardName);
-  await expect(page.getByRole("button", { name: "Permanently delete board" })).toBeEnabled();
-  await page.getByRole("button", { name: "Permanently delete board" }).click();
-  await page.waitForURL((url) => !url.href.includes(boardId));
+  await deleteBoardViaUI(page, boardId, boardName);
   await ctx.close();
 });
 

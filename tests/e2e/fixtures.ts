@@ -1,4 +1,4 @@
-import type { Page } from "@playwright/test";
+import { expect, type Page } from "@playwright/test";
 
 // Shared GitHub API mock data for E2E specs.
 // All specs mock the same external APIs — centralizing here ensures consistency.
@@ -42,4 +42,50 @@ export async function mockGitHubApis(page: Page): Promise<void> {
       body: JSON.stringify({ collaborators: MOCK_COLLABORATORS }),
     }),
   );
+}
+
+/**
+ * Complete the 3-step board creation wizard.
+ * Selects acme-org/backend (step 2) and alice-dev (step 3).
+ * Returns the new board's UUID extracted from the redirect URL.
+ */
+export async function createBoardViaWizard(page: Page, boardName: string): Promise<string> {
+  await page.goto("/board/new");
+  await page.waitForLoadState("networkidle");
+  await expect(page.getByText(/Connected as/)).toBeVisible();
+
+  await page.getByRole("textbox", { name: "Board name" }).pressSequentially(boardName);
+  await expect(page.getByRole("button", { name: "Next" })).toBeEnabled();
+  await page.getByRole("button", { name: "Next" }).click();
+
+  await page.waitForLoadState("networkidle");
+  await expect(page.getByText("Step 2 of 3")).toBeVisible();
+  await page.getByRole("checkbox", { name: /acme-org\/backend/ }).click();
+  await expect(page.getByRole("button", { name: "Next" })).toBeEnabled();
+  await page.getByRole("button", { name: "Next" }).click();
+
+  await page.waitForLoadState("networkidle");
+  await expect(page.getByText("Step 3 of 3")).toBeVisible();
+  await page.getByText("@alice-dev").click();
+  await expect(page.getByRole("button", { name: "Create Board" })).toBeEnabled();
+  await page.getByRole("button", { name: "Create Board" }).click();
+
+  await page.waitForURL(/\/board\/[^/]+\//);
+  const boardId = /\/board\/([^/]+)\//.exec(page.url())?.[1] ?? "";
+  expect(boardId).toBeTruthy();
+  return boardId;
+}
+
+/**
+ * Submit the delete-board confirmation dialog.
+ * Assumes the page is already on the board's settings page with "Delete board" visible.
+ * Waits until the board's ID disappears from the URL.
+ */
+export async function deleteBoardViaUI(page: Page, boardId: string, boardName: string): Promise<void> {
+  await page.getByRole("button", { name: "Delete board" }).click();
+  await expect(page.getByRole("button", { name: "Cancel" })).toBeVisible();
+  await page.getByRole("textbox", { name: /Type .* to confirm/i }).fill(boardName);
+  await expect(page.getByRole("button", { name: "Permanently delete board" })).toBeEnabled();
+  await page.getByRole("button", { name: "Permanently delete board" }).click();
+  await page.waitForURL((url) => !url.href.includes(boardId));
 }
