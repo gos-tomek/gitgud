@@ -415,4 +415,4 @@ Required new GitHub repository secrets: `E2E_EMAIL`, `E2E_PASSWORD`, `E2E_GITHUB
 #### Manual
 
 - [ ] 5.3 Playwright traces uploaded as artifacts on deliberate failure
-- [ ] 5.4 E2E test accounts documented
+- [x] 5.4 E2E test accounts documented
