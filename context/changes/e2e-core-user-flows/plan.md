@@ -386,8 +386,8 @@ Required new GitHub repository secrets: `E2E_EMAIL`, `E2E_PASSWORD`, `E2E_GITHUB
 
 #### Automated
 
-- [ ] 3.1 Spec passes: `npx playwright test contributor-management.spec.ts`
-- [ ] 3.2 Full suite still green: `npx playwright test`
+- [x] 3.1 Spec passes: `npx playwright test contributor-management.spec.ts`
+- [x] 3.2 Full suite still green: `npx playwright test`
 
 #### Manual
 
