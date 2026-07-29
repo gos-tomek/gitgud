@@ -19,10 +19,6 @@ import { createBoardViaWizard, deleteBoardViaUI, mockGitHubApis } from "./fixtur
 // ID mismatch that would break the identity bridge (board_contributors.github_id =
 // user_profiles.github_id). Phase 3 already covers the add-contributor dialog flow.
 //
-// Note: DELETE /api/board/{id} is not tested for 403 here because that endpoint
-// delegates enforcement to Supabase RLS directly (no getBoardWithRole call), which
-// silently drops 0 rows without an error rather than returning 403. The three
-// mutation endpoints that call getBoardWithRole explicitly are tested instead.
 test.describe.configure({ mode: "serial" });
 
 let boardId = "";
@@ -117,11 +113,13 @@ test("viewer settings page: read-only content, no mutation controls", async ({ b
   await expect(page.getByText(boardName).last()).toBeVisible();
   await expect(page.getByRole("button", { name: /edit/i })).not.toBeVisible();
 
-  // Repositories section: no "Add repository" button
+  // Repositories section: no "Add repository" button, no per-item remove buttons
   await expect(page.getByRole("button", { name: "Add repository" })).not.toBeVisible();
+  await expect(page.getByRole("button", { name: /^Remove .+\/.+/ })).not.toBeVisible();
 
-  // Contributors section: no "Add contributors" button; alice-dev listed as static link
+  // Contributors section: no "Add contributors" button, no per-item remove buttons; alice-dev listed as static link
   await expect(page.getByRole("button", { name: "Add contributors" })).not.toBeVisible();
+  await expect(page.getByRole("button", { name: /^Remove @/ })).not.toBeVisible();
   await expect(page.getByText("@alice-dev")).toBeVisible();
 
   // Danger zone absent (no "Delete board" button)
@@ -162,6 +160,10 @@ test("viewer API mutations return 403", async ({ browser }) => {
     data: JSON.stringify({ githubId: 99001 }),
   });
   expect(removeRes.status()).toBe(403);
+
+  // DELETE /api/board/{id} — also returns 403 for non-owners
+  const deleteRes = await page.request.fetch(`/api/board/${boardId}`, { method: "DELETE" });
+  expect(deleteRes.status()).toBe(403);
 
   await viewerCtx.close();
 });

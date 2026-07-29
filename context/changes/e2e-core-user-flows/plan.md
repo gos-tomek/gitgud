@@ -171,6 +171,8 @@ Note: step 1 (empty state) assumes the test user has no other boards. The `Date.
 
 **Implementation Note**: After completing this phase and all automated verification passes, pause here for manual confirmation from the human that the manual testing was successful before proceeding to the next phase.
 
+**Implementation Addendum (post-review)**: Step 5 of the spec deviates from the plan: instead of asserting `"Welcome to GitGud"` heading after deletion, the implementation asserts that the dashboard URL no longer contains the deleted board ID. Reason: the heading assertion requires zero boards on the account, which breaks under parallel test execution when other specs are simultaneously creating boards. The URL assertion is sufficient for the risk coverage goal — it proves the board is removed from the user's active board set regardless of other boards existing.
+
 ---
 
 ## Phase 3: Contributor Management Spec

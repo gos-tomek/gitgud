@@ -149,6 +149,7 @@ export default function RepoManager({ boardId, initialRepos }: RepoManagerProps)
                 type="button"
                 variant="outline"
                 size="sm"
+                aria-label={`Remove ${repo.repoOwner}/${repo.repoName}`}
                 onClick={() => {
                   openRemoveDialog(repo);
                 }}

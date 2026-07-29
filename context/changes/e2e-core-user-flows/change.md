@@ -1,7 +1,7 @@
 ---
 change_id: e2e-core-user-flows
 title: E2E core user flows — board lifecycle, contributor CRUD, non-owner denial
-status: implemented
+status: impl_reviewed
 created: 2026-07-11
 updated: 2026-07-29
 archived_at: null

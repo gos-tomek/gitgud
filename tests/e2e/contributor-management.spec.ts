@@ -73,8 +73,8 @@ test("add contributor: bob-viewer added via dialog and appears in settings list"
   // (alice-dev is already a contributor so the dialog filters her out)
   await expect(dialog.getByText("@bob-viewer")).toBeVisible();
 
-  // Select bob-viewer by clicking the label row
-  await dialog.locator("label").filter({ hasText: "@bob-viewer" }).click();
+  // Select bob-viewer via its checkbox accessible name
+  await dialog.getByRole("checkbox", { name: /@bob-viewer/ }).click();
 
   // Add button updates to "Add 1 contributor"
   const addBtn = dialog.getByRole("button", { name: /Add 1 contributor/ });
