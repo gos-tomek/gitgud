@@ -386,24 +386,24 @@ Required new GitHub repository secrets: `E2E_EMAIL`, `E2E_PASSWORD`, `E2E_GITHUB
 
 #### Automated
 
-- [x] 3.1 Spec passes: `npx playwright test contributor-management.spec.ts`
-- [x] 3.2 Full suite still green: `npx playwright test`
+- [x] 3.1 Spec passes: `npx playwright test contributor-management.spec.ts` — 25f9312
+- [x] 3.2 Full suite still green: `npx playwright test` — 25f9312
 
 #### Manual
 
-- [ ] 3.3 Dialog interaction works correctly in headed run
-- [ ] 3.4 Impact nav dropdown appears with both contributors
+- [x] 3.3 Dialog interaction works correctly in headed run
+- [x] 3.4 Impact nav dropdown appears with both contributors
 
 ### Phase 4: Non-Owner Denial Spec
 
 #### Automated
 
-- [ ] 4.1 Spec passes: `npx playwright test non-owner-denied.spec.ts`
-- [ ] 4.2 Full suite still green: `npx playwright test`
+- [x] 4.1 Spec passes: `npx playwright test non-owner-denied.spec.ts`
+- [x] 4.2 Full suite still green: `npx playwright test`
 
 #### Manual
 
-- [ ] 4.3 Viewer settings page shows only static content in headed run
+- [x] 4.3 Viewer settings page shows only static content in headed run
 
 ### Phase 5: CI Integration
 

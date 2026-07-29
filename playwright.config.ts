@@ -16,6 +16,7 @@ export default defineConfig({
   use: {
     baseURL: "http://localhost:4321",
     trace: "on-first-retry",
+    // slowMo: 1000,
   },
   projects: [
     // auth.setup.ts logs in and writes playwright/.auth/user.json before any test runs.
@@ -38,7 +39,7 @@ export default defineConfig({
         // into every test so no UI login step is needed.
         storageState: "playwright/.auth/user.json",
       },
-      dependencies: ["setup"],
+      dependencies: ["setup", "setup-viewer"],
     },
   ],
   webServer: {
