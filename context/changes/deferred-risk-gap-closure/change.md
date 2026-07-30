@@ -1,7 +1,7 @@
 ---
 change_id: deferred-risk-gap-closure
 title: Close deferred risk gaps from test plan
-status: implementing
+status: impl_reviewed
 created: 2026-07-11
 updated: 2026-07-30
 archived_at: null

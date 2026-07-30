@@ -1,4 +1,4 @@
-import { adminClient, cleanupBoard, cleanupUser } from "../helpers/supabase.js";
+import { adminClient } from "../helpers/supabase.js";
 import { seedTwoBoards, type TwoBoardFixture } from "../helpers/seed.js";
 import { checkSupabase } from "../helpers/setup.js";
 
@@ -12,16 +12,10 @@ describe.skipIf(!supabaseAvailable)("Board-only deletion cascade", () => {
   });
 
   afterAll(async () => {
-    // Board A is deleted by the test; clean up Board B and all three users.
-    await cleanupBoard(fixture.ownerB.boardId);
-    await Promise.all([
-      cleanupUser(fixture.ownerA.userId),
-      cleanupUser(fixture.ownerB.userId),
-      cleanupUser(fixture.contributor.userId),
-    ]);
+    await fixture.cleanup();
   });
 
-  it("cascades through all 7 child tables when board owner deletes via RLS", async () => {
+  it("cascades through all 6 child tables when board owner deletes via RLS", async () => {
     const { boardId, client } = fixture.ownerA;
     const { repoId, prId } = fixture;
 

@@ -243,10 +243,10 @@ No impact on CI run time beyond marginal seconds.
 
 #### Automated
 
-- [x] 3.1 Retention guard test passes
-- [x] 3.2 All hermetic tests pass
-- [x] 3.3 Type checking passes
+- [x] 3.1 Retention guard test passes — ef372f8
+- [x] 3.2 All hermetic tests pass — ef372f8
+- [x] 3.3 Type checking passes — ef372f8
 
 #### Manual
 
-- [x] 3.4 Confirm test catches retention violation by temporarily adding body field
+- [x] 3.4 Confirm test catches retention violation by temporarily adding body field — ef372f8
