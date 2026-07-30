@@ -1,194 +1,95 @@
-# Repo Map — Developer Onboarding
+# Repo Map — Onboarding Synthesis
 
-> Synthesised: 2026-07-28 | Sources: `artifact-1-territory.md` (git activity, 254 commits), `artifact-2-structure.md` (depcruiser, 110 modules / 346 deps), `artifact-3-contributors.md` (authorship analysis)
-
----
+> Synthesized from `artifact-1-territory.md` (git activity), `artifact-2-structure.md` (static import graph, dependency-cruiser), `artifact-3-contributors.md` (authorship), `artifact-4-changes-risk.md` (risk classification).
+> Data window: 2026-05-21 – 2026-07-28 (252–254 commits, ~2 months). See §7 for what this does and does not cover.
 
 ## 1. TL;DR
 
-GitGud is an Astro 6 SSR app with React islands, deployed to Cloudflare Workers, backed by Supabase. Its core function is syncing GitHub PR data into a structured database and surfacing contribution metrics. The project is ~10 weeks old and built almost entirely by one person (Tomasz Sierpiński) with Claude as AI co-pilot. Work is concentrated in two places: the GitHub sync pipeline (`github-sync.ts` + `worker.ts`) and the business services layer (`src/lib/services/`). The schema is stabilising (Q2: 35 migrations → Q3: 9), but three invisible coupling channels are active and unenforceable by the static import graph. The most dangerous area for a new contributor is the Cloudflare Workers orchestration — constraint decisions accumulated over 30+ commits are not written down anywhere.
+GitGud is a solo-built Astro 6 SSR app (React 19 islands, Supabase, Cloudflare Workers/Workflows) that ingests GitHub PR/review activity and turns it into board-scoped contribution metrics and AI-assisted classification. The system has four real layers — DB schema, service logic, UI components, route entry points — connected as a clean layered DAG (zero cycles) for everything the static graph can see, plus at least three coupling channels the graph is blind to (`import type`, DI-injected Supabase client, hardcoded `fetch()` URLs — see §3). Work concentrated in two phases: a fast bootstrap (May–Jun, schema-heavy) that has since stabilised (Jul, sync-refactor-heavy). The pain is concentrated in one place: the GitHub sync pipeline (`github-sync.ts` + `worker.ts`), which absorbed 67 changes including a full revert, encodes undocumented Cloudflare Workflow constraints, and has zero unit tests on the orchestrator. Everything else — schema, types, boards, auth — is either stabilising or has a known, tooling-shaped fix.
 
 ```mermaid
-graph TD
-    DB[(Supabase)]
-    GH[GitHub API]
-    AI[Workers AI]
-    CF[Cloudflare Workers]
-
-    types["src/types.ts\n(type hub, 19 import-type consumers)"]
-    lib["src/lib/\n(supabase.ts, github.ts, logger.ts, utils.ts)"]
-    services["src/lib/services/\n(github-sync · boards · impact-metrics · classification)"]
-    components["src/components/\n(impact/ · CreateBoardForm · threads · auth)"]
-    pages["src/pages/\n(dashboard · api/* · auth/*)"]
-    worker["src/worker.ts\n(CF Workflow orchestrator)"]
-
-    types -.->|import type| lib
-    types -.->|import type| services
-    types -.->|import type| components
-    lib --> services
-    services --> components
-    components --> pages
-    lib --> pages
-    services --> worker
-    lib --> worker
-
-    DB <-->|DI: client as param| services
-    GH <-->|Octokit| lib
-    AI <-->|ai.run| services
-    CF --> worker
+flowchart TB
+    subgraph DB["supabase/migrations/ — schema (44 files, stabilising)"]
+    end
+    subgraph LIB["src/lib/ — clients & utils (logger, supabase, github, date-range)"]
+    end
+    subgraph SVC["src/lib/services/ — business logic (boards, github-sync, classification, impact-metrics)"]
+    end
+    subgraph CMP["src/components/ — React islands (impact/, CreateBoardForm, threads/)"]
+    end
+    subgraph PAGES["src/pages/ + src/worker.ts — routes & Workflow entry"]
+    end
+    DB -->|types.ts bridge| SVC
+    LIB --> SVC
+    SVC --> CMP
+    CMP --> PAGES
+    LIB -.->|import type, invisible to lint:deps| PAGES
+    PAGES -->|fetch URL strings, invisible to all static tooling| SVC
 ```
 
----
+## 2. Territory — activity vs. structure
 
-## 2. Territory
+**Deep, high-responsibility modules** (large + churned + high fan-in): `github-sync.ts` (620 lines, 37 changes — hotspot #1), `worker.ts` (521 lines, 30 changes), `impact-metrics.ts` (1150 lines, 24 functions, but _contained_ — see below), `boards.ts` (fan-in 14, the busiest hub after `logger.ts`/`supabase.ts`), `types.ts` (278 lines, shallow itself but the busiest _cascade_ point in the repo — co-changes with 10 directories).
 
-### Responsibility zones
+**Shallow but load-bearing**: `logger.ts` (fan-in 29, highest in the graph) and `supabase.ts` (fan-in 28) are small, stable, and almost never touched — high structural importance, low change risk. Don't mistake fan-in for danger; pair it with change profile (§3 of artifact-4).
 
-| Zone | Key paths | Depth | Activity |
-|---|---|---|---|
-| **Sync pipeline** | `github-sync.ts`, `worker.ts` | Very deep | 67 changes — #1 hotspot pair |
-| **Business services** | `src/lib/services/` | Deep | 55 dir-changes; 4 services |
-| **Schema** | `supabase/migrations/` | Deep | 44 dir-changes; 44 migrations total |
-| **Impact feature UI** | `src/components/impact/` | Medium | 30 dir-changes; 11 subcomponents |
-| **Board creation wizard** | `CreateBoardForm.tsx`, `wizard-reducer.ts` | Medium | 8+7 changes; 769+424 lines |
-| **API routes** | `src/pages/api/` | Medium | Active during features; quiet now |
-| **Auth** | `src/components/auth/`, `src/pages/auth/` | Shallow | 12 dir-changes; settled in Q2 |
-| **shadcn/ui primitives** | `src/components/ui/` | Shallow | 13 changes; additive only |
+**Peripheral / settled**: `src/components/ui/` (shadcn primitives, additive-only), `src/components/auth/` (no churn since Q2), `classification.ts` (churned early but has real unit + hermetic test coverage and a clean call depth — the one genuinely healthy "deep" module).
 
-### Module depth (size × churn)
+**Where structure ≠ activity**: `impact-metrics.ts` _looks_ like a hotspot by size (1150 lines) but the dependency graph shows its API and UI subtrees are disconnected — no risk crosses into components. It's a maintainability problem, not a coupling problem. Conversely, `types.ts` has **zero runtime fan-in** in the dependency graph (dependency-cruiser would call it an orphan) while being the single highest-blast-radius file in the repo via `import type` — the graph and the real risk point in opposite directions here.
 
-Large files that are also hot are the most expensive to change:
+**Activity over time**: Q2 (May–Jun) was full-stack bootstrap — 35 migrations, heavy UI churn, no unit tests. Q3 (Jul, partial) is stabilisation — migrations dropped to 9, UI churn nearly stopped, unit tests appeared for the first time, and the majority of remaining commits are sync-pipeline refactors (GraphQL batching, Workflow subrequest budgeting).
 
-| File | Lines | Changes | Status |
-|---|---|---|---|
-| `src/lib/services/impact-metrics.ts` | 1150 | — | 6 independent exports in one file — mechanical split candidate |
-| `src/components/CreateBoardForm.tsx` | 769 | 8 | Largest component, no internal decomposition |
-| `src/lib/services/github-sync.ts` | 620 | **37** | Hotspot #1; `syncPrBatch` (211 lines) does fetch + map + persist |
-| `src/worker.ts` | 521 | **30** | 6-phase class; small depth because logic lives in methods |
-| `src/lib/services/classification.ts` | 432 | — | 10 functions, depth 4 — clean pipeline, not a concern |
+## 3. Real couplings — what actually changes together
 
-### Activity over time
+| Coupling                                         | Evidence source                                                                                                                                | Nature                                                                                            |
+| ------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------- |
+| `src/lib` ↔ `src/pages` (17 co-commits)          | git history                                                                                                                                    | mechanism: `supabase.ts` (fan-in 28) — SSR pages call services/DB client directly                 |
+| `src/lib` ↔ `supabase/migrations` (16)           | git history                                                                                                                                    | `types.ts` is the bridge: schema change → type change → service change                            |
+| `src/components` ↔ `src/pages` (15)              | git history + import graph                                                                                                                     | Astro island pattern — expected, not a smell                                                      |
+| `src/pages` ↔ `supabase/migrations` (13)         | git history                                                                                                                                    | full-stack features landing in one commit (bootstrap-phase pattern)                               |
+| `types.ts` → 19 files via `import type`          | dependency-cruiser (`import type` is invisible to `lint:deps`; only caught by `tsc --noEmit`)                                                  | **manual coupling, not generated** — every edit is a human decision with cross-layer consequences |
+| 4 services duplicate `type SupabaseClient = ...` | dependency-cruiser static graph vs. DI pattern                                                                                                 | manual copy-paste coupling the graph can't see (fan-out looks like 1, isn't)                      |
+| 25 `fetch()` URL strings, 11 components          | neither git nor dependency-cruiser sees these — **confirmed by neither tool**, called out only because a rename already broke it once (PR #32) | manual, and currently un-tooled — no lint rule catches a route rename                             |
 
-Q2 (May–Jun): bootstrap, 35 migrations, UI/backend built in parallel. Q3 (Jul): schema settling, worker refactoring, classification voting added. The project has entered stabilisation — new features are now additions, not rewrites of existing flows.
+**No cycles.** `npm run lint:deps` confirms the import graph is a DAG with 0 circular dependencies and 0 layer-boundary violations (5 enforced rules — see artifact-2 §4).
 
----
+**Non-language layers — no dependency graph at all (`unknown`, not "no coupling")**: `supabase/migrations/` (SQL) has no import graph — its coupling is inferred entirely from git co-change data, not verified structurally. Dependency-cruiser's scope is `src/` only; anything in `supabase/`, `.astro`-to-React `client:*` wiring, and the 25 `fetch()` URL strings sit outside what the tool can see. Treat structural silence in these areas as **unknown**, not as evidence of safety.
 
-## 3. Real Couplings
+**Regenerated / mocked, not hand-edited** — no such layer was flagged in the source artifacts (no build-generated types, no mock fixtures called out as co-changing). If you find a generated file (e.g. Supabase generated types, if introduced later), verify manually before assuming its co-change carries the same review cost as hand-edited code — none of artifact-1 through -4 identified one, so this repo currently has no "cheap" generated coupling to discount.
 
-### Git co-change (from artifact-1)
+## 4. Risk zones
 
-These pairs change together often enough that a PR touching one should consciously check the other:
+| Zone                                                 | Why                                                                                                                                                                                         |
+| ---------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `github-sync.ts` + `worker.ts` (sync pipeline)       | 67 combined changes, one full revert (#68), zero unit tests on `worker.ts`, undocumented Cloudflare Workflow constraints (50-subrequest budget, GQL batching) encoded only in method bodies |
+| `src/types.ts`                                       | Invisible cascade to 19 files via `import type`; `lint:deps` gives a false green, only `tsc --noEmit` catches breakage                                                                      |
+| `supabase/migrations/`                               | No contract/implementation split — the SQL _is_ the contract; schema doesn't roll back with `wrangler rollback` (expand/contract mandatory per CLAUDE.md)                                   |
+| `src/lib/github.ts`                                  | Security boundary (PAT encryption/decryption), zero unit tests, undocumented throttling/AbortSignal decisions built iteratively                                                             |
+| `src/lib/services/boards.ts`                         | fan-in 14 (every board op routes through here), zero dedicated tests, Supabase query-chain complexity                                                                                       |
+| `fetch()` URL strings (cross-cutting, 11 components) | Silent-failure risk on route rename; no static tool (TS or depcruiser) catches it; already broke once (PR #32)                                                                              |
 
-| Pair | Co-commits | Why |
-|---|---|---|
-| `src/lib` + `src/pages` | 17 | SSR: pages call services directly (via `supabase.ts` — see import graph) |
-| `src/lib` + `supabase/migrations` | 16 | Schema change forces service/type update; `types.ts` is the bridge |
-| `src/components` + `src/pages` | 15 | Astro island pattern: component embedded in `.astro` |
-| `src/pages` + `supabase/migrations` | 13 | Full-stack features land in one commit |
+## 5. Who to ask
 
-### Import graph structure (from artifact-2, depcruiser)
+Single-author repo (Tomasz Sierpinski/Sierpiński — three git identities, same person; 227 of ~254 commits are AI-paired). There is no one else to ask, so read this as "which commits/PRs to dig into" rather than "which person to ping":
 
-The static import graph is a clean DAG. Layer boundaries are enforced by `npm run lint:deps`. Dependency direction flows downward only:
+- **Sync pipeline / Workflow constraints** → author, but budget for a context-transfer conversation, not a code read: the reasoning behind GQL batch sizing, subrequest budget resets, and the PR #68 revert lives only in commit messages (`fix(worker): reset subrequest budget with step.sleep between phases (#53, #54)`, `revert: undo PR #67 + disable Workflows retries (#68)`).
+- **PAT security / `github.ts`** → author; check the `feat(github-ingestion-access)` and `feat(testing-access-boundary)` commit clusters before touching encryption or retry logic.
+- **`types.ts` cascades** → author; this is a tooling gap (add `tsc --noEmit` as a pre-merge gate for type changes — it already runs in CI per CLAUDE.md, so the fix is discipline, not infrastructure) more than a knowledge gap.
+- **`boards.ts`** → author; test gaps are deliberate (Supabase query-chain mocking is hard), not unfamiliarity — check `feat(access-control-and-membership)` and `feat(S-03)` commits for the access-control/invitation logic.
 
-```
-types.ts  ←  lib/  ←  lib/services/  ←  components/  ←  pages/ / layouts/ / entry
-```
+## 6. First day — read in this order
 
-High fan-in = high blast radius if changed:
-
-| Module | Fan-in | Source |
-|---|---|---|
-| `src/lib/logger.ts` | 29 | import graph |
-| `src/lib/supabase.ts` | 28 | import graph — explains `lib`+`pages` git coupling |
-| `src/lib/utils.ts` | 19 | import graph — `cn()` imported by every shadcn component |
-| `src/lib/services/boards.ts` | 14 | import graph |
-
-### Three invisible coupling channels (not visible to depcruiser)
-
-#### A. `import type` — TypeScript-only coupling (source: artifact-2 §5a)
-
-`src/types.ts` has runtime fan-in = 0, but **19 files** import from it via `import type`. A type rename in `types.ts` cascades as `tsc` errors across 3 layers. `npm run lint:deps` stays green; only `tsc --noEmit` catches the blast. The only known tool that enforces this: `npm run test:typecheck`.
-
-Note: `github-sync.ts` (hotspot #1) does **not** import from `types.ts` — its types are local or inferred from Supabase schema.
-
-#### B. Dependency injection — Supabase client as parameter (source: artifact-2 §5b)
-
-All four services receive the Supabase client as a first argument, not via import. This is correct DI and makes services testable in isolation. Side-effect: the static graph shows service fan-out = 1 (only `logger.ts`), which **severely understates** actual coupling. There are 4 copy-pasted `type SupabaseClient = NonNullable<ReturnType<typeof createClient>>` definitions. No tooling enforces consistency.
-
-#### C. `fetch()` URL strings — runtime API coupling (source: artifact-2 §5c)
-
-25 `fetch()` calls across 11 components reference API endpoints by hardcoded string. TypeScript does not verify these; depcruiser does not see them. **A route rename is invisible to all static tooling.** This already happened once: `boards/` → `board/` (PR #32). The components with the most exposure: `CreateBoardForm.tsx` (7 calls), `ContributorManager.tsx` (3), `RepoManager.tsx` (3).
-
-### What the graph does NOT cover
-
-Astro pages load React components via `client:*` directives in `.astro` files. Depcruiser resolves `.astro` → `.tsx` edges **partially** — most React component "orphans" in the graph are in fact used from `.astro` pages. The import graph should be read with this blind spot in mind: absence of an edge from an `.astro` file is `unknown`, not "no dependency."
-
----
-
-## 4. Risk Zones
-
-| Zone | One-liner |
-|---|---|
-| `github-sync.ts` + `worker.ts` | 30+ commits of accumulated CF Workers constraint decisions (subrequest budgets, GQL batching, adaptive backoff) — none written down; one full revert already happened (PR #68) |
-| `src/types.ts` | 19 consumers via `import type`; `lint:deps` gives false green; only `tsc --noEmit` catches cascade breaks |
-| `fetch()` URL coupling | 25 hardcoded strings in 11 components; a route rename breaks silently with no static warning |
-| `src/lib/services/boards.ts` | Fan-in 14 (every board operation routes through here), zero dedicated tests; the test gap is deliberate due to Supabase mock complexity |
-| `src/lib/services/impact-metrics.ts` | 1150 lines, 5 API endpoints all share the same `{boards, impact-metrics}` import pair; the split **must land in one atomic PR** or endpoints end up on mixed imports |
-| `src/lib/github.ts` + `SyncIndicator.tsx` | Security-critical PAT handling built over multiple phases; `SyncIndicator.tsx` has zero tests; polling pattern needs `vi.useFakeTimers()` and has never been set up |
-
----
-
-## 5. Who to Ask
-
-This is a solo project. All commits originate from **Tomasz Sierpiński** (`sierpinski.tomasz@gmail.com`). There are no other human contributors.
-
-| Zone | Contact | Mode |
-|---|---|---|
-| Worker/sync orchestration | Tomasz | **Schedule a knowledge-transfer session** — the constraint history is in commit messages, not in code or docs |
-| PAT security / `github.ts` | Tomasz | **Explicit handoff** — encryption/decryption, retry strategy, non-leakage tests were built incrementally; the decisions aren't documented |
-| `types.ts` type cascade | Tomasz | Code is readable; the risk is structural — just run `tsc --noEmit` before and after any type change |
-| `boards.ts` (no tests) | Tomasz | Familiarity is high; test coverage is the blocker before safe independent changes |
-| `fetch()` URL coupling | Tomasz | Low knowledge gap; a URL registry or tRPC-style client would fix it tooling-first |
-| Impact feature / classification | Tomasz | Well-covered by tests; ask only for business logic intent |
-
----
-
-## 6. First Day — What to Read
-
-Read in this order. Each entry unlocks the next.
-
-1. **`src/types.ts`** (278 lines) — every domain shape lives here; read before touching any service or component. Changes cascade to 19 files via `import type`.
-
-2. **`src/middleware.ts`** — auth flow entry point; explains `context.locals.user` available on every request and which routes are protected.
-
-3. **`src/lib/supabase.ts`** — SSR Supabase client, cookie-based sessions; fan-in 28. Understanding this explains the `src/lib` + `src/pages` git coupling (17 co-commits).
-
-4. **`src/lib/github.ts`** (165 lines) — Octokit wrapper with PAT decryption, retry, and rate-limit handling. Security-critical. Read before touching any GitHub API path.
-
-5. **`src/lib/services/github-sync.ts`** (620 lines, 37 changes) — hotspot #1. Focus on `syncPrBatch` (211 lines): it encodes the Cloudflare subrequest budget constraints. Do not modify without the context from the commit history (see §4).
-
-6. **`src/worker.ts`** (521 lines, 30 changes) — Cloudflare Workflow orchestrator; 6-phase switch. Each phase is a class method. Read alongside `github-sync.ts`.
-
-7. **`src/lib/services/boards.ts`** (189 lines) — board CRUD service; fan-in 14; every board operation routes through here. Zero dedicated tests — be careful with changes.
-
-8. **`src/pages/dashboard.astro`** (52 lines) — main user-facing entry point; shows the Astro island pattern (React component embedded via `client:*`).
-
----
+1. **`src/types.ts`** — the shared vocabulary; skim it before anything else touches its shapes.
+2. **`src/lib/supabase.ts`** — DB client + cookie-session wiring; explains the `lib`↔`pages` coupling everywhere.
+3. **`src/worker.ts`** — Workflow entry point; read this before touching sync, even if you don't plan to change it, to understand the phase structure.
+4. **`src/lib/services/github-sync.ts`** — hotspot #1; read `syncPrBatch` specifically and cross-reference the iteration table in artifact-3 §2 Area 5.
+5. **`src/lib/services/boards.ts`** — busiest service hub; note the zero-test gap before assuming safety.
+6. **`src/components/CreateBoardForm.tsx`** + its 7 `fetch()` calls — the clearest example of the URL-coupling risk in §3/§4.
+7. **`.dependency-cruiser.cjs`** — the five layer-boundary rules actually enforced in CI; skim so you know what `npm run lint:deps` does and doesn't catch.
+8. **`context/foundation/test-plan.md §2–§3, §6.1`** — testing risk strategy and patterns referenced from CLAUDE.md, for context on why certain modules (sync, boards) lack unit tests by design vs. by neglect.
 
 ## 7. Limitations
 
-**Time window:** 2026-05-21 to 2026-07-28 (~10 weeks). This is the full project lifetime, not a rolling year — the map covers everything, but the project is young and patterns may not be stable yet.
-
-**What git activity measures:** frequency of change, not importance. A file unchanged for months may be load-bearing; a file with 37 changes may just be undergoing active rework.
-
-**Depcruiser scope:** `src/` only (110 modules). The following are **outside the dependency graph entirely**:
-- `supabase/migrations/` — SQL, not analysed by depcruiser
-- `src/worker.ts` as a Cloudflare entry point — its runtime bindings (`env.AI`, `env.GITHUB_SYNC_WORKFLOW`) are invisible to static analysis
-- Astro `.astro` → React `.tsx` edges — partially resolved; most component "orphans" are false positives
-- `tests/` — excluded by configuration
-
-**What this map does NOT tell you:**
-- Runtime behaviour under Cloudflare Workers constraints (subrequest budgets, Workflow durability, secondary rate limits)
-- Which Supabase RLS policies exist and why
-- The intent behind specific classification thresholds or metric formulas
-- Whether `src/lib/token-status.ts` is live code or dead (marked as possible dead code in structure map; verify before touching)
+- **Time window**: all activity data covers 2026-05-21 → 2026-07-28 (~2 months, project inception to now). Older patterns don't exist; newer ones (anything after 2026-07-28) aren't reflected.
+- **Method**: git log/co-change analysis (artifact-1, -3) + dependency-cruiser static import graph scoped to `src/` (artifact-2). Risk labels in artifact-4 are a synthesis of both, not independently measured.
+- **What it does NOT say**: nothing about runtime behavior, performance, actual bug rates, or user-facing severity — this is activity and structure, not incident history. It says nothing about non-`src/` code paths beyond what git co-change can infer (SQL migrations, `.astro`↔React wiring, `fetch()` URL strings are all outside dependency-cruiser's scope — marked `unknown` above, not assumed safe). Single-contributor history also means there's no cross-review signal — "depth: high" reflects one person's iteration, not peer-validated design.
