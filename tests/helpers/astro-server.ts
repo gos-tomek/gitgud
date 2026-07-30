@@ -25,13 +25,17 @@ const LOCAL_LINE_RE = /\blocal\b/i;
  *
  * All stdout/stderr lines are captured for later PAT-leak assertions.
  * The server is started from the project root so `.dev.vars` is picked up.
+ *
+ * `env` layers additional variables on top of `process.env` (e.g.
+ * `CLOUDFLARE_VITE_WRANGLER_CONFIG_PATH` for E2E callers) without mutating the
+ * shared environment used by other callers or normal `npm run dev`.
  */
-export async function startAstroServer(port: number): Promise<AstroServerHandle> {
+export async function startAstroServer(port: number, env: Record<string, string> = {}): Promise<AstroServerHandle> {
   const outputLines: string[] = [];
 
   const proc: ChildProcess = spawn("npx", ["astro", "dev", "--port", String(port)], {
     cwd: PROJECT_ROOT,
-    env: { ...process.env },
+    env: { ...process.env, ...env },
     // detached: spawn in its own process group so `stop()` can kill the whole tree
     detached: true,
     stdio: ["ignore", "pipe", "pipe"],

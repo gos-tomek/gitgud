@@ -2,11 +2,11 @@
 
 ## Overview
 
-Write a Playwright E2E test that proves the full manual sync trigger → data appears flow, covering Risk R1 (workflow chain breaks silently). The test runs against a local `wrangler dev` instance with mocked GitHub API and AI binding, verifying that triggering a sync from the impact dashboard produces non-zero KPI metrics.
+Write a Playwright E2E test that proves the full manual sync trigger → data appears flow, covering Risk R1 (workflow chain breaks silently). The test runs against a local `astro dev` instance (Cloudflare's real `workerd` runtime — already this project's proven way to run the full Workflow chain locally, see `tests/integration/pat-leak.test.ts`) configured for E2E via `CLOUDFLARE_VITE_WRANGLER_CONFIG_PATH=./wrangler.e2e.jsonc`, with mocked GitHub API and AI binding, verifying that triggering a sync from the impact dashboard produces non-zero KPI metrics.
 
 ## Current State Analysis
 
-The project has Playwright installed (`@playwright/test@^1.61.1`) with one seed spec (`tests/e2e/seed.spec.ts`) and an auth setup (`tests/e2e/auth.setup.ts`). The existing config (`playwright.config.ts`) targets `localhost:4321` via `npm run dev` (Astro dev server), which does not support Cloudflare Workflows.
+The project has Playwright installed (`@playwright/test@^1.61.1`) with one seed spec (`tests/e2e/seed.spec.ts`) and an auth setup (`tests/e2e/auth.setup.ts`). The existing config (`playwright.config.ts`) targets `localhost:4321` via `npm run dev` (`astro dev`) — which, as of Astro 6 / `@astrojs/cloudflare` v13 (this project's versions), already runs on the real Cloudflare `workerd` runtime via the Cloudflare Vite plugin and already supports Workflows: `tests/integration/pat-leak.test.ts` already dispatches the real `ClassificationBatchWorkflow` against a plain `astro dev` server. What's missing is a way to inject E2E-only config (`GITHUB_API_BASE_URL`, `AI_MOCK`) without touching the shared `.dev.vars`/`wrangler.jsonc` used by normal dev — see Runtime Selection below.
 
 The sync chain is a multi-phase Cloudflare Workflow (`ClassificationBatchWorkflow` in `src/worker.ts`): dispatch → sync-repo → orchestrate → prdetails + reviews → classify → classify-chunk. All child phases use fire-and-forget spawning (`Workflow.create()` with no completion polling). The UI trigger lives in `SyncIndicator.tsx` — it POSTs to `/api/github/sync`, polls status every 2s, and refreshes the dashboard on completion.
 
@@ -21,6 +21,7 @@ Existing hermetic tests cover individual sync functions (`sync-pr-batch.test.ts`
 - `src/components/impact/SyncIndicator.tsx:87-96` — sync button: `<Button title="Refresh data">`. Locator: `getByRole('button', { name: 'Refresh data' })`.
 - `src/components/impact/KpiCards.tsx` — 6 KPI cards with text labels: "PRs authored", "Reviews given", "Threads started", "Time to merge", "Pickup time", "Discussion ratio". Values are plain `<p>` elements — no ARIA roles or test IDs.
 - Minimum Supabase seed for sync: `auth.users` (with github metadata → auto-creates `user_profiles`), `boards`, `github_repos`. The `board_members` table was dropped; access is derived from ownership.
+- `context/changes/e2e-workflow-chain/research.md` — full investigation of the wrangler-dev-vs-astro-dev question; raw `wrangler dev` cannot bundle `src/worker.ts` (unresolvable Astro/Vite virtual modules, confirmed unfixable via wrangler's `alias` config) and was replaced with `astro dev` + `CLOUDFLARE_VITE_WRANGLER_CONFIG_PATH`.
 
 ## Desired End State
 
@@ -32,7 +33,7 @@ A single Playwright spec (`tests/e2e/sync-chain.spec.ts`) that:
 4. Waits for the SyncIndicator to show completion (60s timeout)
 5. Asserts that KPI cards ("PRs authored", "Reviews given") display non-zero values
 
-The test runs against `wrangler dev` (build + preview) with a local HTTP mock server for GitHub API and a mocked AI binding. A new CI job runs this E2E suite automatically.
+The test runs against `astro dev` (started with `CLOUDFLARE_VITE_WRANGLER_CONFIG_PATH=./wrangler.e2e.jsonc`) with a local HTTP mock server for GitHub API and a mocked AI binding. A new CI job runs this E2E suite automatically.
 
 ## What We're NOT Doing
 
@@ -46,17 +47,21 @@ The test runs against `wrangler dev` (build + preview) with a local HTTP mock se
 
 ## Implementation Approach
 
-Three phases: (1) add the mock infrastructure needed for the Workflow to run locally against fake data — a `GITHUB_API_BASE_URL` override in Octokit, a local HTTP mock server returning fixture GitHub data, and AI binding mock config; (2) update Playwright config for `wrangler dev` and write the E2E spec with Supabase admin seeding; (3) wire into CI as a dedicated job.
+Three phases: (1) add the mock infrastructure needed for the Workflow to run locally against fake data — a `GITHUB_API_BASE_URL` override in Octokit, a local HTTP mock server returning fixture GitHub data, and AI binding mock config; (2) update Playwright config to select the E2E wrangler config on the existing `astro dev` webServer and write the E2E spec with Supabase admin seeding; (3) wire into CI as a dedicated job.
 
 ## Critical Implementation Details
 
+### Runtime Selection
+
+`astro dev` — not `wrangler dev` — is this project's Workflow-capable local runtime. Astro 6 / `@astrojs/cloudflare` v13 run `astro dev` on the real `workerd` runtime via the Cloudflare Vite plugin; `tests/integration/pat-leak.test.ts` already proves this by dispatching the real `ClassificationBatchWorkflow` against a plain `astro dev` server. Raw `wrangler dev` against `src/worker.ts` (this project's custom Worker entrypoint) cannot be made to work — it pulls in Astro/Vite virtual modules (`astro:env/server`, `virtual:astro:app`, `astro:static-paths`) that don't exist as real files even after a build, and wrangler's `alias` bundling workaround cannot substitute for them (confirmed by direct investigation — see `context/changes/e2e-workflow-chain/research.md`). E2E-only config reaches `astro dev` by setting `CLOUDFLARE_VITE_WRANGLER_CONFIG_PATH=./wrangler.e2e.jsonc` on the spawned process's environment — the Cloudflare Vite plugin reads this env var to select which wrangler config file (and therefore which `vars` block) to load, mirroring what `wrangler dev --config` does for a bare wrangler run. Normal `npm run dev` is unaffected since the var is simply absent then and `wrangler.jsonc` remains the default.
+
 ### Timing & lifecycle
 
-The Workflow chain spawns child phases fire-and-forget. With mocked GitHub API (fast responses, no real network), the chain should complete in under 10s locally. However, `wrangler dev` Workflow scheduling may add latency on first run. The test polls `/api/github/sync/status` every 2s with a 60s timeout — matching the SyncIndicator pattern but tighter than production's 120s.
+The Workflow chain spawns child phases fire-and-forget. With mocked GitHub API (fast responses, no real network), the chain should complete in under 10s locally. However, `astro dev`'s Workflow scheduling may add latency on first run. The test polls `/api/github/sync/status` every 2s with a 60s timeout — matching the SyncIndicator pattern but tighter than production's 120s.
 
 ### State sequencing
 
-The test must seed Supabase data (board + repo) _before_ `wrangler dev` starts serving requests, because the sync endpoint reads from `github_repos` immediately. The Playwright `webServer` config handles startup ordering, but the Supabase seed must run in a `beforeAll` or a setup project that executes before the spec.
+The test must seed Supabase data (board + repo) _before_ `astro dev` starts serving requests, because the sync endpoint reads from `github_repos` immediately. The Playwright `webServer` config handles startup ordering, but the Supabase seed must run in a `beforeAll` or a setup project that executes before the spec.
 
 ---
 
@@ -64,7 +69,7 @@ The test must seed Supabase data (board + repo) _before_ `wrangler dev` starts s
 
 ### Overview
 
-Add the plumbing needed for the Workflow chain to run locally against deterministic fake data: a GitHub API base URL override in Octokit, a local HTTP mock server returning fixture PRs/reviews/comments, and wrangler dev configuration for the AI binding mock.
+Add the plumbing needed for the Workflow chain to run locally against deterministic fake data: a GitHub API base URL override in Octokit, a local HTTP mock server returning fixture PRs/reviews/comments, a deterministic AI binding mock, and a way to select this E2E config from `astro dev` without touching normal `npm run dev`.
 
 ### Changes Required:
 
@@ -115,21 +120,37 @@ Add the plumbing needed for the Workflow chain to run locally against determinis
 
 Uses Node's built-in `http.createServer` — no external dependencies.
 
-#### 6. AI binding mock configuration
+#### 6. AI binding mock
 
-**File**: `wrangler.e2e.jsonc`
+**File**: `src/lib/services/mock-ai.ts` (new), `src/worker.ts`, `src/env.d.ts`
 
-**Intent**: A wrangler config overlay for E2E tests that mocks the AI binding. Since `wrangler dev` supports `--config`, we can use a separate config file that overrides the AI binding to return deterministic classification results.
+**Intent**: Workers AI has no local simulator — it always proxies to the real, billed Cloudflare service, even under `astro dev`/`wrangler dev` (confirmed via Cloudflare's `workers-sdk` source: the `ai` binding is tagged `DO-NOT-USE-this-resource-will-never-have-a-local-simulator`). E2E runs need a deterministic, free stand-in instead.
 
-**Contract**: Extends `wrangler.jsonc` but overrides the AI binding with a service binding pointing to a local mock worker, or uses wrangler's `--test-scheduled` / miniflare options. Alternative: the classification service already uses the structural `AiBinding` interface — if wrangler dev allows binding overrides via `--var`, we can point `GITHUB_API_BASE_URL` there too. The exact wrangler dev configuration for AI mocking will be determined during implementation based on current wrangler capabilities.
+**Contract**: `createMockAiBinding(): AiBinding` (the structural interface already defined in `src/lib/services/classification.ts`) parses the classify-chunk phase's batched prompt and returns `{ response: JSON.stringify([...]) }` — one `{thread_id, intent: "question", domain: "discussion"}` entry per thread, matching `ClassificationItemSchema` exactly so the 3-repeat majority vote agrees unanimously. `Cloudflare.Env` gains `AI_MOCK?: string`. The classify-chunk phase (`src/worker.ts`, `runClassifyChunk`) branches: `const ai = this.env.AI_MOCK ? createMockAiBinding() : this.env.AI;` before calling `classifyThreads`.
 
 #### 7. E2E-specific wrangler config
 
 **File**: `wrangler.e2e.jsonc`
 
-**Intent**: Wrangler configuration for E2E test runs — sets `GITHUB_API_BASE_URL` to the mock server and configures the AI binding mock.
+**Intent**: A standalone wrangler config carrying E2E-only `vars` — `GITHUB_API_BASE_URL` (points Octokit at the local GitHub mock server) and `AI_MOCK` (enables the deterministic AI mock above). It is a full copy of `wrangler.jsonc` (wrangler config files don't support partial inheritance), not a `wrangler dev`-only artifact — see "Runtime Selection" above for how it's actually loaded.
 
-**Contract**: Inherits from `wrangler.jsonc` via `inherits` field (if supported) or is a full copy with overrides. Sets `[vars]` with `GITHUB_API_BASE_URL = "http://localhost:<mock-port>"`. Configures the AI binding to use a mock.
+**Contract**: Top-level `vars: { GITHUB_API_BASE_URL: "http://localhost:9999", AI_MOCK: "true" }`; everything else identical to `wrangler.jsonc`.
+
+#### 8. astro dev env override helper
+
+**File**: `tests/helpers/astro-server.ts`
+
+**Intent**: `startAstroServer` currently spawns `astro dev` with `env: { ...process.env }` only — no way to inject E2E-only config (`CLOUDFLARE_VITE_WRANGLER_CONFIG_PATH`) without polluting the shared `.dev.vars`/`process.env` used by other integration tests and normal `npm run dev`. An optional override lets E2E callers layer extra vars on top without affecting existing callers.
+
+**Contract**: `startAstroServer(port: number, env?: Record<string, string>): Promise<AstroServerHandle>` — the new `env` param (default `{}`) is merged as `{ ...process.env, ...env }` into the spawned child's environment. Existing callers (`pat-leak.test.ts`) are unaffected since they don't pass the new param.
+
+#### 9. E2E config boot-check test
+
+**File**: `tests/integration/e2e-config-boot.test.ts` (new)
+
+**Intent**: Regression guard proving `astro dev` actually loads `wrangler.e2e.jsonc` via `CLOUDFLARE_VITE_WRANGLER_CONFIG_PATH` and boots successfully — the exact failure class this replan fixes (bundling errors, misrouted config) fails loudly here instead of only surfacing when Phase 2's full sync-chain spec runs. The helper this test uses is reused by Phase 2's E2E spec.
+
+**Contract**: Uses `startAstroServer(port, { CLOUDFLARE_VITE_WRANGLER_CONFIG_PATH: "./wrangler.e2e.jsonc" })`, asserts a `GET /` on the returned `baseUrl` resolves with a 200 status, then stops the server. Follows the same Supabase-availability guard pattern as `pat-leak.test.ts` (`describe.skipIf(!supabaseAvailable)`), since `astro dev` still needs `.dev.vars` Supabase credentials to boot cleanly even though this test doesn't exercise Supabase-backed routes itself.
 
 ### Success Criteria:
 
@@ -140,11 +161,12 @@ Uses Node's built-in `http.createServer` — no external dependencies.
 - Existing tests pass: `npm test` (no regressions from the optional parameter)
 - GitHub mock server starts and responds to fixture routes: `node -e "import('./tests/e2e/github-mock-server.ts')..."`
 - Linting passes: `npm run lint`
+- `createMockAiBinding()` returns output that parses as valid `ClassificationItem[]` for a sample batch
+- `tests/integration/e2e-config-boot.test.ts` passes: `astro dev` boots with `CLOUDFLARE_VITE_WRANGLER_CONFIG_PATH=./wrangler.e2e.jsonc` and serves a 200 on `/`
 
 #### Manual Verification:
 
-- `wrangler dev --config wrangler.e2e.jsonc` starts successfully with the mock bindings
-- Visiting the app served by wrangler dev shows the same UI as `npm run dev`
+- Visiting the app (started via `astro dev` with the E2E config) in a browser looks identical to `npm run dev`
 
 **Implementation Note**: After completing this phase and all automated verification passes, pause here for manual confirmation from the human that the manual testing was successful before proceeding to the next phase.
 
@@ -154,17 +176,17 @@ Uses Node's built-in `http.createServer` — no external dependencies.
 
 ### Overview
 
-Update Playwright to run against `wrangler dev` (build + preview mode), create a Supabase admin seeding helper for E2E sync tests, and write the sync chain E2E spec.
+Update Playwright to run against `astro dev` configured for E2E via `CLOUDFLARE_VITE_WRANGLER_CONFIG_PATH`, create a Supabase admin seeding helper for E2E sync tests, and write the sync chain E2E spec.
 
 ### Changes Required:
 
-#### 1. Playwright config for wrangler dev
+#### 1. Playwright config for the E2E-only runtime config
 
 **File**: `playwright.config.ts`
 
-**Intent**: Change the `webServer` configuration so Playwright starts `wrangler dev` (with the E2E config) instead of `npm run dev`, since Workflows only run in the Workers runtime.
+**Intent**: Point Playwright's `webServer` at `astro dev` with the E2E wrangler config selected — `astro dev` already runs on the real Workers runtime (`workerd`) and already proves out the full Workflow chain (see `tests/integration/pat-leak.test.ts`); no separate `wrangler dev` process is needed or workable (see "Runtime Selection" above).
 
-**Contract**: The `webServer` block changes to run `astro build && wrangler dev --config wrangler.e2e.jsonc --port 4321` (or a script that orchestrates both). The `reuseExistingServer` behavior stays the same. Consider whether the build step should be a separate `webServer` entry or a pre-test script.
+**Contract**: The `webServer` block's `env` gains `CLOUDFLARE_VITE_WRANGLER_CONFIG_PATH: "./wrangler.e2e.jsonc"`; `command` stays `npm run dev` (no `astro build` step needed — `astro dev` doesn't require a prior build). Exact structure (dedicated Playwright project vs. shared config) is a Phase 2 planning decision, not resolved here.
 
 #### 2. E2E Supabase seed helper
 
@@ -214,7 +236,7 @@ Follows seed.spec.ts conventions: role-based locators, no `waitForTimeout`, no C
 
 - Type checking passes: `npx tsc --noEmit` and `npm run test:typecheck`
 - Linting passes: `npm run lint`
-- `npx playwright test sync-chain` passes against local wrangler dev + mock server + local Supabase
+- `npx playwright test sync-chain` passes against local `astro dev` (E2E config) + mock server + local Supabase
 
 #### Manual Verification:
 
@@ -229,7 +251,7 @@ Follows seed.spec.ts conventions: role-based locators, no `waitForTimeout`, no C
 
 ### Overview
 
-Add a dedicated GitHub Actions job that runs the E2E sync chain test on every PR, using wrangler dev, local Supabase, and the GitHub mock server.
+Add a dedicated GitHub Actions job that runs the E2E sync chain test on every PR, using `astro dev` (E2E config), local Supabase, and the GitHub mock server.
 
 ### Changes Required:
 
@@ -237,7 +259,7 @@ Add a dedicated GitHub Actions job that runs the E2E sync chain test on every PR
 
 **File**: `.github/workflows/ci.yml`
 
-**Intent**: Add a `test-e2e` job that runs Playwright E2E tests with the full wrangler dev + mock server + Supabase stack.
+**Intent**: Add a `test-e2e` job that runs Playwright E2E tests with the full `astro dev` (E2E config) + mock server + Supabase stack.
 
 **Contract**: New job `test-e2e` that:
 
@@ -245,10 +267,10 @@ Add a dedicated GitHub Actions job that runs the E2E sync chain test on every PR
 2. Installs Node.js 22.14.0 and dependencies
 3. Installs Playwright browsers (`npx playwright install --with-deps chromium`)
 4. Starts local Supabase (`supabase start`)
-5. Builds the Astro app (`npm run build`)
-6. Runs `npx playwright test` (which starts wrangler dev + mock server via config)
+5. Builds the Astro app (`npm run build`) — not required for `astro dev` itself, but keeps this job's environment consistent with `validate`; confirm during Phase 3 planning whether it's actually needed
+6. Runs `npx playwright test` (which starts `astro dev` with `CLOUDFLARE_VITE_WRANGLER_CONFIG_PATH` + mock server via config)
 7. Uploads test artifacts (traces, screenshots) on failure
-8. Requires secrets: `SUPABASE_URL`, `SUPABASE_KEY`, `SUPABASE_SERVICE_KEY`, `GITHUB_TOKEN_ENCRYPTION_KEY`, `E2E_EMAIL`, `E2E_PASSWORD`, `E2E_GITHUB_PAT`, `CLOUDFLARE_API_TOKEN` (for wrangler dev)
+8. Requires secrets: `SUPABASE_URL`, `SUPABASE_KEY`, `SUPABASE_SERVICE_KEY`, `GITHUB_TOKEN_ENCRYPTION_KEY`, `E2E_EMAIL`, `E2E_PASSWORD`, `E2E_GITHUB_PAT`, `CLOUDFLARE_API_TOKEN` (astro dev still needs Cloudflare auth for the declared but `AI_MOCK`-bypassed `ai` binding — mirrors the existing `pat-leak.test.ts` CI wiring in `.github/workflows/ci.yml:73-79`; confirm exact necessity during Phase 3 planning)
 
 #### 2. npm script for E2E
 
@@ -263,7 +285,7 @@ Add a dedicated GitHub Actions job that runs the E2E sync chain test on every PR
 #### Automated Verification:
 
 - CI `test-e2e` job passes on a PR branch
-- `npm run test:e2e` runs locally when wrangler dev + Supabase are available
+- `npm run test:e2e` runs locally when `astro dev` (E2E config) + Supabase are available
 
 #### Manual Verification:
 
@@ -293,7 +315,7 @@ Add a dedicated GitHub Actions job that runs the E2E sync chain test on every PR
 ### Manual Testing Steps:
 
 1. Start local Supabase: `npx supabase start`
-2. Start mock server + wrangler dev + Playwright: `npm run test:e2e -- --headed`
+2. Start mock server + Playwright (which launches `astro dev` with the E2E config via its `webServer`): `npm run test:e2e -- --headed`
 3. Watch the sync flow: button click → spinner → "Synced" status → KPI values appear
 4. Verify KPI values match fixture data expectations
 
@@ -302,7 +324,7 @@ Add a dedicated GitHub Actions job that runs the E2E sync chain test on every PR
 - The GitHub mock server returns fixture data instantly — no network latency. Workflow phases should complete in under 10s.
 - AI binding mock returns immediately — no inference latency.
 - The 60s timeout is generous for mocked data; typical runs should complete in 10–20s.
-- wrangler dev startup adds ~5s cold start. The Playwright `webServer` config waits for the URL to be available before running tests.
+- `astro dev` startup adds cold-start latency (observed ~15-30s in this session). The Playwright `webServer` config waits for the URL to be available before running tests.
 
 ## Migration Notes
 
@@ -312,6 +334,7 @@ Add a dedicated GitHub Actions job that runs the E2E sync chain test on every PR
 
 ## References
 
+- Research: `context/changes/e2e-workflow-chain/research.md` — wrangler dev vs astro dev investigation
 - Test plan Phase 7: `context/foundation/test-plan.md` §3 row 7
 - Risk R1: `context/foundation/test-plan.md` §2 row R1
 - Existing seed spec: `tests/e2e/seed.spec.ts`
@@ -328,26 +351,28 @@ Add a dedicated GitHub Actions job that runs the E2E sync chain test on every PR
 
 #### Automated
 
-- [ ] 1.1 makeOctokit accepts optional baseUrl and passes to Octokit constructor
-- [ ] 1.2 GITHUB_API_BASE_URL declared in Cloudflare.Env type
-- [ ] 1.3 Workflow phases pass GITHUB_API_BASE_URL to makeOctokit
-- [ ] 1.4 GitHub mock server starts and responds to fixture routes
-- [ ] 1.5 Type checking passes (tsc --noEmit for src and tests)
-- [ ] 1.6 Existing tests pass (npm test)
-- [ ] 1.7 Linting passes (npm run lint)
+- [x] 1.1 makeOctokit accepts optional baseUrl and passes to Octokit constructor
+- [x] 1.2 GITHUB_API_BASE_URL declared in Cloudflare.Env type
+- [x] 1.3 Workflow phases pass GITHUB_API_BASE_URL to makeOctokit
+- [x] 1.4 GitHub mock server starts and responds to fixture routes
+- [x] 1.5 Type checking passes (tsc --noEmit for src and tests)
+- [x] 1.6 Existing tests pass (npm test)
+- [x] 1.7 Linting passes (npm run lint)
+- [x] 1.8 AI binding mock (mock-ai.ts + AI_MOCK flag) returns schema-valid classification output
+- [x] 1.9 astro-server.ts helper accepts an env override
+- [x] 1.10 e2e-config-boot.test.ts passes: astro dev boots with CLOUDFLARE_VITE_WRANGLER_CONFIG_PATH and serves 200
 
 #### Manual
 
-- [ ] 1.8 wrangler dev starts with E2E config and mock bindings
-- [ ] 1.9 App served by wrangler dev renders correctly
+- [x] 1.11 App served by astro dev (E2E config) looks identical to npm run dev
 
 ### Phase 2: E2E Test + Playwright Config
 
 #### Automated
 
-- [ ] 2.1 Playwright config uses wrangler dev as webServer
+- [ ] 2.1 Playwright config selects the E2E wrangler config on astro dev's webServer
 - [ ] 2.2 Supabase seed helper creates and cleans up sync-ready board
-- [ ] 2.3 sync-chain.spec.ts passes against local wrangler dev + mock server + Supabase
+- [ ] 2.3 sync-chain.spec.ts passes against local astro dev (E2E config) + mock server + Supabase
 - [ ] 2.4 Type checking passes
 - [ ] 2.5 Linting passes
 

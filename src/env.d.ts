@@ -17,6 +17,8 @@ declare namespace Cloudflare {
     GITHUB_TOKEN_ENCRYPTION_KEY: string;
     HOMEPAGE_CACHE: KVNamespace;
     SENTRY_DSN: string;
+    GITHUB_API_BASE_URL?: string;
+    AI_MOCK?: string;
   }
 }
 

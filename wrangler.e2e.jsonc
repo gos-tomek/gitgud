@@ -1,0 +1,45 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "gitgud",
+  "main": "./src/worker.ts",
+  "compatibility_date": "2026-05-08",
+  "compatibility_flags": ["nodejs_compat"],
+  "assets": {
+    "binding": "ASSETS",
+    "directory": "./dist",
+    "not_found_handling": "404-page",
+  },
+  "observability": {
+    "enabled": true,
+  },
+  "ai": {
+    "binding": "AI",
+  },
+  "kv_namespaces": [
+    {
+      "binding": "HOMEPAGE_CACHE",
+      // Run `wrangler kv namespace create HOMEPAGE_CACHE` and replace this ID before deploying.
+      "id": "00000000000000000000000000000001",
+    },
+  ],
+  "workflows": [
+    {
+      "name": "classification-batch",
+      "binding": "CLASSIFICATION_BATCH",
+      "class_name": "ClassificationBatchWorkflow",
+    },
+  ],
+  // No cron triggers during E2E tests — manual sync only.
+  "triggers": {
+    "crons": [],
+  },
+  // Routes Octokit to the local GitHub mock server (tests/e2e/github-mock-server.ts).
+  // Port 9999 is reserved for the mock; startGitHubMockServer must be called with that port.
+  // AI_MOCK swaps the classify phase's AI binding for a deterministic in-process mock
+  // (src/lib/services/mock-ai.ts) — Workers AI has no local simulator and would otherwise proxy
+  // every classify call to the real (billed) Cloudflare service, even under `wrangler dev`.
+  "vars": {
+    "GITHUB_API_BASE_URL": "http://localhost:9999",
+    "AI_MOCK": "true",
+  },
+}

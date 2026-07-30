@@ -60,9 +60,10 @@ export function parseGitHubTokenExpiry(raw: string): Date | null {
 
 const MAX_RETRIES = 3;
 
-export function makeOctokit(token: string): Octokit {
+export function makeOctokit(token: string, baseUrl?: string): Octokit {
   const octokit = new OctokitWithPlugins({
     auth: token,
+    ...(baseUrl ? { baseUrl } : {}),
     userAgent: "gitgud/0.0.1",
     request: { fetch: globalThis.fetch },
     retry: { doNotRetry: [400, 401, 403, 404, 422, 500] },

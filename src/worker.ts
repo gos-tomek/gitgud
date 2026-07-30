@@ -12,6 +12,7 @@ import {
   type PrRef,
 } from "@/lib/services/github-sync";
 import { classifyThreads } from "@/lib/services/classification";
+import { createMockAiBinding } from "@/lib/services/mock-ai";
 import { logger } from "@/lib/logger";
 
 // --- Workflow params --- //
@@ -164,7 +165,7 @@ export class ClassificationBatchWorkflow extends WorkflowEntrypoint<Env, Classif
 
     const supabase = createServiceClient(this.env.SUPABASE_URL, this.env.SUPABASE_SERVICE_KEY);
     const githubToken = await getGitHubToken(supabase, boardId, this.env.GITHUB_TOKEN_ENCRYPTION_KEY);
-    const octokit = makeOctokit(githubToken);
+    const octokit = makeOctokit(githubToken, this.env.GITHUB_API_BASE_URL);
 
     const repoRow = { id: repoId, repo_owner: owner, repo_name: repoName, last_synced_at: null };
     const sinceDate = new Date(since);
@@ -304,7 +305,7 @@ export class ClassificationBatchWorkflow extends WorkflowEntrypoint<Env, Classif
 
     const supabase = createServiceClient(this.env.SUPABASE_URL, this.env.SUPABASE_SERVICE_KEY);
     const githubToken = await getGitHubToken(supabase, boardId, this.env.GITHUB_TOKEN_ENCRYPTION_KEY);
-    const octokit = makeOctokit(githubToken);
+    const octokit = makeOctokit(githubToken, this.env.GITHUB_API_BASE_URL);
 
     logger.info(`[prdetails] ${owner}/${repoName}: chunk ${chunkIndex} — ${prChunk.length} PRs`);
 
@@ -324,7 +325,7 @@ export class ClassificationBatchWorkflow extends WorkflowEntrypoint<Env, Classif
 
     const supabase = createServiceClient(this.env.SUPABASE_URL, this.env.SUPABASE_SERVICE_KEY);
     const githubToken = await getGitHubToken(supabase, boardId, this.env.GITHUB_TOKEN_ENCRYPTION_KEY);
-    const octokit = makeOctokit(githubToken);
+    const octokit = makeOctokit(githubToken, this.env.GITHUB_API_BASE_URL);
 
     logger.info(`[reviews] ${owner}/${repoName}: page index ${reviewPageIndex}`);
 
@@ -472,7 +473,8 @@ export class ClassificationBatchWorkflow extends WorkflowEntrypoint<Env, Classif
       step,
       "classify-batch",
       async () => {
-        return classifyThreads(this.env.AI, supabase, threadChunk);
+        const ai = this.env.AI_MOCK ? createMockAiBinding() : this.env.AI;
+        return classifyThreads(ai, supabase, threadChunk);
       },
       { retries: { limit: 0, delay: "1 second" } },
     );
