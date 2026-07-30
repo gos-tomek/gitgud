@@ -218,35 +218,35 @@ No impact on CI run time beyond marginal seconds.
 
 #### Automated
 
-- [x] 1.1 seedTwoBoards() inserts thread_classifications row without error
-- [x] 1.2 Parity test passes for all 6 endpoints
-- [x] 1.3 Existing integration tests still pass
-- [x] 1.4 Type checking passes
+- [x] 1.1 seedTwoBoards() inserts thread_classifications row without error — 14a7ded
+- [x] 1.2 Parity test passes for all 6 endpoints — 14a7ded
+- [x] 1.3 Existing integration tests still pass — 14a7ded
+- [x] 1.4 Type checking passes — 14a7ded
 
 #### Manual
 
-- [x] 1.5 Confirm parity test exercises endpoints with real data (not empty comparisons)
+- [x] 1.5 Confirm parity test exercises endpoints with real data (not empty comparisons) — 14a7ded
 
 ### Phase 2: Board-Only Deletion Cascade
 
 #### Automated
 
-- [ ] 2.1 Board deletion cascade test passes
-- [ ] 2.2 All integration tests pass
-- [ ] 2.3 Type checking passes
+- [x] 2.1 Board deletion cascade test passes
+- [x] 2.2 All integration tests pass
+- [x] 2.3 Type checking passes
 
 #### Manual
 
-- [ ] 2.4 Confirm test catches cascade gap by temporarily removing a FK CASCADE
+- [x] 2.4 Confirm test catches cascade gap by temporarily removing a FK CASCADE
 
 ### Phase 3: Classification Content Retention Guard
 
 #### Automated
 
-- [ ] 3.1 Retention guard test passes
-- [ ] 3.2 All hermetic tests pass
-- [ ] 3.3 Type checking passes
+- [x] 3.1 Retention guard test passes
+- [x] 3.2 All hermetic tests pass
+- [x] 3.3 Type checking passes
 
 #### Manual
 
-- [ ] 3.4 Confirm test catches retention violation by temporarily adding body field
+- [x] 3.4 Confirm test catches retention violation by temporarily adding body field
