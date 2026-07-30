@@ -231,13 +231,13 @@ No impact on CI run time beyond marginal seconds.
 
 #### Automated
 
-- [x] 2.1 Board deletion cascade test passes
-- [x] 2.2 All integration tests pass
-- [x] 2.3 Type checking passes
+- [x] 2.1 Board deletion cascade test passes — 3dd6f36
+- [x] 2.2 All integration tests pass — 3dd6f36
+- [x] 2.3 Type checking passes — 3dd6f36
 
 #### Manual
 
-- [x] 2.4 Confirm test catches cascade gap by temporarily removing a FK CASCADE
+- [x] 2.4 Confirm test catches cascade gap by temporarily removing a FK CASCADE — 3dd6f36
 
 ### Phase 3: Classification Content Retention Guard
 
