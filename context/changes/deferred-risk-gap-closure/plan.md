@@ -218,14 +218,14 @@ No impact on CI run time beyond marginal seconds.
 
 #### Automated
 
-- [ ] 1.1 seedTwoBoards() inserts thread_classifications row without error
-- [ ] 1.2 Parity test passes for all 6 endpoints
-- [ ] 1.3 Existing integration tests still pass
-- [ ] 1.4 Type checking passes
+- [x] 1.1 seedTwoBoards() inserts thread_classifications row without error
+- [x] 1.2 Parity test passes for all 6 endpoints
+- [x] 1.3 Existing integration tests still pass
+- [x] 1.4 Type checking passes
 
 #### Manual
 
-- [ ] 1.5 Confirm parity test exercises endpoints with real data (not empty comparisons)
+- [x] 1.5 Confirm parity test exercises endpoints with real data (not empty comparisons)
 
 ### Phase 2: Board-Only Deletion Cascade
 
