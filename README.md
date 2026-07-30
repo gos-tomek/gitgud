@@ -62,6 +62,54 @@ npm run dev
 - `npm run lint:fix` — auto-fix ESLint issues
 - `npm run format` — Prettier
 
+## E2E Tests
+
+E2E tests use [Playwright](https://playwright.dev/) and live in `tests/e2e/`. They run against a real local Supabase + dev server — no global mocks on auth, routing, or the database.
+
+### Prerequisites
+
+The dev server (`npm run dev`) and local Supabase (`npx supabase start`) must be running.
+
+Add three variables to `.dev.vars` (the file Playwright's config loads via `process.loadEnvFile`):
+
+```
+E2E_EMAIL=<test user email>
+E2E_PASSWORD=<test user password>
+E2E_GITHUB_PAT=<github personal access token>
+```
+
+The test user must already exist in the local Supabase instance. `E2E_GITHUB_PAT` is seeded into the user's profile once per suite run by `auth.setup.ts` so the board creation wizard finds a stored token — without it, `create_board_atomic` fails.
+
+### Running
+
+```bash
+npx playwright test
+```
+
+To run a single file:
+
+```bash
+npx playwright test tests/e2e/seed.spec.ts
+```
+
+### How the suite is structured
+
+| File                      | Purpose                                                                                                                |
+| ------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| `tests/e2e/auth.setup.ts` | Logs in, seeds the GitHub PAT, writes `playwright/.auth/user.json`                                                     |
+| `tests/e2e/seed.spec.ts`  | Seed test — demonstrates project E2E conventions; used as the template by Playwright's Test Agents (Planner/Generator) |
+
+`auth.setup.ts` runs before every test suite. Every test starts already authenticated via `storageState` — no UI login step is needed in individual tests.
+
+`playwright/.auth/user.json` contains session cookies — it is gitignored and must never be committed.
+
+### What is real vs mocked
+
+| Layer                                            | Real or mocked                                                    |
+| ------------------------------------------------ | ----------------------------------------------------------------- |
+| Auth session, routing, Supabase RPC + DB         | Real                                                              |
+| `/api/github/repos`, `/api/github/collaborators` | Mocked per-test with `page.route()` — external, non-deterministic |
+
 ## Project Structure
 
 ```

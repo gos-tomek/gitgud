@@ -9,6 +9,7 @@ export interface TwoBoardFixture {
   prId: number;
   reviewId: number;
   commentId: number;
+  classificationCommentId: number;
   contributorGithubId: number;
   cleanup: () => Promise<void>;
 }
@@ -97,6 +98,16 @@ export async function seedTwoBoards(): Promise<TwoBoardFixture> {
   });
   if (commentError) throw new Error(`Failed to create review comment: ${commentError.message}`);
 
+  // Seed Board A: thread_classification — links to the review comment via thread_root_comment_id
+  const { error: classificationError } = await adminClient.from("thread_classifications").insert({
+    thread_root_comment_id: commentId,
+    pull_request_id: prId,
+    intent: "mentoring",
+    domain: "functional",
+    model_id: "test-model",
+  });
+  if (classificationError) throw new Error(`Failed to create thread classification: ${classificationError.message}`);
+
   // Seed Board A: board_contributor — linked to the contributor user via matching github_id
   const { error: contributorError } = await adminClient.from("board_contributors").insert({
     board_id: boardIdA,
@@ -119,6 +130,7 @@ export async function seedTwoBoards(): Promise<TwoBoardFixture> {
     prId,
     reviewId,
     commentId,
+    classificationCommentId: commentId,
     contributorGithubId,
     cleanup,
   };

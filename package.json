@@ -13,7 +13,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:typecheck": "tsc --project tests/tsconfig.json --noEmit",
-    "prepare": "lefthook install"
+    "prepare": "lefthook install",
+    "e2e": "playwright test"
   },
   "dependencies": {
     "@astrojs/check": "^0.9.9",

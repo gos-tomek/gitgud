@@ -190,6 +190,7 @@ export default function ContributorManager({ boardId, initialContributors, repos
                 type="button"
                 variant="outline"
                 size="sm"
+                aria-label={`Remove @${contributor.githubLogin}`}
                 onClick={() => {
                   setRemoveTarget({ githubId: contributor.githubId, githubLogin: contributor.githubLogin });
                   setRemoveError(null);

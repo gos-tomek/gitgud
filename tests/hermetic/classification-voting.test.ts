@@ -146,6 +146,26 @@ describe("classifyThreads — majority voting", () => {
     expect(mockLogger.warn).toHaveBeenCalledWith(expect.stringContaining("item validation failed"));
   });
 
+  it("result objects contain exactly the 5 ClassificationResult fields — no body or raw text leaks", async () => {
+    const { supabase } = makeFakeSupabase({ comments: [makeRootComment()], prs: [makePrRow()] });
+    const { ai, run } = makeFakeAi();
+    run
+      .mockResolvedValueOnce(jsonResponse([{ thread_id: 1, intent: "mentoring", domain: "functional" }]))
+      .mockResolvedValueOnce(jsonResponse([{ thread_id: 1, intent: "mentoring", domain: "functional" }]))
+      .mockResolvedValueOnce(jsonResponse([{ thread_id: 1, intent: "mentoring", domain: "functional" }]));
+
+    const result = await classifyThreads(ai, supabase, [1]);
+
+    expect(result).toHaveLength(1);
+    expect(Object.keys(result[0]).sort()).toEqual([
+      "domain",
+      "intent",
+      "model_id",
+      "pull_request_id",
+      "thread_root_comment_id",
+    ]);
+  });
+
   describe("with frozen time", () => {
     beforeEach(() => {
       vi.useFakeTimers();

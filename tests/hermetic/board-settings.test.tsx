@@ -376,7 +376,7 @@ describe("RepoManager", () => {
     const user = userEvent.setup();
     render(<RepoManager boardId={TEST_BOARD_ID} initialRepos={[REPO_A, REPO_B]} />);
 
-    const removeButtons = screen.getAllByRole("button", { name: "" });
+    const removeButtons = screen.getAllByRole("button", { name: /^Remove .+\/.+/ });
     await user.click(removeButtons[0]);
 
     // Dialog opens — the type-to-confirm prompt should be visible
@@ -388,7 +388,7 @@ describe("RepoManager", () => {
     const user = userEvent.setup();
     render(<RepoManager boardId={TEST_BOARD_ID} initialRepos={[REPO_A, REPO_B]} />);
 
-    const removeButtons = screen.getAllByRole("button", { name: "" });
+    const removeButtons = screen.getAllByRole("button", { name: /^Remove .+\/.+/ });
     await user.click(removeButtons[0]);
 
     await waitFor(() => expect(screen.getByText(/remove repository/i)).toBeInTheDocument());
@@ -407,7 +407,7 @@ describe("RepoManager", () => {
     const user = userEvent.setup();
     render(<RepoManager boardId={TEST_BOARD_ID} initialRepos={[REPO_A, REPO_B]} />);
 
-    const removeButtons = screen.getAllByRole("button", { name: "" });
+    const removeButtons = screen.getAllByRole("button", { name: /^Remove .+\/.+/ });
     await user.click(removeButtons[0]);
 
     await waitFor(() => expect(screen.getByText(/remove repository/i)).toBeInTheDocument());
@@ -583,7 +583,7 @@ describe("ContributorManager", () => {
       <ContributorManager boardId={TEST_BOARD_ID} initialContributors={[CONTRIBUTOR_A, CONTRIBUTOR_B]} repos={REPOS} />,
     );
 
-    const removeButtons = screen.getAllByRole("button", { name: "" });
+    const removeButtons = screen.getAllByRole("button", { name: /^Remove @/ });
     await user.click(removeButtons[0]);
 
     await waitFor(() => expect(screen.getByText(/remove contributor/i)).toBeInTheDocument());
@@ -598,7 +598,7 @@ describe("ContributorManager", () => {
     );
 
     // Click the remove button for CONTRIBUTOR_A (first remove button)
-    const removeButtons = screen.getAllByRole("button", { name: "" });
+    const removeButtons = screen.getAllByRole("button", { name: /^Remove @/ });
     await user.click(removeButtons[0]);
 
     await waitFor(() => expect(screen.getByText(/remove contributor/i)).toBeInTheDocument());
