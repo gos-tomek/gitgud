@@ -1,9 +1,9 @@
 ---
 change_id: test-plan-refresh-2026-07-09
 title: Refresh test plan to reflect 10 features shipped since June 2026
-status: implemented
+status: impl_reviewed
 created: 2026-07-09
-updated: 2026-07-10
+updated: 2026-07-30
 archived_at: null
 ---
 
