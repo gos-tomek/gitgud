@@ -15,7 +15,9 @@ export interface TwoBoardFixture {
 }
 
 export async function seedTwoBoards(): Promise<TwoBoardFixture> {
-  const ts = Date.now();
+  // Random jitter avoids github_pull_requests_pkey collisions with other integration test files
+  // that also derive bigint ids from Date.now() and can run in the same millisecond.
+  const ts = Date.now() * 1000 + Math.floor(Math.random() * 1000);
   const email = (label: string) => `seed-${label}-${ts}@test.local`;
 
   // user_profiles rows are created by the handle_new_user trigger from this metadata.

@@ -38,3 +38,13 @@
 **Rule**: Never assume `npx supabase` without an explicit version resolves the same Postgres image as CI. Pin the `supabase` devDependency to an exact version (no `^`/range) matching whatever version `supabase/setup-cli` uses in CI.
 
 **Applies to**: implement, research
+
+## Never use a raw Date.now() as a literal bigint PK in test fixtures
+
+**Context**: `tests/helpers/seed.ts` (`seedTwoBoards()`) and `tests/integration/account-deletion.test.ts`, `board-settings.test.ts`, `pat-leak.test.ts` — all fake GitHub-sourced bigint ids (`github_pull_requests.id` etc.) by deriving `const ts = Date.now()` and using `ts` (or `ts + <small offset>`) directly as the row id.
+
+**Problem**: Vitest runs integration test files in parallel workers. Two different files independently calling `Date.now()` can land in the same millisecond, and if both use the unmodified value (or the same offset) as a bigint PK, the insert collides on `_pkey` — a flaky, hard-to-reproduce CI failure that looks unrelated to whatever change happens to be in the PR at the time.
+
+**Rule**: When deriving a fake bigint id from `Date.now()` in a test file, add random jitter to the base timestamp so two concurrent processes can't produce the same value even if they call it in the same millisecond: `Date.now() * 1000 + Math.floor(Math.random() * 1000)`. Apply this to the base `ts`, not per-offset — offsets derived from it stay internally consistent.
+
+**Applies to**: implement, research (any new integration test that inserts rows with an application-supplied bigint id)
