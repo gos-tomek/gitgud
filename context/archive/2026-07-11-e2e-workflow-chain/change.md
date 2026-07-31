@@ -1,10 +1,10 @@
 ---
 change_id: e2e-workflow-chain
 title: E2e workflow chain
-status: implemented
+status: archived
 created: 2026-07-11
 updated: 2026-07-31
-archived_at: null
+archived_at: 2026-07-31T14:14:46Z
 ---
 
 ## Notes
