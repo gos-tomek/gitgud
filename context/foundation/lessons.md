@@ -48,3 +48,13 @@
 **Rule**: When deriving a fake bigint id from `Date.now()` in a test file, add random jitter to the base timestamp so two concurrent processes can't produce the same value even if they call it in the same millisecond: `Date.now() * 1000 + Math.floor(Math.random() * 1000)`. Apply this to the base `ts`, not per-offset — offsets derived from it stay internally consistent.
 
 **Applies to**: implement, research (any new integration test that inserts rows with an application-supplied bigint id)
+
+## Concurrent `astro dev` spawns racing on shared Vite/Miniflare state
+
+**Context**: `tests/helpers/astro-server.ts` (`startAstroServer`) spawns a real `astro dev` child process from the project root; both `pat-leak.test.ts` and `e2e-config-boot.test.ts` call it, and Vitest runs test files in parallel workers.
+
+**Problem**: Two `astro dev` processes started from the same checkout at nearly the same time share the default Vite SSR dep-optimizer cache (`node_modules/.vite`) and the Cloudflare Vite plugin's inspector-port auto-detection (`getFirstAvailablePort`) — both use a probe-then-bind sequence with no locking. When the timing lines up, one process crashes with "file does not exist in the optimize deps directory" or `EADDRINUSE` on the inspector port. It's a genuine race — same code, passes or fails depending purely on OS scheduling that run, so it can pass on one CI run and fail on the very next with zero diff.
+
+**Rule**: Any helper that spawns a real dev-server subprocess for tests must isolate every shared, auto-detected resource per invocation — don't rely on the framework's own collision-avoidance fallback under concurrency. Here: `VITE_CACHE_DIR` set per-port (`astro.config.mjs`'s `vite.cacheDir`) and the inspector disabled entirely for test-spawned instances (`CLOUDFLARE_VITE_DISABLE_INSPECTOR` → `cloudflare({ inspectorPort: false })`) since tests never attach a debugger.
+
+**Applies to**: implement, research (any new integration/E2E test that spawns `astro dev` or another dev server as a real subprocess)
