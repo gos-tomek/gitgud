@@ -390,6 +390,6 @@ Add a dedicated GitHub Actions job that runs the E2E sync chain test on every PR
 
 #### Manual
 
-- [ ] 3.3 CI job completes in under 5 minutes
-- [ ] 3.4 CI artifacts downloadable on failure
-- [ ] 3.5 Existing CI jobs unaffected
+- [x] 3.3 CI job completes in under 5 minutes
+- [x] 3.4 CI artifacts downloadable on failure
+- [x] 3.5 Existing CI jobs unaffected
