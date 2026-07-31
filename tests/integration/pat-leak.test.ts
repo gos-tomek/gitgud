@@ -37,7 +37,9 @@ describe.skipIf(!canRun)("PAT non-leakage (Risk #2)", () => {
   let dispatchedInstanceId: string | null = null;
 
   beforeAll(async () => {
-    const ts = Date.now();
+    // Random jitter avoids id collisions with other integration test files that also derive
+    // bigint/github ids from Date.now() and can run in the same millisecond.
+    const ts = Date.now() * 1000 + Math.floor(Math.random() * 1000);
 
     // 1. Create owner and contributor users. The contributor's github_id must match a
     //    board_contributors row (added in step 3) — under the derived access model,
