@@ -385,8 +385,8 @@ Add a dedicated GitHub Actions job that runs the E2E sync chain test on every PR
 
 #### Automated
 
-- [x] 3.1 CI test-e2e job passes on PR branch
-- [x] 3.2 npm run test:e2e runs locally
+- [x] 3.1 CI test-e2e job passes on PR branch — 9171c12
+- [x] 3.2 npm run test:e2e runs locally — 9171c12
 
 #### Manual
 
