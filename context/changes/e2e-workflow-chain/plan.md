@@ -370,16 +370,16 @@ Add a dedicated GitHub Actions job that runs the E2E sync chain test on every PR
 
 #### Automated
 
-- [x] 2.1 Playwright config selects the E2E wrangler config on astro dev's webServer
-- [x] 2.2 Supabase seed helper creates and cleans up sync-ready board
-- [x] 2.3 sync-chain.spec.ts passes against local astro dev (E2E config) + mock server + Supabase
-- [x] 2.4 Type checking passes
-- [x] 2.5 Linting passes
+- [x] 2.1 Playwright config selects the E2E wrangler config on astro dev's webServer — 3a816f0
+- [x] 2.2 Supabase seed helper creates and cleans up sync-ready board — 3a816f0
+- [x] 2.3 sync-chain.spec.ts passes against local astro dev (E2E config) + mock server + Supabase — 3a816f0
+- [x] 2.4 Type checking passes — 3a816f0
+- [x] 2.5 Linting passes — 3a816f0
 
 #### Manual
 
-- [x] 2.6 Sync flow visually correct in headed mode
-- [x] 2.7 KPI values match fixture data expectations
+- [x] 2.6 Sync flow visually correct in headed mode — 3a816f0
+- [x] 2.7 KPI values match fixture data expectations — 3a816f0
 
 ### Phase 3: CI Integration
 

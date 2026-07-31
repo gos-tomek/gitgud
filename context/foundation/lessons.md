@@ -28,3 +28,13 @@
 **Rule**: Every new table migration must include `REVOKE ALL ON <table> FROM anon, authenticated;` before the RLS policies.
 
 **Applies to**: All new Supabase migration files that create tables with RLS.
+
+## Always pin the Supabase CLI to an exact version matching CI
+
+**Context**: Local Supabase dev setup (`npx supabase start` / `db reset`).
+
+**Problem**: A loose CLI version range (`"supabase": "^2.23.4"`) let the locally installed CLI drift to 2.109.0, while CI pins `supabase/setup-cli@v2` to exactly `2.101.0`. The newer CLI resolves a different Postgres Docker image that doesn't bootstrap `service_role`'s default table grants — the Cloudflare Workflow's service-role client silently failed on every insert/select, looked exactly like a migration bug, and took a long debugging session to trace back to the CLI version instead.
+
+**Rule**: Never assume `npx supabase` without an explicit version resolves the same Postgres image as CI. Pin the `supabase` devDependency to an exact version (no `^`/range) matching whatever version `supabase/setup-cli` uses in CI.
+
+**Applies to**: implement, research
