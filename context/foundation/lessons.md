@@ -28,3 +28,33 @@
 **Rule**: Every new table migration must include `REVOKE ALL ON <table> FROM anon, authenticated;` before the RLS policies.
 
 **Applies to**: All new Supabase migration files that create tables with RLS.
+
+## Always pin the Supabase CLI to an exact version matching CI
+
+**Context**: Local Supabase dev setup (`npx supabase start` / `db reset`).
+
+**Problem**: A loose CLI version range (`"supabase": "^2.23.4"`) let the locally installed CLI drift to 2.109.0, while CI pins `supabase/setup-cli@v2` to exactly `2.101.0`. The newer CLI resolves a different Postgres Docker image that doesn't bootstrap `service_role`'s default table grants — the Cloudflare Workflow's service-role client silently failed on every insert/select, looked exactly like a migration bug, and took a long debugging session to trace back to the CLI version instead.
+
+**Rule**: Never assume `npx supabase` without an explicit version resolves the same Postgres image as CI. Pin the `supabase` devDependency to an exact version (no `^`/range) matching whatever version `supabase/setup-cli` uses in CI.
+
+**Applies to**: implement, research
+
+## Never use a raw Date.now() as a literal bigint PK in test fixtures
+
+**Context**: `tests/helpers/seed.ts` (`seedTwoBoards()`) and `tests/integration/account-deletion.test.ts`, `board-settings.test.ts`, `pat-leak.test.ts` — all fake GitHub-sourced bigint ids (`github_pull_requests.id` etc.) by deriving `const ts = Date.now()` and using `ts` (or `ts + <small offset>`) directly as the row id.
+
+**Problem**: Vitest runs integration test files in parallel workers. Two different files independently calling `Date.now()` can land in the same millisecond, and if both use the unmodified value (or the same offset) as a bigint PK, the insert collides on `_pkey` — a flaky, hard-to-reproduce CI failure that looks unrelated to whatever change happens to be in the PR at the time.
+
+**Rule**: When deriving a fake bigint id from `Date.now()` in a test file, add random jitter to the base timestamp so two concurrent processes can't produce the same value even if they call it in the same millisecond: `Date.now() * 1000 + Math.floor(Math.random() * 1000)`. Apply this to the base `ts`, not per-offset — offsets derived from it stay internally consistent.
+
+**Applies to**: implement, research (any new integration test that inserts rows with an application-supplied bigint id)
+
+## Concurrent `astro dev` spawns racing on shared Vite/Miniflare state
+
+**Context**: `tests/helpers/astro-server.ts` (`startAstroServer`) spawns a real `astro dev` child process from the project root; both `pat-leak.test.ts` and `e2e-config-boot.test.ts` call it, and Vitest runs test files in parallel workers.
+
+**Problem**: Two `astro dev` processes started from the same checkout at nearly the same time share the default Vite SSR dep-optimizer cache (`node_modules/.vite`) and the Cloudflare Vite plugin's inspector-port auto-detection (`getFirstAvailablePort`) — both use a probe-then-bind sequence with no locking. When the timing lines up, one process crashes with "file does not exist in the optimize deps directory" or `EADDRINUSE` on the inspector port. It's a genuine race — same code, passes or fails depending purely on OS scheduling that run, so it can pass on one CI run and fail on the very next with zero diff.
+
+**Rule**: Any helper that spawns a real dev-server subprocess for tests must isolate every shared, auto-detected resource per invocation — don't rely on the framework's own collision-avoidance fallback under concurrency. Here: `VITE_CACHE_DIR` set per-port (`astro.config.mjs`'s `vite.cacheDir`) and the inspector disabled entirely for test-spawned instances (`CLOUDFLARE_VITE_DISABLE_INSPECTOR` → `cloudflare({ inspectorPort: false })`) since tests never attach a debugger.
+
+**Applies to**: implement, research (any new integration/E2E test that spawns `astro dev` or another dev server as a real subprocess)

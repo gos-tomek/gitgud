@@ -11,7 +11,9 @@ import {
 const supabaseAvailable = await checkSupabase();
 
 describe.skipIf(!supabaseAvailable)("Board settings mutations (integration)", () => {
-  const ts = Date.now();
+  // Random jitter avoids github_pull_requests_pkey collisions with other integration test files
+  // that also derive bigint ids from Date.now() and can run in the same millisecond.
+  const ts = Date.now() * 1000 + Math.floor(Math.random() * 1000);
 
   let ownerClient: Awaited<ReturnType<typeof createTestUser>>["client"];
   let ownerId: string;
