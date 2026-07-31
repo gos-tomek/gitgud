@@ -46,5 +46,11 @@ export default defineConfig({
     command: "npm run dev",
     url: "http://localhost:4321",
     reuseExistingServer: !process.env.CI,
+    // Selects wrangler.e2e.jsonc (GITHUB_API_BASE_URL + AI_MOCK vars) instead of the default
+    // wrangler.jsonc — safe for every spec since only sync-chain.spec.ts's Workflow trigger
+    // actually reads these vars; other specs mock GitHub client-side via page.route().
+    env: {
+      CLOUDFLARE_VITE_WRANGLER_CONFIG_PATH: "./wrangler.e2e.jsonc",
+    },
   },
 });

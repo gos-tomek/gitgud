@@ -351,35 +351,35 @@ Add a dedicated GitHub Actions job that runs the E2E sync chain test on every PR
 
 #### Automated
 
-- [x] 1.1 makeOctokit accepts optional baseUrl and passes to Octokit constructor
-- [x] 1.2 GITHUB_API_BASE_URL declared in Cloudflare.Env type
-- [x] 1.3 Workflow phases pass GITHUB_API_BASE_URL to makeOctokit
-- [x] 1.4 GitHub mock server starts and responds to fixture routes
-- [x] 1.5 Type checking passes (tsc --noEmit for src and tests)
-- [x] 1.6 Existing tests pass (npm test)
-- [x] 1.7 Linting passes (npm run lint)
-- [x] 1.8 AI binding mock (mock-ai.ts + AI_MOCK flag) returns schema-valid classification output
-- [x] 1.9 astro-server.ts helper accepts an env override
-- [x] 1.10 e2e-config-boot.test.ts passes: astro dev boots with CLOUDFLARE_VITE_WRANGLER_CONFIG_PATH and serves 200
+- [x] 1.1 makeOctokit accepts optional baseUrl and passes to Octokit constructor — 50561dd
+- [x] 1.2 GITHUB_API_BASE_URL declared in Cloudflare.Env type — 50561dd
+- [x] 1.3 Workflow phases pass GITHUB_API_BASE_URL to makeOctokit — 50561dd
+- [x] 1.4 GitHub mock server starts and responds to fixture routes — 50561dd
+- [x] 1.5 Type checking passes (tsc --noEmit for src and tests) — 50561dd
+- [x] 1.6 Existing tests pass (npm test) — 50561dd
+- [x] 1.7 Linting passes (npm run lint) — 50561dd
+- [x] 1.8 AI binding mock (mock-ai.ts + AI_MOCK flag) returns schema-valid classification output — 50561dd
+- [x] 1.9 astro-server.ts helper accepts an env override — 50561dd
+- [x] 1.10 e2e-config-boot.test.ts passes: astro dev boots with CLOUDFLARE_VITE_WRANGLER_CONFIG_PATH and serves 200 — 50561dd
 
 #### Manual
 
-- [x] 1.11 App served by astro dev (E2E config) looks identical to npm run dev
+- [x] 1.11 App served by astro dev (E2E config) looks identical to npm run dev — 50561dd
 
 ### Phase 2: E2E Test + Playwright Config
 
 #### Automated
 
-- [ ] 2.1 Playwright config selects the E2E wrangler config on astro dev's webServer
-- [ ] 2.2 Supabase seed helper creates and cleans up sync-ready board
-- [ ] 2.3 sync-chain.spec.ts passes against local astro dev (E2E config) + mock server + Supabase
-- [ ] 2.4 Type checking passes
-- [ ] 2.5 Linting passes
+- [x] 2.1 Playwright config selects the E2E wrangler config on astro dev's webServer
+- [x] 2.2 Supabase seed helper creates and cleans up sync-ready board
+- [x] 2.3 sync-chain.spec.ts passes against local astro dev (E2E config) + mock server + Supabase
+- [x] 2.4 Type checking passes
+- [x] 2.5 Linting passes
 
 #### Manual
 
-- [ ] 2.6 Sync flow visually correct in headed mode
-- [ ] 2.7 KPI values match fixture data expectations
+- [x] 2.6 Sync flow visually correct in headed mode
+- [x] 2.7 KPI values match fixture data expectations
 
 ### Phase 3: CI Integration
 

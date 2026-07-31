@@ -11,6 +11,7 @@ export interface MockServer {
 export const FIXTURE_OWNER = "acme-org";
 export const FIXTURE_REPO = "backend";
 export const FIXTURE_CONTRIBUTOR = "alice-dev";
+export const FIXTURE_CONTRIBUTOR_GITHUB_ID = 1001;
 
 export const FIXTURE_PRS = [
   {
