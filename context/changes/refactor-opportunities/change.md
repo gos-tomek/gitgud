@@ -1,9 +1,9 @@
 ---
 change_id: refactor-opportunities
 title: Rank refactor opportunities from post-flow-analysis into a prioritized plan
-status: preparing
+status: plan_reviewed
 created: 2026-08-02
-updated: 2026-08-02
+updated: 2026-08-15
 archived_at: null
 ---
 
